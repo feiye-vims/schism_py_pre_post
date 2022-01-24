@@ -1,10 +1,7 @@
 import numpy as np
 from pylib import schism_grid, read_schism_bpfile, inside_polygon
 import pandas as pd
-# from test import mean_usgs_val
 from scipy.interpolate import griddata, Rbf
-# from schism_pre_post_process import Hgrid, XmRegion
-# import os
 import netCDF4 as nc
 import idw
 

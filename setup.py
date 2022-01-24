@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
   setuptools.setup(
   name='schism_py_pre_post',
-  version='0.0.1',
+  version='0.0.2',
   author='Fei Ye',
   author_email='feiye@vims.edu',
   description='Python tools for pre/post-processing SCHISM models',
@@ -16,6 +16,6 @@ with open("README.md", "r", encoding="utf-8") as fh:
     "Issues": ""
   },
   license='MIT',
-  packages=['schism_py_pre_post', 'Download', 'Plot', 'Timeseries', 'Shared_modules'],
+  packages=['schism_py_pre_post'],
   install_requires=['climata'],
 )
