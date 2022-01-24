@@ -1,3 +1,0 @@
-[submodule "inverse_distance_weighting"]
-	path = inverse_distance_weighting
-	url = git@github.com:feiye-vims/inverse_distance_weighting.git
