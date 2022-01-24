@@ -1,1 +1,2 @@
-../SCHISM_PYTHON_PRE_POST_PROC/README.md
+# SCHISM_PYTHON_PRE_POST_PROC
+Python tools for pre-/post-processing SCHISM runs
