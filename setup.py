@@ -16,6 +16,6 @@ with open("README.md", "r", encoding="utf-8") as fh:
     "Issues": ""
   },
   license='MIT',
-  packages=['schism_py_pre_post'],
+  packages=['schism_py_pre_post', 'Download', 'Plot', 'Timeseries', 'Shared_modules'],
   install_requires=['climata'],
 )
