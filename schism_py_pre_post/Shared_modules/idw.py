@@ -1,1 +1,1 @@
-../inverse_distance_weighting/idw.py
+../../inverse_distance_weighting/idw.py
