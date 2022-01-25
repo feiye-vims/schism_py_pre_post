@@ -28,7 +28,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     'numpy',
     'pandas',
     'xarray',
-    'climata',
-    'gsw'
+    'climata==0.5.0',
+    'gsw==3.4.0'
   ],
 )
