@@ -16,10 +16,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
     "Issues": ""
   },
   license='MIT',
-  packages=['schism_py_pre_post'],
+  packages=[
+    'schism_py_pre_post',
+    'schism_py_pre_post.Grid',
+    'schism_py_pre_post.Plot',
+    'schism_py_pre_post.Timeseries',
+    'schism_py_pre_post.Shared_modules',
+    'schism_py_pre_post.Download',
+  ],
   install_requires=[
     'numpy',
     'pandas',
+    'xarray',
     'climata'
   ],
 )
