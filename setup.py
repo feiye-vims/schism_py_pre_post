@@ -17,5 +17,9 @@ with open("README.md", "r", encoding="utf-8") as fh:
   },
   license='MIT',
   packages=['schism_py_pre_post'],
-  install_requires=['climata'],
+  install_requires=[
+    'numpy',
+    'pandas',
+    'climata'
+  ],
 )
