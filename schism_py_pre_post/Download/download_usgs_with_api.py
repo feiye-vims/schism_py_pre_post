@@ -1,10 +1,9 @@
 from climata.usgs import InstantValueIO, SiteIO  # pip install climata (mannually define a class "SiteIOIV" in __init__.py)
-# from climata.usgs import DailyValueIO
-# from climata.acis import StationDataIO
 import pandas as pd
 import numpy as np
 import gsw
 import os
+from datetime import datetime, timedelta
 # import subprocess
 # from pandas.plotting import register_matplotlib_converters
 
@@ -13,6 +12,13 @@ class SiteIOIV(SiteIO):
     default_params = {
         'format': 'rdb,1.0',
         'outputDataTypeCd': 'iv',
+        'siteStatus': 'all',
+    }
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
 
@@ -33,13 +39,6 @@ def get_usgs_stations_from_state(states=['VA', 'MD'], data_type='iv'):
     print(f"Total stations found: {len(df['site_no'])}")
     return df
 
-        'siteStatus': 'all',
-    }
-
-
-def chunks(lst, n):
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
 
 def Process_data_chunk(data_chunk):
     total_data = []
@@ -153,13 +152,14 @@ def download_single_station(
     return data_list
 
 
-if __name__ == "__main__":
-    # input section
-    vars = ['temperature', 'salinity', 'conductance']
-    outdir = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/USGS_DATA/'
-    start_date_str = '2012-10-15'
-    end_date_str = '2012-10-16'
-    # end input section
+def get_usgs_obs_for_stofs3d(vars=None, outdir=None, start_date_str='2015-09-18', end_date_str=None):
+    if vars is None:
+        vars = ['temperature', 'salinity', 'conductance']
+    if end_date_str is None:
+        end_date_str = (datetime.strptime(start_date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        
+    if outdir is None:
+        raise Exception('outdir not set')
 
     # dict of param ids:
     usgs_var_dict = {
@@ -183,5 +183,10 @@ if __name__ == "__main__":
 
     cmd_str = f"cat {outfilenames[1]} {outfilenames[2]} > {outdir}/mean_salinity_cond_xyz_{start_date_str}"
     print(cmd_str); os.system(cmd_str)
+
+    if os.path.exists(f"{outdir}mean_sal_xyz_{start_date_str}"):
+        os.remove(f"{outdir}mean_sal_xyz_{start_date_str}")
     os.symlink(f"mean_salinity_cond_xyz_{start_date_str}", f"{outdir}/mean_sal_xyz_{start_date_str}")
-    os.symlink(f"mean_temperature_cond_xyz_{start_date_str}", f"{outdir}/mean_tem_xyz_{start_date_str}")
+    if os.path.exists(f"mean_tem_xyz_{start_date_str}"):
+        os.remove(f"mean_tem_xyz_{start_date_str}")
+    os.symlink(f"mean_temperature_xyz_{start_date_str}", f"{outdir}/mean_tem_xyz_{start_date_str}")

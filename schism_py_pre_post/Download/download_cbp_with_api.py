@@ -68,7 +68,7 @@ def GetCBP(stations=None, sample_time=None, varname='SALINITY'):
     return cbp_dict
 
 
-if __name__ == "__main__":
+def get_cbp_obs_for_stofs3d(outdir=None, sample_time='2015-09-18'):
     '''
     Download from usgs using climata via api
     - List of param ids:
@@ -76,9 +76,6 @@ if __name__ == "__main__":
       http://data.chesapeakebay.net/api.JSON/WaterQuality/WaterQuality/
       8-18-2016/8-18-2021/0,1/2,4,6/12,13,15,35,36,2,3,7,33,34,23,24/Station/1150/83,123
     '''
-
-    outdir = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/Obs/'
-    sample_time = '2012-10-15'
 
     for var, cbp_var in zip(['sal', 'tem'], ['SALINITY', 'WTEMP']):
         my_obs = GetCBP(sample_time=sample_time, varname=cbp_var)

@@ -1,3 +1,4 @@
 .idea/
 instructions.txt
 schism_py_pre_post.egg-info/
+__pycache__/
