@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from pylib import schism_grid, read_schism_bpfile, inside_polygon
 import pandas as pd
 from scipy.interpolate import griddata, Rbf
