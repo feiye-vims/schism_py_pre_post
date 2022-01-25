@@ -3,7 +3,7 @@ from pylib import schism_grid, read_schism_bpfile, inside_polygon
 import pandas as pd
 from scipy.interpolate import griddata, Rbf
 import netCDF4 as nc
-import idw
+import schism_py_pre_post.idw as idw
 
 
 def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_str='2000-01-01'):
