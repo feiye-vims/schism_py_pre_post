@@ -187,6 +187,6 @@ def get_usgs_obs_for_stofs3d(vars=None, outdir=None, start_date_str='2015-09-18'
     if os.path.exists(f"{outdir}mean_sal_xyz_{start_date_str}"):
         os.remove(f"{outdir}mean_sal_xyz_{start_date_str}")
     os.symlink(f"mean_salinity_cond_xyz_{start_date_str}", f"{outdir}/mean_sal_xyz_{start_date_str}")
-    if os.path.exists(f"mean_tem_xyz_{start_date_str}"):
-        os.remove(f"mean_tem_xyz_{start_date_str}")
+    if os.path.exists(f"{outdir}/mean_tem_xyz_{start_date_str}"):
+        os.remove(f"{outdir}/mean_tem_xyz_{start_date_str}")
     os.symlink(f"mean_temperature_xyz_{start_date_str}", f"{outdir}/mean_tem_xyz_{start_date_str}")
