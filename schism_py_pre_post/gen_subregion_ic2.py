@@ -11,10 +11,8 @@ import schism_py_pre_post.idw as idw
 def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_str='2000-01-01'):
     # copy datafiles
     mydir = os.path.dirname(schism_py_pre_post.__file__)
-    for shp in city_shapefile_names:
-        shp_basename = Path(shp).stem
-        os.system(f'cp {mydir}/Datafiles/ecgc_sub_grid.reg {wdir}')
-        os.system(f'cp {mydir}/Datafiles/ecgc_shoreline_sal.txt {wdir}')
+    os.system(f'cp {mydir}/Datafiles/ecgc_sub_grid.reg {wdir}')
+    os.system(f'cp {mydir}/Datafiles/ecgc_shoreline_sal.txt {wdir}')
 
     var_dict = {
         'tem': {'interp_method': 2, 'f_ecgc_shoreline': None},
