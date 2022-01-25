@@ -4,6 +4,7 @@ from pylib import schism_grid, read_schism_bpfile, inside_polygon
 import pandas as pd
 from scipy.interpolate import griddata, Rbf
 import netCDF4 as nc
+import schism_py_pre_post
 import schism_py_pre_post.idw as idw
 
 
