@@ -3,7 +3,7 @@ from pylib import schism_grid, read_schism_bpfile, inside_polygon
 import pandas as pd
 from scipy.interpolate import griddata, Rbf
 import netCDF4 as nc
-import idw
+import schism_py_pre_post.idw as idw
 import os
 
 
@@ -13,7 +13,7 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
     mypath = os.path.dirname(os.path.abspath(__file__))
     os.system(f'cp {mypath}/ecgc_shoreline_sal.txt {wdir}')
     os.system(f'cp {mypath}/ecgc_sub_grid.reg {wdir}')
-    
+
     var_dict = {
         'tem': {'interp_method': 2, 'f_ecgc_shoreline': None},
         'sal': {'interp_method': 1, 'f_ecgc_shoreline': 'ecgc_shoreline_sal.txt'},
