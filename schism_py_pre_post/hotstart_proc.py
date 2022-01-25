@@ -9,6 +9,7 @@ import xarray as xr
 # import pymp  # (The speed gain is probably not worth the trouble) pip install pymp-pypi; setenv OMP_PROC_BIND true; srun --cpus-per-task=20 --time=01:00:00 python ./interp_hotstart4.py
 import matplotlib.pyplot as plt
 import shapefile
+import copy
 
 
 def nearest_neighbour(points_a, points_b):
@@ -319,6 +320,15 @@ class Hotstart():
                 print(f'Generating diagnostic outputs for trnd took {time()-t} seconds', flush=True)
                 t = time()
             print(f'Total time for interpolation: {time()-t0} seconds', flush=True)
+    
+    def trnd_spread(self):
+        tmp_grid = copy.deepcopy(self.grid.hgrid)
+        for i, _ in enumerate(['tem', 'sal']):
+            for j in range(0, self.grid.vgrid.nvrt):
+                tmp_ele_vals = tmp_grid.interp_node_to_elem(value=self.tr_nd.val[:, j, i])
+                self.tr_el.val[:, j, i] = copy.deepcopy(tmp_ele_vals)
+
+        self.tr_nd0.val[:] = self.tr_nd.val[:]
 
     def writer(self, fname):
         WriteNC(fname, self)

@@ -30,6 +30,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     'pandas',
     'xarray',
     'climata==0.5.0',
-    'gsw==3.4.0'
+    'gsw==3.4.0',
+    'pyshp==2.1.3'
   ],
 )
