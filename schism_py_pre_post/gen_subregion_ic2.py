@@ -6,6 +6,7 @@ from scipy.interpolate import griddata, Rbf
 import netCDF4 as nc
 import schism_py_pre_post
 import schism_py_pre_post.idw as idw
+from schism_py_pre_post.Geometry.interp import inverse_distance_weighting
 
 
 def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_str='2000-01-01'):
@@ -82,7 +83,7 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
             x_mask = np.ma.masked_array(xx, mask=m_mask)
             y_mask = np.ma.masked_array(yy, mask=m_mask)
             for i, _ in enumerate(ecgc_shoreline):
-                dist = np.sqrt((x_mask-ecgc_shoreline[i, 0])**2+(y_mask-ecgc_shoreline[i, 1])**2)
+                dist = np.sqrt((x_mask - ecgc_shoreline[i, 0])**2 + (y_mask - ecgc_shoreline[i, 1])**2)
                 ind = np.unravel_index(np.argmin(dist, axis=None), dist.shape)
                 if ecgc_shoreline[i, 2] > 1e-6:
                     ecgc_shoreline[i, 2] = val[0, 0, ind[0], ind[1]]
@@ -132,12 +133,15 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
         elif interp_method == 1:  # linear
             z_interp = griddata(xyz[:, 0:2], xyz[:, 2], (gd_x, gd_y), method='linear')
         elif interp_method == 2:  # inverse-distance weighted
-            idw_tree = idw.tree(xyz[:, 0:2], xyz[:, 2])
-            z_interp = idw_tree(np.transpose(np.vstack([gd_x, gd_y])))
+            # idw_tree = idw.tree(xyz[:, 0:2], xyz[:, 2])  # see github: paulbrodersen/inverse_distance_weighting
+            # z_interp = idw_tree(np.transpose(np.vstack([gd_x, gd_y])))
+            z_interp = inverse_distance_weighting(
+                X=xyz[:, 0:2], val=xyz[:, 2],
+                Xq=np.transpose(np.vstack([gd_x, gd_y])), n_nei=6
+            )
         else:
             raise Exception(f'unknown interp_method {interp_method}')
         nan_idx = np.where(np.isnan(z_interp))
-
 
         # dealing with nan
         z_interp_nearest = griddata(xyz[:, 0:2], xyz[:, 2], (gd_x, gd_y), method='nearest')

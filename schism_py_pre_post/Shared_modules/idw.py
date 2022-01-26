@@ -1,1 +1,0 @@
-../../inverse_distance_weighting/idw.py

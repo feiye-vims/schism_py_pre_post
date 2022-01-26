@@ -213,7 +213,7 @@ class Hotstart():
             t = time()
 
         # set idry, idry_e and idry_s, based on eta2 rather than from interpolation
-        self.idry.val = (eta2 < -grid_out.hgrid.dp+h0).astype('int32')
+        self.idry.val = (eta2 < -grid_out.hgrid.dp + h0).astype('int32')
         # An element is wet if and only if depths at all nodes >h0
         self.idry_e.val = np.ones(grid_out.hgrid.ne).astype('int32')
         for i34 in [3, 4]:
@@ -320,7 +320,7 @@ class Hotstart():
                 print(f'Generating diagnostic outputs for trnd took {time()-t} seconds', flush=True)
                 t = time()
             print(f'Total time for interpolation: {time()-t0} seconds', flush=True)
-    
+
     def trnd_spread(self):
         tmp_grid = copy.deepcopy(self.grid.hgrid)
         for i, _ in enumerate(['tem', 'sal']):
@@ -337,7 +337,7 @@ class Hotstart():
         '''
         var_dict:
                 keys: variable names whose values are to be replaced;
-                values: replacement values 
+                values: replacement values
         shapefile_name:
                 contains one or more polygons inside which the value replacement will occur
         '''
@@ -410,22 +410,22 @@ def GetVerticalWeight(zcor_in, kbp_in, zcor_out, neighbors):
     # with pymp.Parallel(ncpus) as p:
     #    for i in p.range(n_points):
     for i in range(n_points):
-            l_idx = np.searchsorted(zcor_tmp[i], zcor_out[i]) - 1
-            below = l_idx == -1
-            interior = (l_idx >= 0) & (l_idx < nvrt_in-1)
-            above = (l_idx == (nvrt_in-1))
+        l_idx = np.searchsorted(zcor_tmp[i], zcor_out[i]) - 1
+        below = l_idx == -1
+        interior = (l_idx >= 0) & (l_idx < nvrt_in - 1)
+        above = (l_idx == (nvrt_in - 1))
 
-            z_weight_lower[i, interior] = (zcor_tmp[i, l_idx[interior]+1]-zcor_out[i, interior]) / dz[i, l_idx[interior]]
-            z_idx_lower[i, interior] = l_idx[interior]
-            z_idx_upper[i, interior] = l_idx[interior] + 1
+        z_weight_lower[i, interior] = (zcor_tmp[i, l_idx[interior] + 1] - zcor_out[i, interior]) / dz[i, l_idx[interior]]
+        z_idx_lower[i, interior] = l_idx[interior]
+        z_idx_upper[i, interior] = l_idx[interior] + 1
 
-            z_weight_lower[i, below] = 0.0
-            z_idx_lower[i, below] = kbp_in[neighbors[i]]
-            z_idx_upper[i, below] = kbp_in[neighbors[i]]
+        z_weight_lower[i, below] = 0.0
+        z_idx_lower[i, below] = kbp_in[neighbors[i]]
+        z_idx_upper[i, below] = kbp_in[neighbors[i]]
 
-            z_weight_lower[i, above] = 1.0
-            z_idx_lower[i, above] = l_idx[above]
-            z_idx_upper[i, above] = l_idx[above]
+        z_weight_lower[i, above] = 1.0
+        z_idx_lower[i, above] = l_idx[above]
+        z_idx_upper[i, above] = l_idx[above]
 
     return [z_weight_lower, z_idx_lower, z_idx_upper]
 

@@ -28,10 +28,10 @@ for shp in city_shapefile_names:
     os.system(f'cp {mydir}/Datafiles/{shp_basename}.* {wdir}')
 
 # download coastal obs from usgs
-get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
+# get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
 
 # download coastal obs from CBP
-get_cbp_obs_for_stofs3d(outdir=output_obs_dir, sample_time=hotstart_date_str)
+# get_cbp_obs_for_stofs3d(outdir=output_obs_dir, sample_time=hotstart_date_str)
 
 # interpolate obs onto model grid
 gen_subregion_ic_stofs3d(wdir=wdir, obsdir=output_obs_dir, hycom_TS_file=hycom_TS_file, date_str=hotstart_date_str)
@@ -54,7 +54,7 @@ for i, var in enumerate(['tem', 'sal']):
         my_hot.tr_nd.val[idx, k, i] = hg.dp[idx]
 
 # set salinity to 0 on higher grounds
-rat=np.maximum(np.minimum(1.0, (my_hot.grid.hgrid.dp+3.0)/3.0), 0.0)  # linearly varying from 0 to 3 m
+rat = np.maximum(np.minimum(1.0, (my_hot.grid.hgrid.dp + 3.0) / 3.0), 0.0)  # linearly varying from 0 to 3 m
 my_hot.tr_nd.val[:, :, 1] *= np.transpose(np.tile(rat, (my_hot.grid.vgrid.nvrt, 1)))
 my_hot.trnd_spread()  # spread to trnd0 and tr_el
 
