@@ -23,6 +23,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     'schism_py_pre_post.Timeseries',
     'schism_py_pre_post.Shared_modules',
     'schism_py_pre_post.Download',
+    'schism_py_pre_post.Geometry',
   ],
   package_data={'schism_py_pre_post': ['Datafiles/*']},
   install_requires=[
