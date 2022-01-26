@@ -1,4 +1,4 @@
-from pylib import schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: git@github.com:wzhengui/pylibs.git or https://github.com/wzhengui/pylibs
+from pylib import schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pylibs4schism==0.1.10
 from scipy import spatial
 from scipy.interpolate import griddata
 from scipy.sparse import csc_matrix
