@@ -11,14 +11,14 @@ from pathlib import Path
 
 
 # input section
-hotstart_date_str = '2015-09-18'
-wdir = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/'
-griddir = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/'
-output_obs_dir = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/Obs/'
-hycom_TS_file = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/TS_1.nc'
-hycom_hot_file = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/hotstart.nc.hycom'
+hotstart_date_str = '2003-09-08'
+wdir = '/sciclone/schism10/feiye/Coastal_Act/Hot/14a/'
+griddir = wdir
+output_obs_dir = f'{wdir}/Obs/'
+hycom_TS_file = f'{wdir}/TS_1.nc'
+hycom_hot_file = f'{wdir}/hotstart.nc.hycom'
 city_shapefile_names = ["city_polys_from_v10_lonlat.shp"]
-my_hot_file = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/hotstart.nc'
+my_hot_file = f'{wdir}/hotstart.nc'
 # end input section
 
 # copy datafiles
@@ -67,7 +67,7 @@ in_city = find_points_in_polyshp(pt_xy=np.c_[hg.x, hg.y], shapefile_names=shapef
 ind = np.logical_or(above_NAVD88_0, in_city)
 
 elev_ic = np.zeros(my_hot.grid.hgrid.dp.shape)
-elev_ic[ind] = - elev_ic[ind] - h0
+elev_ic[ind] = - my_hot.grid.hgrid.dp[ind] - h0
 my_hot.eta2.val[:] = elev_ic
 
 # write
