@@ -95,7 +95,11 @@ class Hotstart():
             self.set_var('cumsum_eta', np.zeros(self.dims[0]))
         else:  # read from existing hotstart.nc
             for var_str in self.vars:
-                self.set_var(var_str, my_hot[var_str].data)
+                try:
+                    self.set_var(var_str, my_hot[var_str].data)
+                except KeyError:
+                    if var_str in ['nsteps_from_cold', 'cumsum_eta']:
+                        self.set_var(var_str, 0)
 
         self.var_dict = {}
         for var_str in self.vars:
@@ -129,9 +133,9 @@ class Hotstart():
         elif var_str in ['iths', 'ifile', 'nsteps_from_cold']:
             vi.val = np.array(val).astype('int32')
         elif var_str in ['idry_e', 'idry_s', 'idry']:
-            vi.val = val.astype('int32')
+            vi.val = np.array(val).astype('int32')
         else:
-            vi.val = val.astype('float64')
+            vi.val = np.array(val).astype('float64')
 
         exec(f"self.{var_str} = vi")
 
@@ -490,6 +494,13 @@ def replace_hot_vars(infile, outfile, grid, vars_list=[], shapefile_name=None):
 
 
 if __name__ == "__main__":
+
+    # Sample 0: automatically fill missing vars with 0 for hotstart.nc of newer versions
+    my_hot = Hotstart(
+        grid_info='/sciclone/schism10/feiye/Coastal_Act/RUN17a/',
+        hot_file='/sciclone/schism10/feiye/Coastal_Act/RUN17a/hotstart.nc'
+    )
+    my_hot.writer(fname='/sciclone/schism10/feiye/Coastal_Act/RUN17a/new_hotstart.nc')
 
     # Sample 1: replacing variable values within a region
     # replace_hot_vars(
