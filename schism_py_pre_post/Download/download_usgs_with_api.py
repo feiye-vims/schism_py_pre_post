@@ -8,6 +8,15 @@ from datetime import datetime, timedelta
 # from pandas.plotting import register_matplotlib_converters
 
 
+# dict of param ids:
+usgs_var_dict = {
+    "streamflow": {"id": "00060", "unit_conv": 0.028316846592},
+    "salinity": {"id": "00480", "unit_conv": 1},
+    "gauge height": {"id": "00065", "unit_conv": 1},
+    "temperature": {"id": '00010', "unit_conv": 1},
+    "conductance": {"id": '00095', "unit_conv": 0.001},
+}
+
 class SiteIOIV(SiteIO):
     default_params = {
         'format': 'rdb,1.0',
@@ -163,7 +172,7 @@ def get_usgs_obs_for_stofs3d(vars=None, outdir=None, start_date_str='2015-09-18'
 
     # dict of param ids:
     usgs_var_dict = {
-        "streamflow": {"id": "00060", "unit_conv": 1},
+        "streamflow": {"id": "00060", "unit_conv": 0.028316846592},
         "salinity": {"id": "00480", "unit_conv": 1},
         "gauge height": {"id": "00065", "unit_conv": 1},
         "temperature": {"id": '00010', "unit_conv": 1},
@@ -190,3 +199,9 @@ def get_usgs_obs_for_stofs3d(vars=None, outdir=None, start_date_str='2015-09-18'
     if os.path.exists(f"{outdir}/mean_tem_xyz_{start_date_str}"):
         os.remove(f"{outdir}/mean_tem_xyz_{start_date_str}")
     os.symlink(f"mean_temperature_xyz_{start_date_str}", f"{outdir}/mean_tem_xyz_{start_date_str}")
+
+if __name__ == "__main__":
+    data = download_single_station(station_id='04044755', param_id='00060',
+                                   var='streamflow', unit_conv='0.028316846592',
+                                   datelist=pd.date_range(start='2022-01-01', end='2022-02-10'))
+    pass
