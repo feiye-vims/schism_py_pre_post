@@ -1,4 +1,4 @@
-from Timeseries_related.TimeHistory import TimeHistory
+from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
 import numpy as np
 import os
 from scipy import interpolate

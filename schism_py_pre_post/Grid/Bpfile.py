@@ -5,16 +5,25 @@ class Bpfile():
 
     """class for bpfiles"""
 
-    def __init__(self, filename, cols=4):
+    def __init__(self, filename=None, cols=4, nodes=None):
         """Initialization """
         self.nodes = []
         self.n_nodes = 0
         self.info = []
 
-        self.reader(filename, cols)
+        if filename is not None:
+            self.reader(filename, cols)
+        else:
+            nodes = np.array(nodes)
+            self.n_nodes = len(nodes[:, 0])
+            if len(nodes[:, 1] < 3):
+                nodes = np.c_[nodes, np.zeros([self.n_nodes, 1])]
+            self.nodes = nodes
+            for i in range(self.n_nodes):
+                self.info.append(f"Station_{i+1}")
 
-        print(str(self.n_nodes) + "\n")
-        print(str(self.nodes[0][0]) + " " + str(self.nodes[0][1]) + "\n")
+        print(f"{self.n_nodes}")
+        print(f"{self.nodes[0][:]}")
 
     def reader(self, file_name, cols):
         """ Read existing *.reg """
@@ -27,16 +36,13 @@ class Bpfile():
                 self.info.append(list(line.split()[slice(4, cols)]))
         self.nodes = np.array(self.nodes, dtype=float)
 
-    def writer(self, out_file_name, ncol=2):
+    def writer(self, out_file_name):
         """ nodes should be shaped as [:n_nodes][:2] """
         with open(out_file_name, 'w') as fout:
             fout.write("\n")
-            fout.write(str(len(self.nodes)) + "\n")
-            for i, _ in enumerate(self.nodes):
-                fout.write(str(i+1) + " ")
-                for j in range(0, ncol):
-                    fout.write(str(self.nodes[i][j]) + " ")
-                fout.write("\n")
+            fout.write(f"{self.n_nodes}\n")
+            for i in range(self.n_nodes):
+                fout.write(f"{i+1} {self.nodes[i][0]} {self.nodes[i][1]} {self.nodes[i][2]} !{self.info[i]}\n")
 
     def make_dataframe(self, row_name=['lon', 'lat', 'z'], col_name=None):
         import pandas as pd

@@ -56,7 +56,7 @@ for i, var in enumerate(['tem', 'sal']):
 # set salinity to 0 on higher grounds
 rat = np.maximum(np.minimum(1.0, (my_hot.grid.hgrid.dp + 3.0) / 3.0), 0.0)  # linearly varying from 0 to 3 m
 my_hot.tr_nd.val[:, :, 1] *= np.transpose(np.tile(rat, (my_hot.grid.vgrid.nvrt, 1)))
-my_hot.trnd_spread()  # spread to trnd0 and tr_el
+my_hot.trnd_propogate()  # propogate trnd values to trnd0 and tr_el
 
 # set initial elevation: 0 in the ocean, just below ground on higher grounds and in cities
 h0 = 0.1

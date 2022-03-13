@@ -23,6 +23,18 @@ class zdata():
 
 
 class Hotstart():
+    '''
+    A class for SCHISM's hotstart.nc.
+
+    Different ways to instantiate a hotstart instance:
+
+        (1) Hotstart(grid_info=some_dir), where some_dir contains hgrid.gr3 and vgrid.in; the values of the hotstart variables are initialized to 0 mostly.
+
+        (2) Hotstart(grid_info=some_dir, hot_file=some_file), same as (1), but with the hotstart variable values from some_file.
+
+        (3) Hotstart(grid_info={'ne': 2, 'np': 4, 'ns': 5, 'nvrt': 4}); the values of the hotstart variables are initialized to 0 mostly.
+    '''
+
     __slots__ = ('time', 'iths', 'ifile', 'idry_e', 'idry_s', 'idry', 'eta2', 'we', 'tr_el',
                  'tr_nd', 'tr_nd0', 'su2', 'sv2', 'q2', 'xl', 'dfv', 'dfh', 'dfq1', 'dfq2',
                  'nsteps_from_cold', 'cumsum_eta', 'file_format', 'dimname', 'vars', 'dims',
@@ -30,13 +42,6 @@ class Hotstart():
                  'grid', 'source_dir', 'var_dict')
 
     def __init__(self, grid_info, ntracers=2, hot_file=None):
-        '''
-        Different ways to instantiate:
-            (1) Hotstart(grid_info=some_dir), where some_dir contains hgrid.gr3 and vgrid.in; the values of the hotstart variables are initialized to 0 mostly.
-            (2) Hotstart(grid_info=some_dir, hot_file=some_file), same as (1), but with the hotstart variable values from some_file.
-            (3) Hotstart(grid_info={'ne': 2, 'np': 4, 'ns': 5, 'nvrt': 4}); the values of the hotstart variables are initialized to 0 mostly.
-        '''
-
         self.file_format = 'NETCDF4'
         self.dimname = ['node', 'elem', 'side', 'nVert', 'ntracers', 'one']
         if isinstance(grid_info, dict):
@@ -325,7 +330,10 @@ class Hotstart():
                 t = time()
             print(f'Total time for interpolation: {time()-t0} seconds', flush=True)
 
-    def trnd_spread(self):
+    def trnd_propogate(self):
+        '''
+        Propogate trnd to tr_el and tr_nd0
+        '''
         tmp_grid = copy.deepcopy(self.grid.hgrid)
         for i, _ in enumerate(['tem', 'sal']):
             for j in range(0, self.grid.vgrid.nvrt):
@@ -495,24 +503,28 @@ def replace_hot_vars(infile, outfile, grid, vars_list=[], shapefile_name=None):
 
 if __name__ == "__main__":
 
-    # Sample 0: automatically fill missing vars with 0 for hotstart.nc of newer versions
-    my_hot = Hotstart(
-        grid_info='/sciclone/schism10/feiye/Coastal_Act/RUN17a/',
-        hot_file='/sciclone/schism10/feiye/Coastal_Act/RUN17a/hotstart.nc'
-    )
-    my_hot.writer(fname='/sciclone/schism10/feiye/Coastal_Act/RUN17a/new_hotstart.nc')
+    '''
+    Sample usage:
+    '''
 
-    # Sample 1: replacing variable values within a region
-    # replace_hot_vars(
-    #     infile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart_it=31104.nc',
-    #     outfile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart.nc.0',
-    #     grid=schism_grid('/sciclone/schism10/feiye/From_Nabi/RUN02/hgrid.ll'),
-    #     vars_list=['tr_nd', 'tr_nd0', 'tr_el'],
-    #     shapefile_name='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/ocean.shp'
-    # )
+    # Sample 1: automatically fill missing vars with 0 for hotstart.nc of newer versions
+    my_hot = Hotstart(
+        grid_info='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/',
+        hot_file='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/hotstart.nc'
+    )
+    my_hot.writer(fname='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/New_fmt_convert/new_hotstart.nc')
 
     # Sample 2: replacing variable values within a region
-    # 2.1 batch operation using a function provided by the Hotstart class
+    # Sample 2.1: overwrite an existing hotstart.nc from another one on the same hgrid/vgrid
+    replace_hot_vars(
+        infile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart_it=31104.nc',
+        outfile='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/hotstart.nc.0',
+        grid=schism_grid('/sciclone/schism10/feiye/From_Nabi/RUN02/hgrid.ll'),
+        vars_list=['tr_nd', 'tr_nd0', 'tr_el'],
+        shapefile_name='/sciclone/schism10/feiye/From_Nabi/RUN02/Test_Hot/ocean.shp'
+    )
+
+    # Sample 2.2: similar as 2.1, but using a function provided by the Hotstart class
     bg_hot = Hotstart(
         grid_info='/sciclone/schism10/feiye/ICOGS/v3_hot_20211115/',
         hot_file='/sciclone/schism10/feiye/ICOGS/v3_hot_20211115/hotstart.nc.hycom'
@@ -526,23 +538,24 @@ if __name__ == "__main__":
         shapefile_name='./ocean.shp',
     )  # sample *.shp is provided under the same folder as this script in SCHISM GIT
 
-    # # 2.2 tweaking a single variable directly
-    # [_, node_idx_list] = find_ele_node_in_shpfile(
-    #     shapefile_name="/sciclone/schism10/feiye/ICOGS/Ida04b/Elev_IC/city_polys_from_v10_lonlat.shp",
-    #     grid=fg_hot.grid.hgrid
-    # )
-    # for ind in node_idx_list:
-    #     fg_hot.eta2.val[ind] = -fg_hot.grid.hgrid.dp[ind] - 0.1  # set water surface to 0.1 m below ground
-    # fg_hot.writer(f'{fg_hot.source_dir}/hotstart.nc')
+    # Sample 2.3 tweaking a single variable directly
+    [_, node_idx_list] = find_ele_node_in_shpfile(
+        shapefile_name="/sciclone/schism10/feiye/ICOGS/Ida04b/Elev_IC/city_polys_from_v10_lonlat.shp",
+        grid=fg_hot.grid.hgrid
+    )
+    for ind in node_idx_list:
+        fg_hot.eta2.val[ind] = -fg_hot.grid.hgrid.dp[ind] - 0.1  # set water surface to 0.1 m below ground
+    # Note: do fg_hot.trnd_propogate() before writing if trnd is changed; it propogates trnd values to trnd0 and tr_el
+    fg_hot.writer(f'{fg_hot.source_dir}/hotstart.nc')
 
     # Sample 3: interpolating one hotstart.nc to another
-    # hot_background = Hotstart(
-    #     grid_info='/sciclone/schism10/feiye/Coastal_Act/RUN11c/',  # contains hgrid.gr3 and vgrid.in
-    #     hot_file='/sciclone/schism10/feiye/Coastal_Act/RUN11c/hotstart.nc'
-    # )  # create a Hotstart instance with existing values
-    # my_hot = Hotstart(
-    #     grid_info='/sciclone/schism10/feiye/Coastal_Act/Interp_Hot/11d/',
-    #     ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
-    # )  # create a Hotstart instance with empty values
-    # my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=True, i_vert_interp=True)
-    # my_hot.writer(f'{my_hot.source_dir}/interp_hotstart.nc')
+    hot_background = Hotstart(
+        grid_info='/sciclone/schism10/feiye/Coastal_Act/RUN11c/',  # contains hgrid.gr3 and vgrid.in
+        hot_file='/sciclone/schism10/feiye/Coastal_Act/RUN11c/hotstart.nc'
+    )  # create a Hotstart instance with existing values
+    my_hot = Hotstart(
+        grid_info='/sciclone/schism10/feiye/Coastal_Act/Interp_Hot/11d/',
+        ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
+    )  # create a Hotstart instance with empty values
+    my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=True, i_vert_interp=True)
+    my_hot.writer(f'{my_hot.source_dir}/interp_hotstart.nc')
