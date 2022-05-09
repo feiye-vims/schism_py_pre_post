@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from schism_py_pre_post.Grid.SMS import SMS_MAP, SMS_ARC
+from schism_py_pre_post.Grid.SMS import SMS_MAP, SMS_ARC, Levee_SMS_MAP
 import numpy as np
 
 
@@ -30,18 +30,15 @@ def nld2map(nld_fname=None):
     for arc in data['features']:
         my_arc = SMS_ARC(points=np.array(arc['geometry']['coordinates']))
         arc_list.append(my_arc)
-        # my_arc_hats = my_arc.make_hats(arc_hat_length=30/110844.0420526655)
-        # arc_hat_list += my_arc_hats
 
         xyz = np.r_[xyz, my_arc.points]
 
     return SMS_MAP(arcs=arc_list), xyz
 
-
 if __name__ == "__main__":
     # Specify levee ids
-    wdir = '/sciclone/scr10/feiye/NLD/'
-    levee_name = 'FL_levees'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23/Grids/'
+    levee_name = 'TX_levees'
     df = pd.read_csv(f'{wdir}/{levee_name}_info.csv')
     system_ids = df['System_ID'].to_numpy().astype(int).tolist()  # system_ids = [4405000525, 1605995181, 5905000001]
 
@@ -50,7 +47,14 @@ if __name__ == "__main__":
 
     # convert to sms map
     my_map, xyz = nld2map(nld_fname=f'{wdir}/{levee_name}/System.geojson')
+    # my_leveemap = Levee_SMS_MAP(arcs=my_map.arcs, epsg=4326)
+    # scale = 110852.4248 * 285.0 / 300.0
+    # centerline_map, offsetline_map = my_leveemap.make_levee_maps(subsample=[300/scale, None], offset_list=[-3/scale, 3/scale, -12/scale, 12/scale])
+
     my_map.writer(filename=f'{wdir}/{levee_name}/{levee_name}.map')
+    # centerline_map.writer(filename=f'{wdir}/{levee_name}/{levee_name}_centerline_300m.map')
+    # offsetline_map.writer(filename=f'{wdir}/{levee_name}/{levee_name}_offsetline_300m.map')
+
     # my_map_hats.writer('test_hats.map')
 
     pass 

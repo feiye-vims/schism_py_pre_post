@@ -1,5 +1,73 @@
+from dataclasses import replace
+from logging import raiseExceptions
+from sys import getallocatedblocks
 import numpy as np
+from shapely.geometry import LineString
+import matplotlib.pyplot as plt
+import csv
+import numpy as np
+import re
+import shapefile
+from scipy import spatial
+from schism_py_pre_post.Geometry.inpoly import find_pts_in_shpfiles
 
+
+def normalizeVec(x, y):
+    distance = np.sqrt(x*x+y*y)
+    return x/distance, y/distance
+
+def makeOffsetPoly(oldX, oldY, offset, outer_ccw = 1):
+    num_points = len(oldX)
+    newX = []
+    newY = []
+
+    for curr in range(num_points):
+        prev = (curr + num_points - 1) % num_points
+        next = (curr + 1) % num_points
+
+        vnX =  oldX[next] - oldX[curr]
+        vnY =  oldY[next] - oldY[curr]
+        vnnX, vnnY = normalizeVec(vnX,vnY)
+        nnnX = vnnY
+        nnnY = -vnnX
+
+        vpX =  oldX[curr] - oldX[prev]
+        vpY =  oldY[curr] - oldY[prev]
+        vpnX, vpnY = normalizeVec(vpX,vpY)
+        npnX = vpnY * outer_ccw
+        npnY = -vpnX * outer_ccw
+
+        bisX = (nnnX + npnX) * outer_ccw
+        bisY = (nnnY + npnY) * outer_ccw
+
+        bisnX, bisnY = normalizeVec(bisX,  bisY)
+        bislen = offset /  np.sqrt(1 + nnnX*npnX + nnnY*npnY)
+
+        newX.append(oldX[curr] + bislen * bisnX)
+        newY.append(oldY[curr] + bislen * bisnY)
+
+    return newX, newY
+
+def redistribute(x, y, length=None, num_points=None, iplot=False):
+    line = LineString(np.c_[x, y])
+
+    if length is None and num_points is None:
+      raise Exception("Needs to specify either length or num_points")
+
+    if length is not None:
+        num_points = max(2, int(line.length / length))
+    
+    new_points = [line.interpolate(i/float(num_points - 1), normalized=True) for i in range(num_points)]
+    x_subsampled = [p.x for p in new_points]
+    y_subsampled = [p.y for p in new_points]
+
+    if iplot:
+        plt.plot(x, y, '+')
+        plt.plot(x_subsampled, y_subsampled, 'o')
+        plt.axis('equal')
+        plt.show()
+
+    return x_subsampled, y_subsampled, new_points
 
 '''
 <Sample map only containing arcs>
@@ -112,10 +180,53 @@ class SMS_ARC():
    
 class SMS_MAP():
     '''class for manipulating SMS maps''' 
-    def __init__(self, arcs=[]):
-        if arcs == []:
-            raise Exception('At least one arc is required in the arcs list')
-        self.arcs = arcs
+    def __init__(self, filename=None, arcs=[], epsg=4326):
+        self.epsg = None
+        self.arcs = []
+        self.nodes = np.zeros((0, 2))
+
+        if filename is not None:
+            self.reader(filename=filename)
+        else:
+            if arcs == []:
+                raise Exception('At least one arc is required in the arcs list')
+            self.arcs = arcs
+            self.epsg = epsg
+    
+    def reader(self, filename='test.map'):
+        self.n_glb_nodes = 0
+        self.n_arcs = 0
+
+        with open(filename) as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+
+                strs = re.split(' +', line.strip())
+                if strs[0] == 'COV_WKT':
+                    if "GCS_WGS_1984" in line:
+                        self.epsg = 4326
+                    else:
+                        raiseExceptions('unkown epsg')
+                elif strs[0] == 'XY':
+                    self.n_glb_nodes += 1
+                    self.nodes = np.append(self.nodes, np.reshape([float(strs[1]), float(strs[2])], (1,2)), axis=0)
+                elif line.strip() == 'ARC':
+                    self.n_arcs += 1
+                elif strs[0] == 'NODES':
+                    this_arc_node_idx = np.array([int(strs[1]), int(strs[2])])-1
+                elif strs[0] == 'ARCVERTICES':
+                    this_arc_nvert = int(strs[1])
+                    this_arc_verts = np.zeros((this_arc_nvert, 2), dtype=float)
+                    for i in range(this_arc_nvert):
+                        strs = f.readline().strip().split(' ')
+                        this_arc_verts[i, :] = np.array([strs[0], strs[1]])
+                    node_1 = np.reshape(self.nodes[this_arc_node_idx[0], :], (1, 2))
+                    node_2 = np.reshape(self.nodes[this_arc_node_idx[1], :], (1, 2))
+                    this_arc = SMS_ARC(points=np.r_[node_1, this_arc_verts, node_2])
+                    self.arcs.append(this_arc)
+        pass
     
     def writer(self, filename='test.map'):
         with open(filename, 'w') as f:
@@ -129,7 +240,12 @@ class SMS_MAP():
             f.write('COVGUID 57a1fdc1-d908-44d3-befe-8785288e69e7\n')
             f.write('COVATTS VISIBLE 1\n')
             f.write('COVATTS ACTIVECOVERAGE Area Property\n')
-            f.write('COV_WKT GEOGCS["GCS_WGS_1984",DATUM["WGS84",SPHEROID["WGS84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]END_COV_WKT \n')
+            if self.epsg == 4326:
+                f.write('COV_WKT GEOGCS["GCS_WGS_1984",DATUM["WGS84",SPHEROID["WGS84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]END_COV_WKT \n')
+            elif self.epsg == 26918:
+                f.write('COV_WKT PROJCS["NAD83 / UTM zone 18N",GEOGCS["NAD83",DATUM["North_American_Datum_1983",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6269"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4269"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],PARAMETER["central_meridian",-75],PARAMETER["scale_factor",0.9996],PARAMETER["false_easting",500000],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","26918"]]END_COV_WKT')
+            else:
+                raiseExceptions("Projection not supported.")
             f.write('COV_VERT_DATUM 0\n')
             f.write('COV_VERT_UNITS 0\n')
             f.write('COVATTS PROPERTIES MESH_GENERATION\n')
@@ -157,10 +273,88 @@ class SMS_MAP():
             f.write('BEGTS\n')
             f.write('LEND\n')
             pass
+
+class Levee_SMS_MAP(SMS_MAP):
+    def __init__(self, arcs=[], epsg=4326):
+        super().__init__(arcs=arcs, epsg=epsg)
+        self.centerline_list = arcs
+        self.subsampled_centerline_list = []
+        self.offsetline_list = []
+    
+    def make_levee_maps(self, offset_list=[-5, 5, -15, 15], subsample=[300, 10]):
+        for arc in self.centerline_list:
+            x_sub, y_sub, _ = redistribute(x=arc.points[:, 0], y=arc.points[:, 1], length=subsample[0])
+            self.subsampled_centerline_list.append(SMS_ARC(points=np.c_[x_sub, y_sub]))
             
+            for offset in offset_list:
+                x_off, y_off = makeOffsetPoly(x_sub, y_sub, offset)
+                self.offsetline_list.append(SMS_ARC(points=np.c_[x_off, y_off]))
+        return SMS_MAP(arcs=self.subsampled_centerline_list), SMS_MAP(arcs=self.offsetline_list)
+
+def get_all_points_from_shp(fname):
+    sf = shapefile.Reader(fname)
+    shapes = sf.shapes()
+
+    shape_pts_l2g = []
+    xyz = np.empty((0, 2), dtype=float)
+    n = 0
+    for i, shp in enumerate(shapes):
+        print(f'shp {i} of {len(shapes)}')
+        xyz = np.append(xyz, shp.points, axis=0)
+        shape_pts_l2g.append(np.array(np.arange(n, n+len(shp.points))))
+        n += len(shp.points)
+
+    return xyz, shape_pts_l2g
+
+def replace_shp_pts(inshp_fname, pts, l2g, outshp_fname):
+    sf = shapefile.Reader(inshp_fname)
+    shapes = sf.shapes()
+
+    with shapefile.Writer(outshp_fname) as w:
+        w.fields = sf.fields[1:] # skip first deletion field
+        for i, feature in enumerate(sf.iterShapeRecords()): # iteration on both record and shape for a feature
+            if len(l2g[i]) > 0:
+                w.record(*feature.record) # * for unpacking tuple
+                feature.shape.points = pts[l2g[i]]
+                w.shape(feature.shape)
+
             
 
 if __name__ == '__main__':
+    river_bank_shpfname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank.shp'
+
+    river_banks_pts, l2g = get_all_points_from_shp(river_bank_shpfname)
+    # thalweg_pts, _ = get_all_points_from_shp('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_stream_redist.shp')
+    thalweg_buffer_pts, _ = get_all_points_from_shp('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_buffer_poly.shp')
+
+    tree = spatial.cKDTree(thalweg_buffer_pts)
+    mindist_bank_idx = tree.query(river_banks_pts)[1]
+
+    too_close_idx = find_pts_in_shpfiles(['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_buffer_poly.shp'], pts=river_banks_pts)
+    river_banks_pts[too_close_idx] = thalweg_buffer_pts[mindist_bank_idx[too_close_idx]]
+
+    # w = shapefile.Writer('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank_redist_nudged.shp')
+    # w.field('name', 'C')
+    # w.line(river_banks_pts[l2g])
+    # w.record('linestring1')
+    # w.close()
+
+    replace_shp_pts(
+        '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank.shp',
+        river_banks_pts, l2g,
+        '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank_nudged.shp',
+    )
+
+    np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank_redist_nudged.xyz', river_banks_pts)
+
+
+    river_resolution = np.maximum(50, np.minimum(300, river_widths*3))
+
+    np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/NJDE/NJDE_river_resolution.txt', np.c_[thalweg_pts, river_resolution])
+
+    my_map = SMS_MAP(filename='test.map')
+    my_map.writer('test_copy.map')
+
     my_arc = SMS_ARC()
     my_map = SMS_MAP(arcs=[my_arc])
     my_map.writer()

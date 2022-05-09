@@ -10,8 +10,9 @@ def find_points_in_polyshp(pt_xy, shapefile_names):
         sf = shapefile.Reader(shapefile_name)
         shapes = sf.shapes()
 
-        for shp in shapes:
+        for i, shp in enumerate(shapes):
             poly_xy = np.array(shp.points).T
+            print(f'shape {i+1} of {len(shapes)}, {poly_xy[:, 0]}')
             ind += inside_polygon(pt_xy, poly_xy[0], poly_xy[1])  # 1: true; 0: false
 
     ind = ind.astype('bool')

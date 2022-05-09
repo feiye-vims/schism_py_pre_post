@@ -41,7 +41,7 @@ def extract_schism(bpfiles=None, var=None, rundir=None, i_comb=None, stacks=None
         with open(read_in, 'w') as fout:
             if ver==9:
                 if i_comb:
-                    fout.write("1\n2\n1\n")
+                    fout.write("1\n2\n10\n")
                 else:
                     fout.write("0\n1\n2.e9\n")
             fout.write("1\n1\n")
@@ -82,18 +82,64 @@ def extract_schism(bpfiles=None, var=None, rundir=None, i_comb=None, stacks=None
 # -----------------------------------------------------------------------------------
 # ----------------------extract schism results-------------------------
 # -----------------------------------------------------------------------------------
-rundir = '/sciclone/data10/feiye/vims20/work/ChesBay/RUN200i/'
-outfilenames = extract_schism(
-    bpfiles=['/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/center.bp'],
-    var='salinity',
-    rundir=rundir,
-    i_comb=True,
-    stacks=[1, 28],
-    i_all_level=False,
-    ver=10
-)
-shutil.copy(outfilenames[0], f'{rundir}/salt.dat.more.center')
+# rundir = '/sciclone/data10/feiye/vims20/work/ChesBay/RUN200p/'
+# bpname = 'center'
+# outfilenames = extract_schism(
+#     bpfiles=[f'/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/{bpname}.bp'],
+#     var='temperature',
+#     rundir=rundir,
+#     i_comb=True,
+#     stacks=[1, 255],
+#     i_all_level=False,
+#     ver=10
+# )
+# shutil.copy(outfilenames[0], f'{rundir}/temp.dat.more.{bpname}')
+# pass
+
+# ChesBay transect
+bpfiles = ['/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/center_v3.bp']
+
+runid = 'RUN109x'
+vars = ['salt', 'zcor']
+stacks = [1, 86]
+ver=9
+
+runid = 'RUN200p'
+vars = ['zCoordinates']
+stacks = [1, 255]
+ver=10
+
+rundir = f'/sciclone/data10/feiye/vims20/work/ChesBay/{runid}/'
+for var in vars:
+    outfilenames = extract_schism(
+        bpfiles=bpfiles,
+        var=var,
+        rundir=rundir,
+        i_comb=True,
+        stacks=stacks,
+        i_all_level=True,
+        ver=ver
+    )
 pass
+
+# # ChesBay hvel
+# runid = 'RUN200i'
+# rundir = '/sciclone/data10/feiye/vims20/work/ChesBay/' + runid
+# bpdir = '/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/'
+# bpnames = ['cb0102','cb0301','cb0601','cb0701','cb0901','cb1001','cb1101','cb1201','cb0402']
+# for bpname in bpnames:
+#     for var1, var2 in [['horizontalVelX', 'u'], ['horizontalVelY', 'v']]:
+#         outfilenames = extract_schism(
+#             bpfiles=[f'{bpdir}/{bpname}.bp'],
+#             var=var1,
+#             rundir=rundir,
+#             i_comb=True,
+#             stacks=[1, 80],
+#             i_all_level=False,
+#             ver=10
+#         )
+#         shutil.copy(outfilenames[0], f'{rundir}/{var2}.dat.{bpname}.{runid}')
+#     pass
 
 # extract_schism(
 #     bpfiles=['/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp'],

@@ -68,31 +68,55 @@ class testAnimation:
         anim = animation.FuncAnimation(self.fig, self.animate, init_func=self.init,
                                        frames=self.nt, interval=100, blit=True)
 
-def transect_anim(bpfile=None, datafile=None, runids=None):
-    my_grid = schism_grid(bpfile)  # my_grid.save()
-    my_bp = Bpfile(datafile)
-    runids = runids
+def get_transect_shape_from_grid(gridfile=None, bpfile=None):
+    my_grid = schism_grid(gridfile)  # my_grid.save()
+    my_bp = Bpfile(bpfile)
 
     bp_dp = my_grid.interp(pxy=np.c_[my_bp.nodes[:, 0], my_bp.nodes[:, 1]])
     bp_x, _ = np.unique(range(my_bp.n_nodes), return_index=True)
 
+    return bp_dp, bp_x
+
+def get_datasets(runids=None):
     ths = []
     for runid in runids:
-        th = TimeHistory(file_name=f'/sciclone/schism10/feiye/ICOGS/{runid}/PostP/elev.dat.missi.{runid}',
-                        start_time_str='2021-05-01 00:00:00', sec_per_time_unit=86400)
+        runid1 = runid.split('RUN')[-1].strip()
+        th = TimeHistory(
+            # file_name=f'/sciclone/schism10/feiye/ICOGS/{runid}/PostP/elev.dat.missi.{runid}',
+            file_name=f'/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O{runid1}/elev.dat.missi.{runid}',
+            start_time_str='2021-05-01 00:00:00', sec_per_time_unit=86400
+        )
         ths.append(th)
 
     datasets = []
     for th, runid in zip(ths, runids):
         datasets.append(th.data[::1, :])
+    
+    return datasets
 
+
+def transect_anim(gridfile=None, bpfile=None, runids=None):
+    bp_dp, bp_x = get_transect_shape_from_grid(gridfile=gridfile, bpfile=bpfile)
+    datasets = get_datasets(runids=runids)
     vis = testAnimation(datasets, runids, bp_x, bp_dp)
     return vis
 
 if __name__ == "__main__":
+    bp_dp, bp_x = get_transect_shape_from_grid(
+        gridfile='/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz',
+        bpfile='/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp',
+    )
+    datasets = get_datasets(runids=['RUN23k', 'RUN23k1'])
+    plt.plot(bp_x, -bp_dp/10)
+    plt.plot(bp_x, datasets[0][0, :])
+    plt.plot(bp_x, datasets[0][191, :])
+    plt.plot(bp_x, datasets[1][0, :])
+    plt.plot(bp_x, datasets[1][191, :])
+    plt.show()
+
     transect_anim(
-        bpfile='/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz',
-        datafile='/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp',
+        gridfile='/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz',
+        bpfile='/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp',
         runids=['RUN10a', 'RUN10b', 'RUN10d', 'RUN10e', 'RUN10g']
     ).draw()
     # Note: below is the part which makes it work on Colab

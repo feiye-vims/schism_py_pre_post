@@ -45,6 +45,7 @@ class TimeHistory():
         self.data = None
         self.delta_t = -99999999.9
         self.datetime = None
+        self.sec_per_time_unit = sec_per_time_unit
 
         if file_name is None:
             self.df = pd.DataFrame(data_array)
@@ -54,17 +55,27 @@ class TimeHistory():
             self.df.columns = columns
 
         self.df.rename(columns={0: 'datetime'}, inplace=True)
+        self.df_propagate()  # populate vars from dataframe
 
+    def df_propagate(self):
         [self.n_time, self.n_station] = list(self.df.shape)
         self.n_station -= 1  # first col is time
-        self.time = self.df['datetime'].to_numpy()
-        self.datetime = [datetime.strptime(self.start_time_str, '%Y-%m-%d %H:%M:%S')
-                         + timedelta(seconds=x*sec_per_time_unit) for x in self.time]
-        self.df['datetime'] = self.datetime
-        # mask invalid values
+        if isinstance(self.df['datetime'][0], float):
+            self.time = self.df['datetime'].to_numpy()
+            self.datetime = [datetime.strptime(self.start_time_str, '%Y-%m-%d %H:%M:%S')
+                             + timedelta(seconds=x*self.sec_per_time_unit) for x in self.time]
+            self.df['datetime'] = self.datetime
+        elif isinstance(self.df['datetime'][0], datetime):
+            time_delta = self.df['datetime'] - self.df['datetime'][0]
+            self.time = numpy.array([x.total_seconds() for x in time_delta])
+            self.datetime = self.df['datetime']
+        else:
+            raise Exception('unknown datatype for the first column, neither datetime or float')
 
+
+        # mask invalid values
         self.data = self.df.iloc[:, 1:].to_numpy(dtype=float)
-        self.data[abs(self.data-float(mask_val)) < 1e-5] = numpy.nan
+        self.data[abs(self.data-float(self.mask_val)) < 1e-5] = numpy.nan
         print("Number of times: " + str(self.n_time))
         print("Number of stations: " + str(self.n_station))
 
@@ -263,8 +274,7 @@ class TimeHistory():
                            "\n")
 
     def writer(self, out_file_name):
-        self.data = self.df.iloc[:, 1:].to_numpy(dtype=float)
-        self.data[abs(self.data-float(self.mask_val)) < 1e-5] = numpy.nan
+        self.df_propagate()
         """ write self """
         with open(out_file_name, 'w') as fout:
             for i, _ in enumerate(self.time):

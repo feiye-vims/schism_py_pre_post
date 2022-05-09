@@ -507,12 +507,12 @@ if __name__ == "__main__":
     Sample usage:
     '''
 
-    # Sample 1: automatically fill missing vars with 0 for hotstart.nc of newer versions
-    my_hot = Hotstart(
-        grid_info='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/',
-        hot_file='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/hotstart.nc'
-    )
-    my_hot.writer(fname='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/New_fmt_convert/new_hotstart.nc')
+    # # Sample 1: automatically fill missing vars with 0 for hotstart.nc of newer versions
+    # my_hot = Hotstart(
+    #     grid_info='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/',
+    #     hot_file='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/hotstart.nc'
+    # )
+    # my_hot.writer(fname='/sciclone/data10/feiye/vims20/work/ChesBay/RUN110y/New_fmt_convert/new_hotstart.nc')
 
     # Sample 2: replacing variable values within a region
     # Sample 2.1: overwrite an existing hotstart.nc from another one on the same hgrid/vgrid
