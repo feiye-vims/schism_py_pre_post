@@ -97,7 +97,7 @@ def extract_schism(bpfiles=None, var=None, rundir=None, i_comb=None, stacks=None
 # pass
 
 # ChesBay transect
-bpfiles = ['/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/center_v3.bp']
+bpfiles = ['/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/side_w.bp']
 
 runid = 'RUN109x'
 vars = ['salt', 'zcor']
@@ -105,7 +105,7 @@ stacks = [1, 86]
 ver=9
 
 runid = 'RUN200p'
-vars = ['zCoordinates']
+vars = ['salinity', 'zCoordinates']
 stacks = [1, 255]
 ver=10
 

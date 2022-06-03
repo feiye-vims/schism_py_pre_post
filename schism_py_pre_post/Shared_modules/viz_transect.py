@@ -1,3 +1,4 @@
+#%%
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
 from pylib import schism_grid
 import numpy as np
@@ -100,20 +101,23 @@ def transect_anim(gridfile=None, bpfile=None, runids=None):
     datasets = get_datasets(runids=runids)
     vis = testAnimation(datasets, runids, bp_x, bp_dp)
     return vis
-
+#%%
 if __name__ == "__main__":
     bp_dp, bp_x = get_transect_shape_from_grid(
         gridfile='/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz',
         bpfile='/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp',
     )
-    datasets = get_datasets(runids=['RUN23k', 'RUN23k1'])
+    runids=['RUN23k', 'RUN23k5', 'RUN23k6', 'RUN23k1', 'RUN23k4', 'RUN23k7']
+    datasets = get_datasets(runids=runids)
+
     plt.plot(bp_x, -bp_dp/10)
     plt.plot(bp_x, datasets[0][0, :])
-    plt.plot(bp_x, datasets[0][191, :])
-    plt.plot(bp_x, datasets[1][0, :])
-    plt.plot(bp_x, datasets[1][191, :])
+    for i, runid in enumerate(runids):
+        plt.plot(bp_x, datasets[i][-1, :], label=runid)
+    plt.legend()
     plt.show()
 
+#%%
     transect_anim(
         gridfile='/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz',
         bpfile='/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp',
@@ -122,3 +126,5 @@ if __name__ == "__main__":
     # Note: below is the part which makes it work on Colab
     rc('animation', html='jshtml')
     anim
+
+# %%

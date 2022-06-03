@@ -291,20 +291,38 @@ class Levee_SMS_MAP(SMS_MAP):
                 self.offsetline_list.append(SMS_ARC(points=np.c_[x_off, y_off]))
         return SMS_MAP(arcs=self.subsampled_centerline_list), SMS_MAP(arcs=self.offsetline_list)
 
+def curvature(pts):
+    dx = np.gradient(pts[:,0]) # first derivatives
+    dy = np.gradient(pts[:,1])
+
+    d2x = np.gradient(dx) #second derivatives
+    d2y = np.gradient(dy)
+
+    cur = np.abs(dx * d2y - d2x * dy) / (dx * dx + dy * dy)**1.5
+
+    return cur
+
 def get_all_points_from_shp(fname):
     sf = shapefile.Reader(fname)
     shapes = sf.shapes()
 
     shape_pts_l2g = []
     xyz = np.empty((0, 2), dtype=float)
+    curv = np.empty((0, ), dtype=float)
     n = 0
     for i, shp in enumerate(shapes):
-        print(f'shp {i} of {len(shapes)}')
+        pts = np.array(shp.points)
+        curv = np.r_[curv, curvature(pts)]
+        # pts_cplx = np.array(pts).view(np.complex128)
+        # dl = abs(pts_cplx[2:-1] - pts_cplx[1:-2])
+
+        print(f'shp {i+1} of {len(shapes)}, {len(pts)} points')
+
         xyz = np.append(xyz, shp.points, axis=0)
         shape_pts_l2g.append(np.array(np.arange(n, n+len(shp.points))))
         n += len(shp.points)
 
-    return xyz, shape_pts_l2g
+    return xyz, shape_pts_l2g, curv
 
 def replace_shp_pts(inshp_fname, pts, l2g, outshp_fname):
     sf = shapefile.Reader(inshp_fname)
@@ -318,44 +336,6 @@ def replace_shp_pts(inshp_fname, pts, l2g, outshp_fname):
                 feature.shape.points = pts[l2g[i]]
                 w.shape(feature.shape)
 
-            
 
 if __name__ == '__main__':
-    river_bank_shpfname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank.shp'
-
-    river_banks_pts, l2g = get_all_points_from_shp(river_bank_shpfname)
-    # thalweg_pts, _ = get_all_points_from_shp('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_stream_redist.shp')
-    thalweg_buffer_pts, _ = get_all_points_from_shp('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_buffer_poly.shp')
-
-    tree = spatial.cKDTree(thalweg_buffer_pts)
-    mindist_bank_idx = tree.query(river_banks_pts)[1]
-
-    too_close_idx = find_pts_in_shpfiles(['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_buffer_poly.shp'], pts=river_banks_pts)
-    river_banks_pts[too_close_idx] = thalweg_buffer_pts[mindist_bank_idx[too_close_idx]]
-
-    # w = shapefile.Writer('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank_redist_nudged.shp')
-    # w.field('name', 'C')
-    # w.line(river_banks_pts[l2g])
-    # w.record('linestring1')
-    # w.close()
-
-    replace_shp_pts(
-        '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank.shp',
-        river_banks_pts, l2g,
-        '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank_nudged.shp',
-    )
-
-    np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/SC/SC_river_bank_redist_nudged.xyz', river_banks_pts)
-
-
-    river_resolution = np.maximum(50, np.minimum(300, river_widths*3))
-
-    np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/NJDE/NJDE_river_resolution.txt', np.c_[thalweg_pts, river_resolution])
-
-    my_map = SMS_MAP(filename='test.map')
-    my_map.writer('test_copy.map')
-
-    my_arc = SMS_ARC()
-    my_map = SMS_MAP(arcs=[my_arc])
-    my_map.writer()
     pass
