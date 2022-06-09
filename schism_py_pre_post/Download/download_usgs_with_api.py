@@ -159,11 +159,18 @@ def all_states_time_average(param_id=None, var=None, unit_conv=1, states=None,
         temperature = '00010'
         conductance = '00095', unit_conv = 0.001
     '''
+    
+    if os.path.exists(outfilename):
+        print(f'{outfilename} exists, skipping ...')
+        return
 
     if states is None:
         states = ['ME', 'NH', 'MA', 'RI', 'CT', 'NY', 'NJ', 'DE', 'PA', 'MD', 'VA', 'NC', 'SC', 'GA', 'FL', 'AL', 'MI', 'LA', 'TX']
     station_info_df = get_usgs_stations_from_state(states)
     station_ids = station_info_df["site_no"].to_list()
+
+    if not os.path.exists(os.path.dirname(outfilename)):
+        os.mkdir(os.path.dirname(outfilename))
 
     total_data = download_stations(param_id=param_id, var=var, station_ids=station_ids, datelist=datelist)
     write_time_average(input_data=total_data, param_id=param_id, unit_conv=unit_conv, outfilename=outfilename)

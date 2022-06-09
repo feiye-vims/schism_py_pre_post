@@ -1,18 +1,18 @@
 import numpy as np
 import os
 import schism_py_pre_post
-from schism_py_pre_post.hotstart_proc import Hotstart
+from schism_py_pre_post.Shared_modules.hotstart_proc import Hotstart
 from schism_py_pre_post.Download.download_usgs_with_api import get_usgs_obs_for_stofs3d
 from schism_py_pre_post.Download.download_cbp_with_api import get_cbp_obs_for_stofs3d
-from schism_py_pre_post.gen_subregion_ic2 import gen_subregion_ic_stofs3d
+from schism_py_pre_post.Shared_modules.gen_subregion_ic2 import gen_subregion_ic_stofs3d
 from schism_py_pre_post.Grid.Grid_geometry import find_points_in_polyshp
 from pylib import schism_grid
 from pathlib import Path
 
 
 # input section
-hotstart_date_str = '2003-09-08'
-wdir = '/sciclone/schism10/feiye/Coastal_Act/Hot/14a/'
+hotstart_date_str = '2017-04-27'
+wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/I11g/Hot/'
 griddir = wdir
 output_obs_dir = f'{wdir}/Obs/'
 hycom_TS_file = f'{wdir}/TS_1.nc'
