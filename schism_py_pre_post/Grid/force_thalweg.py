@@ -6,15 +6,17 @@ import copy
 
 
 if __name__ == '__main__':
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/TX_stream/'
-    original_grid_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/TX/'
+    # -------------------------------------------------------------------------
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/Combined_load_bathy/'
+    original_grid_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/Combined_load_bathy/'
 
     # thalweg
-    thalweg_grd_name = f'{wdir}/TX_stream_redist_50m.2dm'
+    thalweg_grd_name = f'{wdir}/merged_thalwegs_redist100m.2dm'
     # thalweg buffer
-    thalweg_buffer_poly_shpfname = f'{wdir}/TX_stream_34m_buffer_poly.shp'
+    thalweg_buffer_poly_shpfname = f'{wdir}/stream_redist_100m_buf_34m.shp'
     # full grid with bathymetry loaded
     full_grid_name = f'{original_grid_dir}/hgrid.utm.26918.gr3'
+    # -------------------------------------------------------------------------
 
     full_gd = schism_grid(full_grid_name)
     thalweg_gd = sms2grd(thalweg_grd_name)
@@ -41,9 +43,9 @@ if __name__ == '__main__':
     full_gd.x, full_gd.y = full_gd.proj(prj0='epsg:26918', prj1='epsg:4326')
     full_gd.save(f'{wdir}/hgrid.thalweg.ll')
 
-    print('writing hgrid in cpp ...\n')
-    full_gd.x, full_gd.y = full_gd.proj(prj0='epsg:4326', prj1='cpp', lon0=-77.07, lat0=24)
-    full_gd.save(f'{wdir}/hgrid.thalweg.cpp.gr3')
-    full_gd.write_hgrid(f'{wdir}/hgrid.thalweg.cpp')
+    # print('writing hgrid in cpp ...\n')
+    # full_gd.x, full_gd.y = full_gd.proj(prj0='epsg:4326', prj1='cpp', lon0=-77.07, lat0=24)
+    # full_gd.save(f'{wdir}/hgrid.thalweg.cpp.gr3')
+    # full_gd.write_hgrid(f'{wdir}/hgrid.thalweg.cpp')
 
     pass

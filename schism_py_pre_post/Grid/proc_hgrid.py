@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 # %%
-file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/TX/TX.2dm'
+file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/Combined/Combined.2dm'
 dirname = os.path.dirname(file_2dm)
 
 # %%

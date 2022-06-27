@@ -5,7 +5,7 @@ from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, replace_shp_pts
 
 
 if __name__ == '__main__':
-    state = 'NH'
+    state = 'NC'
     # original
     river_bank_shpfname = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/{state}/{state}_bank.shp'
     # based on redistributed arc pts

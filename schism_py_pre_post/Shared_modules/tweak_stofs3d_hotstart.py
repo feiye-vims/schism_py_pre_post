@@ -11,8 +11,8 @@ from pathlib import Path
 
 
 # input section
-hotstart_date_str = '2017-04-27'
-wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/I11g/Hot/'
+hotstart_date_str = '2021-05-01'
+wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/I24a/Hot/'
 griddir = wdir
 output_obs_dir = f'{wdir}/Obs/'
 hycom_TS_file = f'{wdir}/TS_1.nc'

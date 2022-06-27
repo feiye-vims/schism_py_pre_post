@@ -6,9 +6,9 @@ import numpy as np
 
 if __name__ == "__main__":
     # input section
-    wdir = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/'
-    hycom_hot_file = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/hotstart.nc.0'
-    my_hot_file = '/sciclone/schism10/feiye/From_Nabi/RUN02/Hotstart_v1/hotstart.nc'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/v4_20220627_update/Replace_hot_in_region/'
+    hycom_hot_file = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/v4_20220627_update/Replace_hot_in_region/hotstart.nc.hycom'
+    my_hot_file = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/v4_20220627_update/Replace_hot_in_region/'
     # end input section
     
     if os.path.exists(my_hot_file):

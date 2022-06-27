@@ -1,4 +1,4 @@
-from climata.usgs import InstantValueIO, SiteIO  # pip install climata (mannually define a class "SiteIOIV" in __init__.py)
+from climata.usgs import InstantValueIO, SiteIO
 import pandas as pd
 import numpy as np
 import gsw
@@ -91,6 +91,9 @@ class GenericObsData():
 
 def download_stations(param_id=None, var=None, station_ids=[], datelist=pd.date_range(start='2000-01-01', end='2000-01-02')):
     stations_chunk_size = 200
+
+    if type(station_ids) is np.ndarray:
+        station_ids = station_ids.tolist()
 
     print(f'station ids: {station_ids}\n')
     print(f'var: {var}\n')
