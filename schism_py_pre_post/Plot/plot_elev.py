@@ -12,6 +12,7 @@ from scipy.interpolate import griddata  # , interp2d
 import math
 import os
 import glob
+import pickle
 
 
 def get_hycom_elev(noaa_stations=None, station_in_file=None, hycom_file=None):
@@ -102,29 +103,39 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
     return model_df
 
 
-def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_datum='NAVD'):
-    # NOAA obs
-    noaa_df_list = []
-    datum_list = []
-    station_data = []
-    for i, st in enumerate(noaa_stations):
-        print(f'Processing Station {i+1} of {len(noaa_stations)}: {st}')
-        noaa_data = noaa.Station(st)
-        station_data.append(noaa_data)
-        try:
-            noaa_df_list.append(noaa_data.get_data(begin_date=plot_start_day_str.replace("-", "")[:-3],
-                                end_date=plot_end_day_str.replace("-", "")[:-3],
-                                product="water_level", datum=default_datum, units="metric", time_zone="gmt", interval='h'))
-            datum_list.append(default_datum)
-        except Exception:
+def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_datum='NAVD', cache_folder='./'):
+
+    cache_filename = f"{cache_folder}/COOPS_{plot_start_day_str.replace(' ','_')}_{plot_end_day_str.replace(' ','_')}_{'.'.join(noaa_stations)}_{default_datum}.pkl"
+
+    if os.path.exists(cache_filename):
+        with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
+            noaa_df_list, datum_list, station_data = pickle.load(f)
+            print(f'Existing obs data read from {cache_filename}')
+    else:  # download NOAA COOPS obs
+        noaa_df_list = []
+        datum_list = []
+        station_data = []
+        for i, st in enumerate(noaa_stations):
+            print(f'Processing Station {i+1} of {len(noaa_stations)}: {st}')
+            noaa_data = noaa.Station(st)
+            station_data.append(noaa_data)
             try:
                 noaa_df_list.append(noaa_data.get_data(begin_date=plot_start_day_str.replace("-", "")[:-3],
                                     end_date=plot_end_day_str.replace("-", "")[:-3],
-                                    product="water_level", datum="MSL", units="metric", time_zone="gmt", interval='h'))
-                datum_list.append("MSL")
+                                    product="water_level", datum=default_datum, units="metric", time_zone="gmt", interval='h'))
+                datum_list.append(default_datum)
             except Exception:
-                noaa_df_list.append(None)
-                datum_list.append(None)
+                try:
+                    noaa_df_list.append(noaa_data.get_data(begin_date=plot_start_day_str.replace("-", "")[:-3],
+                                        end_date=plot_end_day_str.replace("-", "")[:-3],
+                                        product="water_level", datum="MSL", units="metric", time_zone="gmt", interval='h'))
+                    datum_list.append("MSL")
+                except Exception:
+                    noaa_df_list.append(None)
+                    datum_list.append(None)
+        with open(cache_filename, 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump([noaa_df_list, datum_list, station_data], f)
+
     return [noaa_df_list, datum_list, station_data]
 
 

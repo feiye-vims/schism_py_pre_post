@@ -138,10 +138,12 @@ if __name__ == "__main__":
     other_shifts = [0]
 
     datum = ''  # '' (use predefined ones in ecgc_stations), 'NAVD', 'MSL'
-    outfilename_suffix = 'Mostly_NAVD'  # 'Mostly_NAVD': note some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
+    outfilename_suffix = 'Mostly_NAVD'  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
 
     with open('coastal_act_stats_plot_symbols.json') as d:
         plot_symbol_dict = json.load(d)
+
+    cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
     # --end inputs-------------------------------------------------------------------------------
 
     for hurricane in hurricanes:
@@ -164,7 +166,7 @@ if __name__ == "__main__":
             stations_groups, default_datums = subset_stations_in_box(box, station_bp_file, group_name=region, default_datum=datum)
 
         # ---------------------------------------------------------------------------------
-        # # Manually overwrite the parameters read from '*.json'
+        # # Manually override the parameters read from '*.json', only for testing
         # overwrite default_datums
         if datum is not None and datum != '':
             for key in default_datums:
@@ -203,7 +205,8 @@ if __name__ == "__main__":
                 plot_start_day_str=plot_start_day_str,
                 plot_end_day_str=plot_end_day_str,
                 noaa_stations=stations_groups[group_name],
-                default_datum=default_datums[group_name]
+                default_datum=default_datums[group_name],
+                cache_folder=cache_folder
             )
 
             # plot time series

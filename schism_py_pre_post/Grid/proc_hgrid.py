@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 # %%
-file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/Combined/Combined.2dm'
+file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/LA1.0/LA1.0.2dm'
 dirname = os.path.dirname(file_2dm)
 
 # %%
@@ -25,7 +25,7 @@ pass
 
 # %% load bathymetry
 # os.chdir(dirname)
-# os.system('mpirun ../pload_depth.py')
+# os.system('mpirun ./pload_depth.py')
 
 # %%
 os.system(f'mv {dirname}/hgrid.ll.new {dirname}/hgrid.ll')
