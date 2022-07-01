@@ -4,7 +4,22 @@ from pylib import loadz
 from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP
 import numpy as np
 import copy
+import os
 import math
+from osgeo import gdal
+from dataclasses import dataclass
+import pathlib
+
+
+@dataclass
+class dem_data():
+     x: np.ndarray
+     y: np.ndarray
+     lon: np.ndarray
+     lat: np.ndarray
+     elev: np.ndarray
+     dx: float
+     dy: float
 
 
 # %%
@@ -21,8 +36,21 @@ def Sidx(S, x, y):
     j = (np.round((y - S.lat[0]) / dSy)).astype(int)
     return [i, j]
 
+def improve_thalwegs(S, x, y, xt_left, yt_left, xt_right, yt_right, search_steps=200):
+    xts = np.linspace(xt_left, xt_right, search_steps, axis=1)
+    yts = np.linspace(yt_left, yt_right, search_steps, axis=1)
+
+    jj, ii = Sidx(S, xts[:], yts[:])
+    elevs = S.elev[ii, jj]
+    real_thalweg_idx = np.argmin(elevs, axis=1)
+
+    x_real = xts[np.array(range(len(xts))), real_thalweg_idx]
+    y_real = yts[np.array(range(len(yts))), real_thalweg_idx]
+    
+    return [x_real, y_real]
+
 # %%
-def get_bank(S, x, y, xt, yt, search_steps=30, search_tolerance=5, water_depth=1.3):
+def get_bank(S, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
     '''Get a bank on one side of the thalweg (x, y)'''
     # search_steps_tile = np.repeat(np.arange(search_steps).reshape(1, -1), len(x), axis=0)  # expanded to the search area
 
@@ -31,13 +59,13 @@ def get_bank(S, x, y, xt, yt, search_steps=30, search_tolerance=5, water_depth=1
     yts = np.linspace(y, yt, search_steps, axis=1)
 
     j, i = Sidx(S, x, y)
-    elevs_stream = np.tile(S.elev[i, j].reshape(-1, 1), (1, search_steps))  # elev on thalweg, expanded to the search area
-    depths = np.ones(elevs_stream.shape) * water_depth  # preset waterdepth, expanded to the search area
+    elevs_thalweg = np.ones(S.elev[i, j].shape) * eta  # elev on thalweg
+    elevs_stream = np.tile(elevs_thalweg.reshape(-1, 1), (1, search_steps))  # expanded to the search area
 
     jj, ii = Sidx(S, xts[:], yts[:])
     elevs = S.elev[ii, jj]
 
-    R = abs(elevs - elevs_stream - depths)  # closeness to target depth: 0-1
+    R = abs(elevs - elevs_stream)  # closeness to target depth: 0-1
     R_sort_idx = np.argsort(R)
     bank_idx = np.min(R_sort_idx[:, :min(search_steps, search_tolerance)], axis=1)
 
@@ -78,7 +106,7 @@ def smooth_bank(xs, ys, ang_diff_shres=np.pi/2.5, nmax=100):
         
     return xs, ys
 
-def nudge_bank(line, perp, xs, ys, dist=np.array([35/100000, 80/100000])):
+def nudge_bank(line, perp, xs, ys, dist=np.array([35, 500])):
     ds = ((line[:, 0] - xs)**2 + (line[:, 1] - ys)**2)**0.5
 
     idx = ds < dist[0]
@@ -91,12 +119,61 @@ def nudge_bank(line, perp, xs, ys, dist=np.array([35/100000, 80/100000])):
 
     return xs, ys
 
-if __name__ == "__main__":
-    # %%
-    xyz, l2g, curv = get_all_points_from_shp('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/stream4.shp')
-    bank_arcs = []
+def Tif2XYZ(tif_fname=None):
+    ds = gdal.Open(tif_fname, gdal.GA_ReadOnly)
+    band = ds.GetRasterBand(1)
 
-    for idx in l2g:
+    width = ds.RasterXSize
+    height = ds.RasterYSize
+
+    gt = ds.GetGeoTransform()
+    TL_x, TL_y = gt[0], gt[3]
+
+    #showing a 2D image of the topo
+    # plt.imshow(elevation, cmap='gist_earth',extent=[minX, maxX, minY, maxY])
+    # plt.show()
+
+    z = band.ReadAsArray()
+
+    dx = gt[1]
+    dy = gt[5]
+    if gt[2] != 0 or gt[4] != 0:
+        raise Exception()
+
+    x_idx = np.array(range(width))
+    y_idx = np.array(range(height))
+    xp = dx * x_idx + TL_x + dx/2
+    yp = dy * y_idx + TL_y + dy/2
+
+    S = dem_data(xp, yp, xp, yp, z, dx, dy)
+
+    return S
+
+if __name__ == "__main__":
+    # tif_fname = r'/sciclone/data10/wangzg/DEM/npz/sc_ll_7.npz'  # directory of DEM data
+    tif_fname = 'LA_CONED_merged_3_UTM15_5m.tif'
+    search_steps = 100
+    river_threshold = np.array([35, 500])
+    
+    # %%
+    if pathlib.Path(tif_fname).suffix == ".npz":
+        S = loadz(tif_fname)
+    elif pathlib.Path(tif_fname).suffix == ".tif" : 
+        S = Tif2XYZ(tif_fname=tif_fname)
+    else:
+        raise Exception("Unknown DEM format.")
+
+    # %%
+    xyz, l2g, curv = get_all_points_from_shp('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_test.shp')
+
+    range_arcs = []
+    bank_arcs = []
+    improved_thalweg_arcs = []
+    search_length = river_threshold[1] * 1.1
+
+    for i, idx in enumerate(l2g):
+        print(f'Arc {i+1} of {len(l2g)}')
+        
         line = xyz[idx, :]
 
         line_cplx = np.squeeze(line.view(np.complex128))
@@ -109,23 +186,14 @@ if __name__ == "__main__":
         perp = np.r_[angles[0] - np.pi / 2, perp, angles[-1] - np.pi / 2]
 
         # %%
-        search_length = 100 / 100000
-
         xt_right = line[:, 0] + search_length * np.cos(perp)
         yt_right = line[:, 1] + search_length * np.sin(perp)
 
         xt_left = line[:, 0] + search_length * np.cos(perp + np.pi)
         yt_left = line[:, 1] + search_length * np.sin(perp + np.pi)
 
-        map = SMS_MAP(
-            arcs=[SMS_ARC(points=np.c_[xt_left, yt_left]), SMS_ARC(points=np.c_[xt_right, yt_right])]
-        )
-        map.writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/hats.map')
+        range_arcs += [SMS_ARC(points=np.c_[xt_left, yt_left]), SMS_ARC(points=np.c_[xt_right, yt_right])]
 
-        # %%
-        sdir = r'/sciclone/data10/wangzg/DEM/npz'  # directory of DEM data
-        fname = 'sc_ll_7.npz'
-        S = loadz(f'{sdir}/{fname}')
         # %%
         dx = S.lon[1] - S.lon[0]
         dy = S.lat[1] - S.lat[0]
@@ -134,20 +202,29 @@ if __name__ == "__main__":
         x = line[:, 0]
         y = line[:, 1]
         # %%
-        x_banks_left, y_banks_left = get_bank(S, x, y, xt_left, yt_left)
-        x_banks_left, y_banks_left = nudge_bank(line, perp+np.pi, x_banks_left, y_banks_left)
+        x, y = improve_thalwegs(S, x, y, xt_left, yt_left, xt_right, yt_right, search_steps=int(0.2*search_steps))
+        improved_thalweg_arcs += [SMS_ARC(points=np.c_[x, y])]
+
+        thalweg_eta = np.maximum(0.0, (y - 3313760.0))/(3367300.0 - 3313760.0) * 8
+
+        x_banks_left, y_banks_left = get_bank(S, x, y, thalweg_eta, xt_left, yt_left, search_steps=search_steps)
+        x_banks_left, y_banks_left = nudge_bank(line, perp+np.pi, x_banks_left, y_banks_left, dist=river_threshold)
         x_banks_left, y_banks_left = smooth_bank(x_banks_left, y_banks_left)
 
-        x_banks_right, y_banks_right = get_bank(S, x, y, xt_right, yt_right)
-        x_banks_right, y_banks_right = nudge_bank(line, perp, x_banks_right, y_banks_right)
+        x_banks_right, y_banks_right = get_bank(S, x, y, thalweg_eta, xt_right, yt_right, search_steps=search_steps)
+        x_banks_right, y_banks_right = nudge_bank(line, perp, x_banks_right, y_banks_right, dist=river_threshold)
         x_banks_right, y_banks_right = smooth_bank(x_banks_right, y_banks_right)
 
 
         bank_arcs.append(SMS_ARC(points=np.c_[x_banks_left, y_banks_left]))
         bank_arcs.append(SMS_ARC(points=np.c_[x_banks_right, y_banks_right]))
 
+    SMS_MAP(arcs=improved_thalweg_arcs).writer(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_improved_thalwegs.map')
+    map = SMS_MAP(arcs=range_arcs)
+    map.writer(filename=f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_test_range.map')
+
     map = SMS_MAP(arcs=bank_arcs)
-    map.writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/hats.map')
+    map.writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_test_bank.map')
 
     # %%
     pass

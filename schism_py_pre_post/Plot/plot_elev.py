@@ -105,7 +105,7 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
 
 def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_datum='NAVD', cache_folder='./'):
 
-    cache_filename = f"{cache_folder}/COOPS_{plot_start_day_str.replace(' ','_')}_{plot_end_day_str.replace(' ','_')}_{'.'.join(noaa_stations)}_{default_datum}.pkl"
+    cache_filename = f"{cache_folder}/COOPS_{plot_start_day_str.replace(' ','_')}_{plot_end_day_str.replace(' ','_')}_{len(noaa_stations)}_stations_{'-'.join([noaa_stations[0], noaa_stations[-1]])}_{default_datum}.pkl"
 
     if os.path.exists(cache_filename):
         with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
