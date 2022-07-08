@@ -292,13 +292,16 @@ class Levee_SMS_MAP(SMS_MAP):
         return SMS_MAP(arcs=self.subsampled_centerline_list), SMS_MAP(arcs=self.offsetline_list)
 
 def curvature(pts):
-    dx = np.gradient(pts[:,0]) # first derivatives
-    dy = np.gradient(pts[:,1])
+    if len(pts[:, 0]) < 3:
+        cur = np.zeros((len(pts[:, 0])))
+    else:
+        dx = np.gradient(pts[:,0]) # first derivatives
+        dy = np.gradient(pts[:,1])
 
-    d2x = np.gradient(dx) #second derivatives
-    d2y = np.gradient(dy)
+        d2x = np.gradient(dx) #second derivatives
+        d2y = np.gradient(dy)
 
-    cur = np.abs(dx * d2y - d2x * dy) / (dx * dx + dy * dy)**1.5
+        cur = np.abs(dx * d2y - d2x * dy) / (dx * dx + dy * dy)**1.5
 
     return cur
 

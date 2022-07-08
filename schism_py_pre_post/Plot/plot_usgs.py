@@ -23,20 +23,29 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
     return downloaded_data
 
 model_start_day_str = '2021-05-01 00:00:00'
-plot_start_day_str = '2021-07-24 00:00:00'
-plot_end_day_str = '2021-08-01 00:00:00'
+plot_start_day_str = '2021-05-01 00:00:00'
+plot_end_day_str = '2021-06-01 00:00:00'
 station_bp_file = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Stations/USGS_station.bp'
-elev_out_file = '/sciclone/schism10/feiye/STOFS3D-v5/Outputs/O24a/fort.18'
+elev_out_files = {'RUN24a': '/sciclone/schism10/feiye/STOFS3D-v5/Outputs/O24a/fort.18',
+                  'RUN01b': '/sciclone/schism10/feiye/STOFS3D-v5/Outputs/O01b_JZ/fort.18'}
+mod_run_colors = ['b', 'g', 'k']
 
-mod = get_hindcast_elev(
-    model_start_day_str=model_start_day_str,
-    noaa_stations=None,
-    station_in_file=station_bp_file,
-    elev_out_file=elev_out_file,
-    sec_per_time_unit=86400
-)
-time_stamps = [x.replace(tzinfo=pytz.UTC) for x in mod.index]
-station_ids = mod.columns.values[:]
+mod_run_ids = list(elev_out_files.keys())
+
+mods = []
+for id in mod_run_ids:
+    elev_out_file = elev_out_files[id]
+    mods.append(
+        get_hindcast_elev(
+            model_start_day_str=model_start_day_str,
+            noaa_stations=None,
+            station_in_file=station_bp_file,
+            elev_out_file=elev_out_file,
+            sec_per_time_unit=86400
+        )
+    )
+time_stamps = [x.replace(tzinfo=pytz.UTC) for x in mods[0].index]
+station_ids = mods[0].columns.values[:]
 
 cache_file = f"{Cache_folder}/usgs_{plot_start_day_str.replace(' ', '_')}-{plot_end_day_str.replace(' ','_')}.pkl"
 if os.path.exists(cache_file):
@@ -68,7 +77,8 @@ for ichunk, chunk in enumerate(chunks(requested_data, n_subplot_col * n_subplot_
             ax[n].plot(obs_date, (data.df['value'] - data.df['value'].mean()) * feet2meters, 'r.', label='obs')
             if data.station_info['id'] != station_id:
                 raise Exception('Station ids for obs and mod do not match')
-        ax[n].plot(mod.index, (mod[station_id] - mod[station_id].mean()), 'b', label='mod')
+        for i, [mod_run_id, mod] in enumerate(zip(mod_run_ids, mods)):
+            ax[n].plot(mod.index, (mod[station_id] - mod[station_id].mean()), mod_run_colors[i], label=mod_run_id)
 
         ax[n].title.set_text(station_id)
         ax[n].tick_params(labelrotation=20)

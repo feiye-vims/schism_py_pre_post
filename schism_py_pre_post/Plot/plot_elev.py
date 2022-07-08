@@ -105,38 +105,50 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
 
 def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_datum='NAVD', cache_folder='./'):
 
-    cache_filename = f"{cache_folder}/COOPS_{plot_start_day_str.replace(' ','_')}_{plot_end_day_str.replace(' ','_')}_{len(noaa_stations)}_stations_{'-'.join([noaa_stations[0], noaa_stations[-1]])}_{default_datum}.pkl"
+    noaa_df_list = []
+    datum_list = []
+    station_data_list = []
+    for i, st in enumerate(noaa_stations):
+        print(f'Processing Station {i+1} of {len(noaa_stations)}: {st}')
 
-    if os.path.exists(cache_filename):
-        with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
-            noaa_df_list, datum_list, station_data = pickle.load(f)
-            print(f'Existing obs data read from {cache_filename}')
-    else:  # download NOAA COOPS obs
-        noaa_df_list = []
-        datum_list = []
-        station_data = []
-        for i, st in enumerate(noaa_stations):
-            print(f'Processing Station {i+1} of {len(noaa_stations)}: {st}')
-            noaa_data = noaa.Station(st)
-            station_data.append(noaa_data)
+        cache_filename = f"{cache_folder}/COOPS_{plot_start_day_str.replace(' ','_')}_{plot_end_day_str.replace(' ','_')}_{st}_requested_{default_datum}.pkl"
+        if os.path.exists(cache_filename):
+            with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
+                this_noaa_df, this_datum, station_data = pickle.load(f)
+                print(f'Existing obs data read from {cache_filename}')
+        else:
             try:
-                noaa_df_list.append(noaa_data.get_data(begin_date=plot_start_day_str.replace("-", "")[:-3],
-                                    end_date=plot_end_day_str.replace("-", "")[:-3],
-                                    product="water_level", datum=default_datum, units="metric", time_zone="gmt", interval='h'))
-                datum_list.append(default_datum)
+                station_data = noaa.Station(st)
+            except:  # JSONDecodeError
+                raise Exception("Got JSONDecodeError, possible unstable network from COOPS server")
+
+            try:
+                this_noaa_df = station_data.get_data(
+                    begin_date=plot_start_day_str.replace("-", "")[:-3],
+                    end_date=plot_end_day_str.replace("-", "")[:-3],
+                    product="water_level", datum=default_datum, units="metric", time_zone="gmt", interval='h'
+                )
+                this_datum = default_datum
             except Exception:
                 try:
-                    noaa_df_list.append(noaa_data.get_data(begin_date=plot_start_day_str.replace("-", "")[:-3],
-                                        end_date=plot_end_day_str.replace("-", "")[:-3],
-                                        product="water_level", datum="MSL", units="metric", time_zone="gmt", interval='h'))
-                    datum_list.append("MSL")
+                    this_noaa_df = station_data.get_data(
+                        begin_date=plot_start_day_str.replace("-", "")[:-3],
+                        end_date=plot_end_day_str.replace("-", "")[:-3],
+                        product="water_level", datum="MSL", units="metric", time_zone="gmt", interval='h'
+                    )
+                    this_datum = "MSL"
                 except Exception:
-                    noaa_df_list.append(None)
-                    datum_list.append(None)
-        with open(cache_filename, 'wb') as f:  # Python 3: open(..., 'wb')
-            pickle.dump([noaa_df_list, datum_list, station_data], f)
+                    this_noaa_df = None
+                    this_datum = None
 
-    return [noaa_df_list, datum_list, station_data]
+            with open(cache_filename, 'wb') as f:  # Python 3: open(..., 'wb')
+                pickle.dump([this_noaa_df, this_datum, station_data], f)
+
+        noaa_df_list.append(this_noaa_df)
+        datum_list.append(this_datum)
+        station_data_list.append(station_data)
+
+    return [noaa_df_list, datum_list, station_data_list]
 
 
 def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day_str,
@@ -192,7 +204,6 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
         mask = (mod_df.index > plot_start_day_str) & (mod_df.index <= plot_end_day_str)
         mod_df = mod_df.loc[mask]
 
-        # if False:
         if (datum_list[i] == 'MSL'):
             obs_df = obs_df - obs_df.mean()
             mod_df = mod_df - mod_df.mean()
@@ -247,6 +258,7 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
         'station_lon': [x.lat_lon['lon'] for x in station_info],
         'station_lat': [x.lat_lon['lat'] for x in station_info],
         'RMSE': [float(x['RMSE']) for x in stats],
+        'ubRMSE': [float(x['ubRMSE']) for x in stats],
         'MAE': [float(x['MAE']) for x in stats],
         'Bias': [float(x['Bias']) for x in stats],
         'CC': [float(x['CC']) for x in stats],
@@ -260,12 +272,12 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
 def plot_operation():
     os.system("rm stat*.txt *.png")
     # time
-    plot_start_day_str = '2022-05-02 00:00:00'
-    plot_end_day_str = '2022-05-13 00:00:00'
+    plot_start_day_str = '2022-06-02 00:00:00'
+    plot_end_day_str = '2022-07-05 00:00:00'
 
-    forecast_end_day_str = '2022-05-11 00:00:00'  # corresponding to folder name
+    forecast_end_day_str = '2022-07-03 00:00:00'  # corresponding to folder name
     fcst_folder = '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/'
-    remote_dir = '$cdir/srv/www/htdocs/yinglong/feiye/ICOGS/STOFS-3D_fcst/2022_05_10/'
+    remote_dir = '$cdir/srv/www/htdocs/yinglong/feiye/ICOGS/STOFS-3D_fcst/2022_07_03/'
 
     # station presets>>
     # stations, ICOGS v2 and v3>
@@ -275,12 +287,12 @@ def plot_operation():
         'Florida': noaa_stations_all[:10],
         'Atlantic': noaa_stations_all[10:29],
         'GoME': noaa_stations_all[29:39],
-        'GoMX_west': noaa_stations_all[40:60],
+        'GoMX_west': noaa_stations_all[41:60],
         'GoMX_east': noaa_stations_all[60:80],
         'Atlantic_inland1': noaa_stations_all[80:100],
         'Atlantic_inland2': noaa_stations_all[100:120],
         'GoMX_inland': noaa_stations_all[120:150],
-        'Puerto_Rico': noaa_stations_all[150:163]
+        'Puerto_Rico': noaa_stations_all[150:164] + noaa_stations_all[39:41]
     }
     default_datums = {
         'Florida': 'NAVD',

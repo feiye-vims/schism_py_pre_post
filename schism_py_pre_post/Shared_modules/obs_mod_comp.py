@@ -86,27 +86,38 @@ class obs_mod_comp():
 
         i_valid = np.logical_not((np.isnan(self.mod_interp_df['value'].to_numpy())) | np.isnan(self.obs_df['value'].to_numpy()))
         if np.any(i_valid):
-            yhat = self.mod_interp_df['value'][i_valid].to_numpy()
-            y = self.obs_df['value'][i_valid].to_numpy()
+            yhat = self.mod_interp_df['value'][i_valid].to_numpy()  # prediction
+            y = self.obs_df['value'][i_valid].to_numpy()  # observation
+
+            yhat_demeaned = yhat - np.mean(yhat)
+            y_demeaned = y - np.mean(y)
+
             d = yhat - y
 
             mae = metrics.mean_absolute_error(y, yhat)
+
             mse = metrics.mean_squared_error(y, yhat)
             rmse = np.sqrt(mse)
+
+            un_biased_mse = metrics.mean_squared_error(y_demeaned, yhat_demeaned)
+            unbiased_rmse = np.sqrt(un_biased_mse)
+
             CC = np.corrcoef(y, yhat)[0, 1]
 
             stats_dict = {
                 'Bias': np.mean(d),
                 'MAE': mae,
                 'RMSE': rmse,
-                'CC': CC
+                'CC': CC,
+                'ubRMSE': unbiased_rmse,
             }
         else:
             stats_dict = {
                 'Bias': np.nan,
                 'MAE': np.nan,
                 'RMSE': np.nan,
-                'CC': np.nan
+                'CC': np.nan,
+                'ubRMSE': np.nan,
             }
 
         self.stats_dict = stats_dict

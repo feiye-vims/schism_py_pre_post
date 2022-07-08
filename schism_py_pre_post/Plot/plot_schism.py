@@ -5,7 +5,7 @@ from pylib import schism_grid, grd2sms
 import copy
 
 
-for i, file_id in enumerate(range(83, 87)):
+for i, file_id in enumerate(range(83, 91)):
     print(i)
     ds = xarray.open_dataset(f'/sciclone/scr10/feiye/STOFS3D-v5/RUN24a/outputs/out2d_{file_id}.nc')
     if i==0:
@@ -22,8 +22,9 @@ for i, file_id in enumerate(range(83, 87)):
 
 # ME_01049300 = (1778898, 1412496, 1397082, 1352813, 1367590)
 # LA_08042522 = (578203,)
-LA_08030540 = (598585, 547975, 501620, 532565, 444206, 337719, 269403)
-for nd in LA_08030540:
+# LA_08030540 = (598585, 547975, 501620, 532565, 444206, 337719, 269403)
+LA_MS = (267871, 296224, 349788)
+for nd in LA_MS:
     plt.plot(elev[:, nd-1], label=f'{nd}')
     plt.legend()
 plt.show()

@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 # %%
-file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/LA1.0/LA1.0.2dm'
+file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/Combined_1.2.2/v5_1.2.2.2dm'
 dirname = os.path.dirname(file_2dm)
 
 # %%
@@ -39,6 +39,8 @@ gd.x = utm_x
 gd.y = utm_y
 gd.dp = gd_ll_loaded.dp
 gd.write_hgrid(f'{dirname}/hgrid.utm.26918')
+os.chdir(dirname)
+os.system('ln -s hgrid.utm.26918 hgrid.utm.26918.gr3')
 
 grd2sms(gd, file_2dm)
 pass
