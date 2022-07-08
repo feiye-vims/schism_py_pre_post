@@ -133,17 +133,17 @@ if __name__ == "__main__":
     #    inputs
     # ---------------------------------------------------------------------------------
     hurricanes = ['Year2015']
-    main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
+    main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d_test.json'  # 'coastal_act_stats_period_3D_1st_round.json'
 
     region = "Full_domain"  # "Landfall_region", "Full_domain", "Manual"
     var_str = 'MAE'
-    nday_moving_average = 3
+    nday_moving_average = 0
 
     with open(main_dict) as d:
         hurricane_dict = json.load(d)
     station_bp_file = hurricane_dict['All']['station_bp_file']
 
-    other_dicts_files = ['/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
+    other_dicts_files = ['/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json']  # ['coastal_act_stats_period_3D_others.json']
     other_line_styles = ['g']
     other_shifts = [0]
 
