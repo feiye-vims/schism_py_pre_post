@@ -142,10 +142,12 @@ if __name__ == "__main__":
     with open(main_dict) as d:
         hurricane_dict = json.load(d)
     station_bp_file = hurricane_dict['All']['station_bp_file']
+    station_subset = range(164)
 
     other_dicts_files = ['/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json']  # ['coastal_act_stats_period_3D_others.json']
     other_line_styles = ['g']
     other_shifts = [0]
+    other_subsets = [None]
 
     datum = ''  # '' (use predefined ones in ecgc_stations), 'NAVD', 'MSL'
     outfilename_suffix = 'Mostly_NAVD'  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
@@ -207,7 +209,8 @@ if __name__ == "__main__":
                 model_start_day_str=model_start_day_str,
                 noaa_stations=None,
                 station_in_file=station_bp_file,
-                elev_out_file=elev_out_file
+                elev_out_file=elev_out_file,
+                station_in_subset=station_subset,
             )
 
             # get obs
@@ -228,12 +231,13 @@ if __name__ == "__main__":
             write_stat(stat, f'stats_{runid}_{group_name}.txt')
 
             if len(other_dicts) > 0:
-                for i, [other_runid, other_dict, other_line_style, other_shift] in enumerate(zip(other_runids, other_dicts, other_line_styles, other_shifts)):
+                for i, [other_runid, other_dict, other_line_style, other_shift, other_subset] in enumerate(zip(other_runids, other_dicts, other_line_styles, other_shifts, other_subsets)):
                     other_mod = get_hindcast_elev(
                         model_start_day_str=other_dict[hurricane]['model_start_day_str'],
                         noaa_stations=None,
                         station_in_file=station_bp_file,
-                        elev_out_file=other_dict[hurricane]['elev_out_file']
+                        elev_out_file=other_dict[hurricane]['elev_out_file'],
+                        station_in_subset=other_subset
                     )
                     other_stat, _ = plot_elev(obs, other_mod, plot_start_day_str, plot_end_day_str,
                                               stations_groups[group_name],

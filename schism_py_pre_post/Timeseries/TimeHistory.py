@@ -245,13 +245,25 @@ class TimeHistory():
         self.data[abs(self.data-float(self.mask_val)) < 1e-5] = numpy.nan
         self.data = self.data * unit_conv
 
-    def export_subset(self, station_idx, time_idx, i_reset_time, subset_filename):
+    def export_subset(self, station_idx=None, time_idx=None, i_reset_time=False, subset_filename=None):
+        import os
         """extract a subset from the original *.th"""
         """by station_idx and time_idx"""
         """[] idx means no operation"""
-        """if i_reset_time == 1, then the subset *.th starts from 0 time"""
-        station_idx = numpy.array(station_idx)
-        time_idx = numpy.array(time_idx)
+        """if i_reset_time == True, then the subset *.th starts from 0 time"""
+
+        if subset_filename is None:
+            subset_filename = os.path.abspath(self.source_file) + '.subset'
+
+        if station_idx is None:
+            station_idx = numpy.array(range(self.n_station))
+        else:
+            station_idx = numpy.array(station_idx)
+
+        if time_idx is None:
+            time_idx = numpy.array(range(self.n_time))
+        else:
+            time_idx = numpy.array(time_idx)
 
         self.data = self.df.iloc[:, 1:].to_numpy(dtype=float)
         self.data[abs(self.data-float(self.mask_val)) < 1e-5] = numpy.nan
@@ -261,17 +273,23 @@ class TimeHistory():
         if (len(station_idx) > 0):
             sub_data = sub_data[:, station_idx]
         if (len(time_idx) > 0):
-            sub_data = self.data[time_idx, :]
+            sub_data = sub_data[time_idx, :]
             sub_time = self.time[time_idx]
 
-        if (i_reset_time > 0):
+        if i_reset_time:
+            new_start_time_str = datetime.strftime(datetime.strptime(self.start_time_str, "%Y-%m-%d %H:%M:%S") +timedelta(seconds=sub_time[0]*self.sec_per_time_unit), "%Y-%m-%d %H:%M:%S")
             sub_time = sub_time - sub_time[0]
+        else:
+            new_start_time_str = self.start_time_str
 
         with open(subset_filename, 'w') as fout:
             for i, _ in enumerate(sub_time):
                 fout.write(str(sub_time[i]) + " " +
                            ' '.join(map(str, sub_data[i, :])) +
                            "\n")
+        
+        return TimeHistory(file_name=subset_filename, start_time_str=new_start_time_str, mask_val=self.mask_val, sec_per_time_unit=self.sec_per_time_unit,
+                           data_array=None, columns=None)
 
     def writer(self, out_file_name):
         self.df_propagate()

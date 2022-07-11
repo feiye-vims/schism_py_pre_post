@@ -57,13 +57,17 @@ def get_hycom_elev(noaa_stations=None, station_in_file=None, hycom_file=None):
     return model_df
 
 
-def get_hindcast_elev(model_start_day_str, noaa_stations=None, station_in_file=None, elev_out_file=None, sec_per_time_unit=1):
+def get_hindcast_elev(model_start_day_str, noaa_stations=None, station_in_file=None, elev_out_file=None, sec_per_time_unit=1, station_in_subset=None):
     '''
     if noaa_stations = None, then read stations from station.in
     '''
     st_id = Bpfile(station_in_file, cols=5).make_dataframe().columns
 
     my_th = TimeHistory(elev_out_file, model_start_day_str, -9999, sec_per_time_unit=sec_per_time_unit)
+
+    if station_in_subset is not None:
+        my_th = my_th.export_subset(station_idx=station_in_subset)
+    
     model_df = my_th.df.set_index('datetime')
 
     model_df.columns = st_id
