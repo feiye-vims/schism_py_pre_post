@@ -132,7 +132,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    hurricanes = ['Year2015']
+    hurricanes = ['Ida_v5']
     main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d_test.json'  # 'coastal_act_stats_period_3D_1st_round.json'
 
     region = "Full_domain"  # "Landfall_region", "Full_domain", "Manual"
