@@ -16,10 +16,19 @@ size = comm.Get_size()
 print(f'process {rank} of {size}\n')
 
     
+def my_mpi_idx(N, size, rank):
+    if N > size:
+        n_per_rank, _ = divmod(N, size)
+        n_per_rank = n_per_rank + 1
+        return slice(rank*n_per_rank, min((rank+1)*n_per_rank, N))
+    else:
+        if rank+1 > N:
+            return slice
+
 def plot_schism2D_parallel(
     rundir='./',
     model_start_time = datetime.strptime('2014-12-01 00:00:00', "%Y-%m-%d %H:%M:%S"),
-    var_str=None, stacks=[1, 1],
+    var_str=None, stacks=[1, 2, 3],
     caxis = [10, 35], output_dir='./'
 ):
     """
@@ -28,11 +37,7 @@ def plot_schism2D_parallel(
     """
 
     # devide tasks
-    nf_per_proc = len(stacks) // size
-    if rank < size - 1:
-        stacks_proc = stacks[np.arange(rank*nf_per_proc, (rank+1)*nf_per_proc)]
-    else:
-        stacks_proc = stacks[np.arange(rank*nf_per_proc, len(stacks))]
+    stacks_proc = stacks[my_mpi_idx(len(stacks), size, rank)]
 
     # stacks_proc = np.flip(stacks_proc)
     print(f'process {rank} handles {stacks_proc}\n')
@@ -86,7 +91,7 @@ if __name__ == "__main__":
     rundir = '/sciclone/schism10/feiye/STOFS3D-v4/RUN23m/'
     model_start_time = datetime.strptime('2014-12-01', "%Y-%m-%d")
     var_str = 'temperature'
-    stacks = np.arange(396, 397)
+    stacks = np.arange(0, 397)
     caxis = [10, 35]
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23m/Plots/'
 
