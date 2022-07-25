@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
   setuptools.setup(
   name='schism_py_pre_post',
-  version='0.0.4.4',
+  version='0.0.4.5',
   author='Fei Ye',
   author_email='feiye@vims.edu',
   description='Python tools for pre/post-processing SCHISM models',
@@ -24,6 +24,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     'schism_py_pre_post.Shared_modules',
     'schism_py_pre_post.Download',
     'schism_py_pre_post.Geometry',
+    'schism_py_pre_post.Datasets',
   ],
   package_data={'schism_py_pre_post': ['Datafiles/*']},
   install_requires=[
