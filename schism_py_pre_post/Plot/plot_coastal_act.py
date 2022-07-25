@@ -132,8 +132,8 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    hurricanes = ['Ida_v5']
-    main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d_test.json'  # 'coastal_act_stats_period_3D_1st_round.json'
+    hurricanes = ['Year2015']
+    main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
 
     region = "Full_domain"  # "Landfall_region", "Full_domain", "Manual"
     var_str = 'MAE'
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     station_bp_file = hurricane_dict['All']['station_bp_file']
     station_subset = range(164)
 
-    other_dicts_files = ['/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json']  # ['coastal_act_stats_period_3D_others.json']
+    other_dicts_files = ['/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
     other_line_styles = ['g']
     other_shifts = [0]
     other_subsets = [None]
@@ -191,15 +191,16 @@ if __name__ == "__main__":
         # elev_out_file = '/sciclone/schsm10/feiye/Coastal_Act/RUN13b/PostP/staout_1'
         # cdir = '$cdir/srv/www/htdocs/yinglong/feiye/Coastal_Act/RUN13b/'
 
-        other_dicts = []; other_runs_stats = [[]] * len(other_dicts_files)
+        other_dicts = []; other_runs_stats = [pd.DataFrame()] * len(other_dicts_files)
         for other_dict_file in other_dicts_files:
             with open(other_dict_file) as d:
                 other_dicts.append(json.load(d))
         other_runids = [os.path.basename(os.path.dirname(x[hurricane]['cdir'])) for x in other_dicts]
         # ---------------------------------------------------------------------------------
 
+        final_datums = []
         stats = pd.DataFrame()
-        for group_name in stations_groups:
+        for i_group, group_name in enumerate(stations_groups):
             filename_base = f'{hurricane}_{group_name}_{default_datums[group_name]}'
             # if group_name != 'Puerto_Rico':
             #     continue
@@ -221,6 +222,7 @@ if __name__ == "__main__":
                 default_datum=default_datums[group_name],
                 cache_folder=cache_folder
             )
+            final_datums += datums
 
             # plot time series
             stat, fig_ax = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str,
@@ -243,8 +245,8 @@ if __name__ == "__main__":
                                               stations_groups[group_name],
                                               datums, st_info, None, iplot=False, nday_moving_average=nday_moving_average,
                                               fig_ax=fig_ax, line_styles=[None, other_line_style], shift=other_shift, label_strs=['obs', other_runid])
-                    other_runs_stats[i].append(other_stat)
-                    write_stat(stat, f'stats_{other_runid}_{group_name}.txt')
+                    other_runs_stats[i] = other_runs_stats[i].append(other_stat)
+                    write_stat(other_stat, f'stats_{other_runid}_{group_name}.txt')
                     fig_ax[0].savefig(f'compare_ts_{filename_base}.png')
 
         # ---------------------------------------------------------------------------------
@@ -253,11 +255,26 @@ if __name__ == "__main__":
 
         write_stat(stats, f'stats_{runid}_{filename_base}.txt')
         for other_runid, other_run_stats in zip(other_runids, other_runs_stats):
-            write_stat(stats, f'stats_{other_runid}_{filename_base}.txt')
+            write_stat(other_run_stats, f'stats_{other_runid}_{filename_base}.txt')
+        
+        overall_stats_datum_info_texts = [
+            f"Stations with NAVD datum: {sum(np.array(final_datums)=='NAVD')}",
+            f"Stations with MSL datum: {sum(np.array(final_datums)=='MSL')}",
+            f"Stations without data: {sum(np.array(final_datums)==None)}",
+        ]
 
+        fname = 'stats_datum_info.txt'
+        with open(fname, 'w') as f:
+            os.system(f"head -n 1 stats_{runid}_{filename_base}.txt > {fname}")
+            os.system(f"tail -n 1 stats_{runid}_{filename_base}.txt > {fname}")
+            for group in groups:
+            f.write('\n'.join(overall_stats_datum_info_texts))
+        
         # ---------------------------------------------------------------------------------
 
         # upload to ccrm drive:
-        print(f"scp stats_{filename_base}.txt *png {cdir}/")
+        print(f"scp *stats*txt *png {cdir}/")
         os.system(f"scp *stats*txt *png {cdir}/")
         os.system(f"rm *stats*txt *png")
+            
+

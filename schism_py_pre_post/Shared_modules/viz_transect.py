@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib import animation, rc
-from IPython.display import HTML
 
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 import matplotlib
@@ -78,13 +77,25 @@ def get_transect_shape_from_grid(gridfile=None, bpfile=None):
 
     return bp_dp, bp_x
 
-def get_datasets(runids=None):
+def project_info(project=None, runid=None):
+    outptu_dir = None
+
+    if project == 'ICOGS':
+        output_dir = f'/sciclone/schism10/feiye/ICOGS/{runid}/PostP/'
+    elif project == 'STOFS3D-v4':
+        output_dir = f'/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O{runid.replace("RUN","")}/'
+    else:
+        print('Undefined project name')
+        
+    return output_dir
+
+def get_datasets(project='STOFS3D-v4', runids=None):
     ths = []
     for runid in runids:
         runid1 = runid.split('RUN')[-1].strip()
+        outdir = project_info(project=project, runid=runid)
         th = TimeHistory(
-            # file_name=f'/sciclone/schism10/feiye/ICOGS/{runid}/PostP/elev.dat.missi.{runid}',
-            file_name=f'/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O{runid1}/elev.dat.missi.{runid}',
+            file_name=f'{outdir}/elev.dat.missi.{runid}',
             start_time_str='2021-05-01 00:00:00', sec_per_time_unit=86400
         )
         ths.append(th)
@@ -96,35 +107,31 @@ def get_datasets(runids=None):
     return datasets
 
 
-def transect_anim(gridfile=None, bpfile=None, runids=None):
+def transect_anim(gridfile=None, bpfile=None, project='STOFS3D-v4', runids=None):
     bp_dp, bp_x = get_transect_shape_from_grid(gridfile=gridfile, bpfile=bpfile)
-    datasets = get_datasets(runids=runids)
+    datasets = get_datasets(project=project, runids=runids)
     vis = testAnimation(datasets, runids, bp_x, bp_dp)
     return vis
-#%%
-if __name__ == "__main__":
-    bp_dp, bp_x = get_transect_shape_from_grid(
-        gridfile='/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz',
-        bpfile='/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp',
-    )
-    runids=['RUN23k', 'RUN23k5', 'RUN23k6', 'RUN23k1', 'RUN23k4', 'RUN23k7']
-    datasets = get_datasets(runids=runids)
+
+def plot_snapshot(gridfile=None, bpfile=None, project=None, runids=[], snapshot_idx=-1):
+    bp_dp, bp_x = get_transect_shape_from_grid(gridfile, bpfile)
+    datasets = get_datasets(project='STOFS3D-v4', runids=runids)
 
     plt.plot(bp_x, -bp_dp/10)
     plt.plot(bp_x, datasets[0][0, :])
     for i, runid in enumerate(runids):
-        plt.plot(bp_x, datasets[i][-1, :], label=runid)
+        plt.plot(bp_x, datasets[i][snapshot_idx, :], label=runid)
     plt.legend()
     plt.show()
 
-#%%
-    transect_anim(
-        gridfile='/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz',
-        bpfile='/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp',
-        runids=['RUN10a', 'RUN10b', 'RUN10d', 'RUN10e', 'RUN10g']
-    ).draw()
-    # Note: below is the part which makes it work on Colab
+# %%
+if __name__ == "__main__":
+    gridfile = '/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz'
+    bpfile = '/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp'
+    project = 'ICOGS'
+    runids=['RUN10a', 'RUN10b', 'RUN10d', 'RUN10e', 'RUN10g']
+
+    transect_anim(gridfile=gridfile, bpfile=bpfile, project=project, runids=runids).draw()
+
     rc('animation', html='jshtml')
     anim
-
-# %%

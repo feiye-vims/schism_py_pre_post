@@ -191,8 +191,6 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
     n = 0
     stats = []; obs_maxs = []; mod_maxs = []
     for i, st in enumerate(noaa_stations):
-        title_str = None
-
         if st in mod_df_all_stations.columns:
             mod_df = mod_df_all_stations[st]
             mod_df.values[:] += shift
@@ -200,7 +198,6 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
             mod_df = obs_df_list[i]['water_level']
 
         if obs_df_list[i] is None:
-            title_str = f'{i+1}: {st}, no data\n'
             obs_df = mod_df * np.nan
         else:
             obs_df = obs_df_list[i]['water_level']
@@ -229,15 +226,17 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
         mod_maxs.append(max(my_comp.mod_df['value']))
         stats.append(my_comp.stats_dict)
 
-        if title_str is None:
+        datum_str = "NAVD 88" if datum_list[n] == "NAVD" else datum_list[n] 
+        if obs_df_list[i] is None:
+            title_str = f'{st}, {station_info[n].name}, no data\n'
+        else:
             existing_title = ax[n].get_title()
-            datum_str = "NAVD 88" if datum_list[n] == "NAVD" else datum_list[n] 
             if existing_title == '':
                 # title_str = f'{st}, {datum_str}, {station_info[n].name}\n'
                 title_str = f'{st}, {datum_str}; {station_info[n].name}\n; {my_comp.stats_str}'
             else:
-                title_str = f'{existing_title}; {my_comp.stats_str}'
-            ax[n].title.set_text(title_str)
+                title_str = f'{existing_title}\n; {my_comp.stats_str}'
+        ax[n].title.set_text(title_str)
 
         ax[n].set_xlim([datetime.strptime(plot_start_day_str, "%Y-%m-%d %H:%M:%S"),
                         datetime.strptime(plot_end_day_str, "%Y-%m-%d %H:%M:%S")])
@@ -276,12 +275,12 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
 def plot_operation():
     os.system("rm stat*.txt *.png")
     # time
-    plot_start_day_str = '2022-06-02 00:00:00'
-    plot_end_day_str = '2022-07-05 00:00:00'
+    plot_start_day_str = '2022-07-20 00:00:00'
+    plot_end_day_str = '2022-07-22 00:00:00'
 
-    forecast_end_day_str = '2022-07-03 00:00:00'  # corresponding to folder name
+    forecast_end_day_str = '2022-07-22 00:00:00'  # corresponding to folder name
     fcst_folder = '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/'
-    remote_dir = '$cdir/srv/www/htdocs/yinglong/feiye/ICOGS/STOFS-3D_fcst/2022_07_03/'
+    remote_dir = '$cdir/srv/www/htdocs/yinglong/feiye/ICOGS/STOFS-3D_fcst/2022_07_20/'
 
     # station presets>>
     # stations, ICOGS v2 and v3>
@@ -305,7 +304,7 @@ def plot_operation():
         'GoMX_west': 'NAVD',
         'GoMX_east': 'NAVD',
         'Atlantic_inland1': 'NAVD',
-        'Atlantic_inland2': 'MSL',
+        'Atlantic_inland2': 'NAVD',
         'GoMX_inland': 'NAVD',
         'Puerto_Rico': 'MSL'
     }
