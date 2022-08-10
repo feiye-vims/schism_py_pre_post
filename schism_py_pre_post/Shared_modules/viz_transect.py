@@ -12,7 +12,8 @@ import matplotlib
 import plotly.io as pio
 from IPython.display import set_matplotlib_formats
 
-
+# import matplotlib_inline
+# matplotlib_inline.backend_inline.set_matplotlib_formats('svg')
 set_matplotlib_formats('svg')
 
 matplotlib.rcParams['animation.embed_limit'] = 2**128
@@ -126,12 +127,17 @@ def plot_snapshot(gridfile=None, bpfile=None, project=None, runids=[], snapshot_
 
 # %%
 if __name__ == "__main__":
+    # %%
     gridfile = '/sciclone/schism10/feiye/ICOGS/RUN10g/hgrid.npz'
     bpfile = '/sciclone/schism10/feiye/ICOGS/BPfiles/missi.bp'
     project = 'ICOGS'
-    runids=['RUN10a', 'RUN10b', 'RUN10d', 'RUN10e', 'RUN10g']
+
+    # runids=['RUN10a', 'RUN10b', 'RUN10d', 'RUN10e', 'RUN10g']
+    runids=['RUN21f', 'RUN21a']
 
     transect_anim(gridfile=gridfile, bpfile=bpfile, project=project, runids=runids).draw()
 
     rc('animation', html='jshtml')
     anim
+
+# %%

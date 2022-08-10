@@ -295,12 +295,12 @@ def redistribute_arc(line, channel_width):
     dist_along_thalweg = get_dist_increment(line)
 
     curv = curvature(line)
-    for i in [2, 3]:
+    for i in [1, 2]:
         for j in range(i):
             curv[j::i] = np.maximum(curv[j::i], curvature(line[j::i]))
 
     R = 1.0/(curv+1e-10)
-    river_resolution = np.minimum(0.3 * R, 5 * channel_width)
+    river_resolution = np.minimum(R, 5 * channel_width)
     river_resolution = np.minimum(np.maximum(10, river_resolution), 300)
 
     retained_points = np.ones((dist_along_thalweg.shape), dtype=bool)
@@ -338,33 +338,36 @@ def get_thalweg_neighbors(thalwegs, thalweg_endpoints):
     
     return thalweg_neighbors
         
-def assemble_arcs(arcs, line, blast_radius, thalweg_id, i_check_valid=False):
+def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
     valid_idx = np.ones(len(line[:, 0]), dtype=bool)
     if i_check_valid:
         for k in [0, -1]:
             valid_idx *= (line[:, 0] - line[k, 0])**2 + (line[:, 1] - line[k, 1])**2 > blast_radius[k]**2
         if sum(valid_idx) < 1:
             print(f'warning: thalweg {thalweg_id+1} has less than 1 points after bombing, neglecting ...')
-            return arcs  # no changes
+            return valid_idx  # no changes
 
-    arcs.append(SMS_ARC(points=np.c_[line[valid_idx], line[valid_idx]]))
-    return arcs
+    return valid_idx
 
 if __name__ == "__main__":
+
+    # ------------------------- basic inputs --------------------------- 
     MapUnit2METER = 1 #00000
 
     # tif_fname = r'/sciclone/data10/wangzg/DEM/npz/sc_ll_7.npz'  # directory of DEM data
 
-    # tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/CUDEM_TX_merged_LA_utm15.tif'
-    # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1_0_fix_region1.shp'
+    tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/CUDEM_TX_merged_LA_utm15.tif'
+    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1_0_fix_region1.shp'
 
-    tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1.0_Fix_region2_utm15N.tif'
-    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1_0_fix_region2_test1.shp'
+    # tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1.0_Fix_region2_utm15N.tif'
+    # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1_0_fix_region2_test1.shp'
 
     river_threshold = np.array([15, 400]) / MapUnit2METER
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
+    # ------------------------- end basic inputs --------------------------- 
     
     # %%
+    # ------------------------- read DEM --------------------------- 
     if pathlib.Path(tif_fname).suffix == ".npz":
         S = loadz(tif_fname)
     elif pathlib.Path(tif_fname).suffix == ".tif" : 
@@ -380,7 +383,7 @@ if __name__ == "__main__":
     search_length = river_threshold[1] * 1.1
     search_steps = int(river_threshold[1] / ds)
 
-    # read points from thalweg shapefile
+    # ------------------------- read thalweg --------------------------- 
     xyz, l2g, curv = get_all_points_from_shp(thalweg_shp_fname)
     thalwegs = []
     thalwegs_curv = []
@@ -392,20 +395,22 @@ if __name__ == "__main__":
         thalweg_endpoints = np.r_[thalweg_endpoints, np.reshape(xyz[idx][0, :], (1, 2))]
         thalweg_endpoints = np.r_[thalweg_endpoints, np.reshape(xyz[idx][-1, :], (1, 2))]
 
-    # Dry run
+    # ------------------------- Dry run ---------------------------
     thalweg_endpoints_width = np.empty((0), dtype=float)
     thalweg_widths = []
     valid_thalwegs = []
+    original_banks = []
     for i, [line, curv] in enumerate(zip(thalwegs, thalwegs_curv)):
         print(f'Dry run: Arc {i+1} of {len(l2g)}')
-        x_banks_left, _, x_banks_right, _, _, width = get_two_banks(line)
+        x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = get_two_banks(line)
         thalweg_widths.append(width)
         if width is None:
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
         else:
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, width[0]]
-            thalweg_endpoints_width = np.r_[thalweg_endpoints_width, width[1]]
+            thalweg_endpoints_width = np.r_[thalweg_endpoints_width, width[-1]]
+
         if len(line[:, 0]) < 2:
             print(f"warning: thalweg {i+1} only has one point, neglecting ...")
             valid_thalwegs.append(False)
@@ -416,13 +421,23 @@ if __name__ == "__main__":
             valid_thalwegs.append(False)
             continue
 
+        original_banks.append(SMS_ARC(points=np.c_[x_banks_left, y_banks_left]))
+        original_banks.append(SMS_ARC(points=np.c_[x_banks_right, y_banks_right]))
         valid_thalwegs.append(True)
-    # End Dry run
+    # End Dry run: found valid river segments; record channel width
     
+    # ------------------------- Wet run --------------------------- 
     bank_arcs = []
-    bank_arcs_all = []
+    bank_arcs_raw = []
+    inner_arcs = []
     redistributed_arcs = []
     # improved_thalweg_arcs = []
+    rbanks_valid_points = []
+    lbanks_valid_points = []
+    intersection_arcs = []
+    thalweg_neighbors = []
+
+    # enumerate each thalweg
     for i, [line, curv, width, valid_thalweg] in enumerate(zip(thalwegs, thalwegs_curv, thalweg_widths, valid_thalwegs)):
         print(f'Arc {i+1} of {len(l2g)}')
 
@@ -430,7 +445,7 @@ if __name__ == "__main__":
             print(f"marked as invalid in dry run, skipping ...")
             continue
 
-        # redistribute vertices
+        # Redistribute vertices. Note: line is overwritten!
         line = redistribute_arc(line, width)
         redistributed_arcs.append(SMS_ARC(points=np.c_[line[:, 0], line[:, 1]]))
 
@@ -458,31 +473,61 @@ if __name__ == "__main__":
         x_inner_arcs = np.linspace(x_banks_left, x_banks_right, 4)
         y_inner_arcs = np.linspace(y_banks_left, y_banks_right, 4)
 
-        # remove points at thalweg intersectios with a radius of channel width
+        # determine blast radius based on mean channel width at an intersection
         blast_radius = np.array([0.0, 0.0])
-        for k in [0, -1]:
+        for k in [0, -1]:  # head and tail
             dist = thalweg_endpoints[:, :] - line[k, :]
             neighbor_thalwegs_endpoints = np.argwhere(dist[:, 0]**2 + dist[:, 1]**2 < 1e-6**2)
+            thalweg_neighbors.append(neighbor_thalwegs_endpoints)
             if len(neighbor_thalwegs_endpoints) > 1:
-                blast_radius[k] = 0.4 * np.mean(thalweg_endpoints_width[neighbor_thalwegs_endpoints])
+                blast_radius[k] = 0.2 * np.mean(thalweg_endpoints_width[neighbor_thalwegs_endpoints])
             else:  # no intersections
                 blast_radius[k] = 0.0
 
-        out_arcs = [
-            np.c_[x_banks_left, y_banks_left],
-            np.c_[x_banks_right, y_banks_right],
-        ]
+        # assemble banks
+        for i, line in enumerate([np.c_[x_banks_left, y_banks_left], np.c_[x_banks_right, y_banks_right]]):
+            valid_points = bomb_line(line, blast_radius, i, i_check_valid=True)
+            if i == 0:
+                lbanks_valid_points.append(valid_points)
+            else:
+                rbanks_valid_points.append(valid_points)
+            bank_arcs_raw.append(SMS_ARC(points=np.c_[line[:, 0], line[:, 1]]))
+            if sum(valid_points) > 0:
+                bank_arcs.append(SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]]))
+            else:
+                bank_arcs.append(None)
+
+        # assemble inner arcs
         for x_inner_arc, y_inner_arc in zip (x_inner_arcs, y_inner_arcs):
-            out_arcs.append(np.c_[x_inner_arc, y_inner_arc])
+            line = np.c_[x_inner_arc, y_inner_arc]
+            valid_points = bomb_line(line, blast_radius, i, i_check_valid=True)
+            if sum(valid_points) > 0:
+                inner_arcs.append(SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]]))
 
-        for out_arc in out_arcs:
-            bank_arcs = assemble_arcs(bank_arcs, out_arc, blast_radius, i, i_check_valid=True)
-            bank_arcs_all = assemble_arcs(bank_arcs_all, out_arc, blast_radius, i, i_check_valid=False)
+    # assemble intersectional arcs
+    for i, neibs in enumerate(thalweg_neighbors):
+        if len(neibs) > 1:
+            line = np.zeros((0, 2), dtype=float)
+            for j, nei in enumerate(neibs):
+                id = int(nei/2)
+                i_tail_head = nei%2
+                if bank_arcs[id*2] is not None:
+                    line = np.r_[line, bank_arcs[id*2].nodes[i_tail_head, :2]]
+                if bank_arcs[id*2+1] is not None:
+                    line = np.r_[line, bank_arcs[id*2+1].nodes[i_tail_head, :2]]
+            if len(line) > 0:
+                intersection_arcs.append(SMS_ARC(points=np.c_[line[:, 0], line[:, 1]]))
+        
+    # assemble river arcs
+    river_arcs = bank_arcs + inner_arcs
+    # End wet run
 
-    # write SMS maps
+    # ------------------------- write SMS maps --------------------------- 
     SMS_MAP(arcs=bank_arcs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank.map')
-    SMS_MAP(arcs=bank_arcs_all).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank_all.map')
+    SMS_MAP(arcs=bank_arcs_raw).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank_raw.map')
+    SMS_MAP(arcs=river_arcs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/river.map')
     SMS_MAP(arcs=redistributed_arcs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/redist_thalweg.map')
+    SMS_MAP(arcs=intersection_arcs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/intersection_arcs.map')
 
     # %%
     pass

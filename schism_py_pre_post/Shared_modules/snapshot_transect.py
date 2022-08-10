@@ -7,6 +7,9 @@ if __name__ == "__main__":
 
     # snapshot
     project = 'STOFS3D-v4'
+
     runids = ['RUN23k', 'RUN23k5', 'RUN23k6', 'RUN23k1', 'RUN23k4', 'RUN23k7']
-    runids = ['RUN23o', 'RUN23o1']
-    plot_snapshot(gridfile=gridfile, bpfile=bpfile, project=project, runids=runids, snapshot_idx=431)
+    plot_snapshot(gridfile=gridfile, bpfile=bpfile, project=project, runids=runids, snapshot_idx=-1)
+
+    # runids = ['RUN23o', 'RUN23o1']
+    # plot_snapshot(gridfile=gridfile, bpfile=bpfile, project=project, runids=runids, snapshot_idx=431)

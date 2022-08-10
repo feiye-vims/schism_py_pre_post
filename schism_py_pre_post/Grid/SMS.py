@@ -137,6 +137,8 @@ LEND
 class SMS_ARC():
     '''class for manipulating arcs in SMS maps''' 
     def __init__(self, points=None, node_idx=[0, -1]):
+        # self.isDummy = (len(points) == 0)
+
         npoints, ncol = points.shape
         self.points = np.zeros((npoints, 3), dtype=float)
         self.points[:, :min(3, ncol)] = points[:, :min(3, ncol)]
@@ -188,8 +190,10 @@ class SMS_MAP():
         if filename is not None:
             self.reader(filename=filename)
         else:
+            arcs = list(filter(lambda item: item is not None, arcs))
             if arcs == []:
                 raise Exception('At least one arc is required in the arcs list')
+            
             self.arcs = arcs
             self.epsg = epsg
     
