@@ -190,6 +190,8 @@ class SMS_MAP():
         if filename is not None:
             self.reader(filename=filename)
         else:
+            if type(arcs) == np.ndarray:
+                arcs = np.squeeze(arcs).tolist()
             arcs = list(filter(lambda item: item is not None, arcs))
             if arcs == []:
                 raise Exception('At least one arc is required in the arcs list')
@@ -305,7 +307,7 @@ def curvature(pts):
         d2x = np.gradient(dx) #second derivatives
         d2y = np.gradient(dy)
 
-        cur = np.abs(dx * d2y - d2x * dy) / (dx * dx + dy * dy)**1.5
+        cur = np.abs(dx * d2y - d2x * dy) / ((dx * dx + dy * dy)**1.5 + 1e-20)
 
     return cur
 

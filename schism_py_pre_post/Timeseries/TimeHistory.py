@@ -6,6 +6,7 @@ from matplotlib import pyplot
 import numpy
 import mplcursors
 import copy
+from numbers import Integral, Real
 
 
 def running_mean1(X, N):
@@ -60,7 +61,7 @@ class TimeHistory():
     def df_propagate(self):
         [self.n_time, self.n_station] = list(self.df.shape)
         self.n_station -= 1  # first col is time
-        if isinstance(self.df['datetime'][0], float):
+        if isinstance(self.df['datetime'][0], (Real, Integral)):
             self.time = self.df['datetime'].to_numpy()
             self.datetime = [datetime.strptime(self.start_time_str, '%Y-%m-%d %H:%M:%S')
                              + timedelta(seconds=x*self.sec_per_time_unit) for x in self.time]

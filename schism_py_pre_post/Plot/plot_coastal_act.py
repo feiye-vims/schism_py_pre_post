@@ -132,7 +132,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    hurricanes = ['Year2015']
+    hurricanes = ['Ida']
     main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
 
     region = "Full_domain"  # "Landfall_region", "Full_domain", "Manual"
@@ -263,12 +263,12 @@ if __name__ == "__main__":
             f"Stations without data: {sum(np.array(final_datums)==None)}",
         ]
 
-        fname = 'stats_datum_info.txt'
-        with open(fname, 'w') as f:
-            os.system(f"head -n 1 stats_{runid}_{filename_base}.txt > {fname}")
-            os.system(f"tail -n 1 stats_{runid}_{filename_base}.txt > {fname}")
-            for group in groups:
-            f.write('\n'.join(overall_stats_datum_info_texts))
+        # fname = 'stats_datum_info.txt'
+        # with open(fname, 'w') as f:
+        #     os.system(f"head -n 1 stats_{runid}_{filename_base}.txt > {fname}")
+        #     os.system(f"tail -n 1 stats_{runid}_{filename_base}.txt > {fname}")
+        #     for group in groups:
+        #         f.write('\n'.join(overall_stats_datum_info_texts))
         
         # ---------------------------------------------------------------------------------
 
