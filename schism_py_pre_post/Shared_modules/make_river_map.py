@@ -96,11 +96,12 @@ def get_bank(S, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
     return x_banks, y_banks
 
 def get_dist_increment(line):
-    line_cplx = np.squeeze(line.view(np.complex128))
+    line_copy = copy.deepcopy(line)
+    line_cplx = np.squeeze(line_copy.view(np.complex128))
     dist = np.absolute(line_cplx[1:] - line_cplx[:-1])
 
     # return np.r_[0.0, np.cumsum(dist)]
-    return np.r_[dist[0], dist]
+    return dist
 
 def get_angle_diffs(xs, ys):
     line = np.c_[xs, ys]
@@ -351,22 +352,37 @@ def redistribute_arc(line, line_smooth, channel_width, smooth_option=1, R_coef=0
     R = 1.0/(curv+1e-10)
     river_resolution = np.minimum(R_coef * R, width_coef * channel_width)
     river_resolution = np.minimum(np.maximum(reso_thres[0], river_resolution), reso_thres[1])
+    river_resolution_seg = (river_resolution[:-1]+river_resolution[1:])/2  # resolution between two points
 
-    retained_points = np.ones((dist_along_thalweg.shape), dtype=bool)
-    idx = 1
-    original_seg_length = dist_along_thalweg[1]
+    retained_points = np.ones((line.shape[0]), dtype=bool)
+    idx = 0
+    this_seg_length = dist_along_thalweg[0]  # dist between pt0 and pt1
     while idx < len(dist_along_thalweg)-1:
-        ideal_seg_length = river_resolution[idx]  # move ideal arc forward
-        if original_seg_length < ideal_seg_length:
-            retained_points[idx] = False  # remove points
-            original_seg_length += dist_along_thalweg[idx]
+        if this_seg_length < river_resolution_seg[idx]:  # resolution of the seg between pt0 and pt1
+            retained_points[idx+1] = False  # remove point
+            this_seg_length += dist_along_thalweg[idx+1]
         else:
-            original_seg_length = dist_along_thalweg[idx]
+            this_seg_length = dist_along_thalweg[idx+1]
         idx += 1  # move original arc forward
     # last point should be retained
     retained_points[-1] = True
             
-    return line[retained_points, :], line_smooth
+    return line[retained_points, :], line_smooth, river_resolution
+
+def snap_vertices(line, thalweg_resolution):
+    dist_along_thalweg = get_dist_increment(line)
+
+    idx = 0
+    original_seg_length = dist_along_thalweg[0]
+    while idx < len(dist_along_thalweg)-1:
+        if original_seg_length < thalweg_resolution[idx]:
+            line[idx+1, :] = line[idx, :]  # snap current point to the previous one
+            original_seg_length += dist_along_thalweg[idx+1]
+        else:
+            original_seg_length = dist_along_thalweg[idx+1]
+        idx += 1  # move original arc forward
+
+    return line
 
 def nearest_neighbour(points_a, points_b):
     from scipy import spatial
@@ -502,24 +518,24 @@ if __name__ == "__main__":
     real_bank_width = np.zeros((len(thalwegs), 2), dtype=float)  # [, 0] is head, [, 1] is tail
 
     # enumerate each thalweg
-    for i, [line, curv, width, valid_thalweg, line_smooth] in enumerate(zip(thalwegs, thalwegs_curv, thalweg_widths, valid_thalwegs, thalwegs_smooth)):
+    for i, [thalweg, curv, width, valid_thalweg, thalweg_smooth] in enumerate(zip(thalwegs, thalwegs_curv, thalweg_widths, valid_thalwegs, thalwegs_smooth)):
         print(f'Wet run: Arc {i+1} of {len(l2g)}')
 
         if not valid_thalweg:
             print(f"marked as invalid in dry run, skipping ...")
             continue
 
-        # Redistribute vertices. Note: line is overwritten!
-        line, line_smooth = redistribute_arc(line, line_smooth, width, smooth_option=1)
-        smoothed_thalwegs[i] = SMS_ARC(points=np.c_[line_smooth[:, 0], line_smooth[:, 1]])
-        redistributed_thalwegs[i] = SMS_ARC(points=np.c_[line[:, 0], line[:, 1]])
+        # Redistribute thalwegs vertices
+        thalweg_redist, thalweg_smooth, reso = redistribute_arc(thalweg, thalweg_smooth, width, smooth_option=1)
+        smoothed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_smooth[:, 0], thalweg_smooth[:, 1]])
+        redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg_redist[:, 0], thalweg_redist[:, 1]])
 
-        if len(line[:, 0]) < 2:
+        if len(thalweg_redist[:, 0]) < 2:
             print(f"warning: thalweg {i+1} only has one point after redistribution, neglecting ...")
             continue
 
         # re-make banks based on redistributed thalweg
-        x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = get_two_banks(line)
+        x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = get_two_banks(thalweg_redist)
 
         # touch-ups on the two banks
         if x_banks_left is None or x_banks_right is None:
@@ -527,12 +543,18 @@ if __name__ == "__main__":
             continue
 
         # nudge banks
-        x_banks_left, y_banks_left = nudge_bank(line, perp+np.pi, x_banks_left, y_banks_left, dist=nudge_ratio*0.5*np.mean(width))
-        x_banks_right, y_banks_right = nudge_bank(line, perp, x_banks_right, y_banks_right, dist=nudge_ratio*0.5*np.mean(width))
+        x_banks_left, y_banks_left = nudge_bank(thalweg_redist, perp+np.pi, x_banks_left, y_banks_left, dist=nudge_ratio*0.5*np.mean(width))
+        x_banks_right, y_banks_right = nudge_bank(thalweg_redist, perp, x_banks_right, y_banks_right, dist=nudge_ratio*0.5*np.mean(width))
 
         # smooth banks
-        line, x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp = smooth_bank(line, x_banks_left, y_banks_left, x_banks_right, y_banks_right)
-        line, x_banks_right, y_banks_right, x_banks_left, y_banks_left, perp = smooth_bank(line, x_banks_right, y_banks_right, x_banks_left, y_banks_left)
+        thalweg_redist, x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp = smooth_bank(thalweg_redist, x_banks_left, y_banks_left, x_banks_right, y_banks_right)
+        thalweg_redist, x_banks_right, y_banks_right, x_banks_left, y_banks_left, perp = smooth_bank(thalweg_redist, x_banks_right, y_banks_right, x_banks_left, y_banks_left)
+
+        # update width
+        width = ((x_banks_left-x_banks_right)**2 + (y_banks_left-y_banks_right)**2)**0.5
+        
+        # get actual resolution along redistributed/smoothed thalweg
+        thalweg_resolution = get_dist_increment(thalweg_redist)
 
         # make inner arcs between two banks
         x_inner_arcs = np.linspace(x_banks_left, x_banks_right, nrow_arcs)
@@ -541,7 +563,7 @@ if __name__ == "__main__":
         # determine blast radius based on mean channel width at an intersection
         blast_radius = np.array([0.0, 0.0])
         for k in [0, -1]:  # head and tail
-            dist = thalweg_endpoints[:, :] - line[k, :]
+            dist = thalweg_endpoints[:, :] - thalweg_redist[k, :]
             neighbor_thalwegs_endpoints = np.argwhere(dist[:, 0]**2 + dist[:, 1]**2 < 1e-6**2)
             thalwegs_neighbors[i, k] = neighbor_thalwegs_endpoints
             if len(neighbor_thalwegs_endpoints) > 1:
@@ -565,6 +587,7 @@ if __name__ == "__main__":
         for k, [x_inner_arc, y_inner_arc] in enumerate(zip(x_inner_arcs, y_inner_arcs)):
             line = np.c_[x_inner_arc, y_inner_arc]
             if sum(valid_points) > 0:
+                line = snap_vertices(line, width * 0.2)
                 inner_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]])
 
         # assemble cross-channel arcs
@@ -612,14 +635,14 @@ if __name__ == "__main__":
     intersect_res = intersect_res[valid, :]
         
     # assemble river arcs
-    river_arcs = np.r_[bank_arcs.reshape((-1, 1)), inner_arcs.reshape((-1, 1))]
+    # river_arcs = np.r_[bank_arcs.reshape((-1, 1)), inner_arcs.reshape((-1, 1))]
     # End wet run
 
     # ------------------------- write SMS maps --------------------------- 
     SMS_MAP(arcs=bank_arcs.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank.map')
     SMS_MAP(arcs=cc_arcs.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/cc_arcs.map')
     SMS_MAP(arcs=bank_arcs_raw.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank_raw.map')
-    SMS_MAP(arcs=river_arcs.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/river.map')
+    SMS_MAP(arcs=inner_arcs.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/river.map')
     SMS_MAP(arcs=smoothed_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/smoothed_thalweg.map')
     SMS_MAP(arcs=redistributed_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/redist_thalweg.map')
     np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/intersection_res.xyz', intersect_res)

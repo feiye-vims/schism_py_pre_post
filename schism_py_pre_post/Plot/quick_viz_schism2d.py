@@ -31,14 +31,14 @@ else:
 
 
 # %%
-var_name = "salinity"
+var_name = "temperature"
 it = -1
 isurf = False
 caxis = [0, 35]; xlim = [-77, -75]; ylim = [37, 39]
 plt.figure(figsize=(7, 7))
 
-fname = f'/sciclone/schism10/feiye/STOFS3D-v4/RUN23p9/outputs/{var_name}_78.nc'
-fname = f'/sciclone/scr10/lcui01/ICOGS3D/outputs_RUN23p1/{var_name}_21.nc'
+fname = f'/sciclone/schism10/feiye/STOFS3D-v4/RUN23p9/outputs/{var_name}_144.nc'
+fname = f'/sciclone/scr10/lcui01/ICOGS3D/outputs_RUN23p1/{var_name}_141.nc'
 
 my_nc = netCDF4.Dataset(fname)
 var = my_nc.variables[var_name]
