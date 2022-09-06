@@ -2,10 +2,10 @@
     "Ida": {
         "name": "Ida",
         "plot_start_day_str": "2021-05-05 00:00:00",
-        "plot_end_day_str": "2021-05-25 00:00:00",
+        "plot_end_day_str": "2021-07-11 00:00:00",
         "model_start_day_str": "2021-05-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23p8/outputs/staout_1",
-        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v4/RUN23p8/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23p10/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v4/RUN23p10/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31}
     },
     "Ida_v5": {

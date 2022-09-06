@@ -20,18 +20,27 @@ def find_large_small_dp():
         file.write('x y z id\n')
         np.savetxt(file, np.c_[gd.x[sorted_idx[valid[:n]]], gd.y[sorted_idx[valid[:n]]], sorted_dp[valid[:n]], sorted_idx[valid[:n]]])
 
+def quality_check_hgrid(gd, epsg=4326):
+    gd.compute_ctr()
+    if epsg != 26918:
+        gd.x, gd.y = gd.proj(prj0=f'epsg:{epsg}', prj1='epsg:26918')
+    
+    gd.compute_area()
+    sorted_area = np.sort(gd.area)
+    sorted_idx = np.argsort(gd.area)
+
+    print(np.c_[sorted_area[:20], sorted_idx[:20], gd.xctr[sorted_idx[:20]], gd.yctr[sorted_idx[:20]]])
+
 
 def proc_hgrid():
     file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/Combined_1.2.2/v5_1.2.2.2dm'
     dirname = os.path.dirname(file_2dm)
 
     gd = sms2grd(file_2dm)
+
+    quality_check_hgrid(gd, epsg=26918)
+
     utm_x, utm_y = [gd.x, gd.y]
-    gd.compute_area()
-    gd.compute_ctr()
-    sorted_area = np.sort(gd.area)
-    sorted_idx = np.argsort(gd.area)
-    print(np.c_[sorted_area[:20], sorted_idx[:20], gd.xctr[sorted_idx[:20]], gd.yctr[sorted_idx[:20]]])
 
     gd.x, gd.y = gd.proj(prj0='epsg:26918', prj1='epsg:4326')
     gd.save(f'{dirname}/hgrid.ll')
@@ -59,4 +68,16 @@ def proc_hgrid():
     pass
 
 if __name__ == "__main__":
-    proc_hgrid()
+    # proc_hgrid()
+    
+    gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23p11/hgrid.ll'
+    gd_cache_fname = os.path.splitext(gd_fname)[0] + '.pkl'
+    if os.path.exists(gd_cache_fname):
+        gd = schism_grid(gd_cache_fname)
+    else:
+        gd = schism_grid(gd_fname)
+        gd.save(gd_cache_fname)
+    
+    quality_check_hgrid(gd)
+
+    pass

@@ -107,7 +107,7 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
     return model_df
 
 
-def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_datum='NAVD', cache_folder='./'):
+def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_datum='NAVD', cache_folder='/sciclone/schism10/feiye/Cache/'):
 
     noaa_df_list = []
     datum_list = []
@@ -275,16 +275,16 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
 def plot_operation():
     os.system("rm stat*.txt *.png")
     # time
-    plot_start_day_str = '2022-07-20 00:00:00'
-    plot_end_day_str = '2022-07-22 00:00:00'
+    plot_start_day_str = '2022-08-28 00:00:00'
+    plot_end_day_str = '2022-08-30 00:00:00'
 
-    forecast_end_day_str = '2022-07-22 00:00:00'  # corresponding to folder name
+    forecast_end_day_str = '2022-08-28 00:00:00'  # corresponding to folder name
     fcst_folder = '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/'
-    remote_dir = '$cdir/srv/www/htdocs/yinglong/feiye/ICOGS/STOFS-3D_fcst/2022_07_20/'
+    remote_dir = '$cdir/webdata/html/yinglong/feiye/ICOGS/STOFS-3D_fcst/2022_08_28/'
 
     # station presets>>
     # stations, ICOGS v2 and v3>
-    station_bp_file = '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/20210829/station.in'
+    station_bp_file = '/sciclone/schism10/feiye/Coastal_Act/RUN11e/station.in'
     noaa_stations_all = Bpfile(station_bp_file, cols=5).st_id
     noaa_stations_groups = {
         'Florida': noaa_stations_all[:10],
