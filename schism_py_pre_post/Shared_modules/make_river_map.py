@@ -77,7 +77,7 @@ def improve_thalwegs(S, line, search_length, perp):
             I_lr[:, k] = ii[range(0, len(x)), thalweg_idx]
             J_lr[:, k] = jj[range(0, len(x)), thalweg_idx]
         except IndexError:
-            return None, None
+            return np.c_[x, y], False
 
     lr = S.elev[I_lr[:,0], J_lr[:,0]] > S.elev[I_lr[:,1], J_lr[:,1]]
     j = J_lr[range(0, len(x)), lr.astype(int)]
@@ -86,7 +86,7 @@ def improve_thalwegs(S, line, search_length, perp):
     x_real = S.lon[j]
     y_real = S.lat[i]
 
-    return np.c_[x_real, y_real]
+    return np.c_[x_real, y_real], True
 
 # %%
 def get_bank(S, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
@@ -499,8 +499,12 @@ if __name__ == "__main__":
     # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp'
     # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
-    tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'
-    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp'
+    # tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'
+    # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp'
+    # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
+
+    tif_fname = '/sciclone/data10/jiabi/nwm/tx-all.tif'
+    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/TX_watershed_nwm_projected_26915_v2_cleaned.shp'
     thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
     river_threshold = np.array([15, 400]) / MapUnit2METER
@@ -618,7 +622,9 @@ if __name__ == "__main__":
 
         # correct thalwegs
         width_moving_avg = moving_average(width, n=10)
-        thalweg = improve_thalwegs(S, thalweg, width_moving_avg*0.5, perp)
+        thalweg, is_corrected= improve_thalwegs(S, thalweg, width_moving_avg*0.5, perp)
+        if not is_corrected:
+            print(f"warning: thalweg {i+1} failed to correct, using original thalweg ...")
         corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
 
         # Redistribute thalwegs vertices
