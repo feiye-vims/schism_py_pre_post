@@ -307,7 +307,7 @@ def set_eta(x, y):
     # thalweg_eta = np.ones(y.shape) * 0.5
 
     y0 = [0, 23388517, 3461404, 9e9]
-    eta0 = [1, 1, 1, 1]
+    eta0 = [0, 0, 0, 0]
 
     eta = np.interp(y, y0, eta0)
 
@@ -382,7 +382,7 @@ def moving_average(a, n=10, self_weights=0):
 
         return ret2
 
-def redistribute_arc(line, line_smooth, channel_width, smooth_option=1, R_coef=0.5, width_coef=4.0, reso_thres=[3, 300]):
+def redistribute_arc(line, line_smooth, channel_width, smooth_option=1, R_coef=0.4, width_coef=4.0, reso_thres=[3, 300]):
     # along-river distance, for redistribution
     dist_along_thalweg = get_dist_increment(line)
 
@@ -495,14 +495,18 @@ if __name__ == "__main__":
     # tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1.0_Fix_region2_utm15N.tif'
     # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/LA_1_0_fix_region2_test1.shp'
 
+    # tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'
+    # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp'
+    # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
+
     tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'
-    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp'
+    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp'
     thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
     river_threshold = np.array([15, 400]) / MapUnit2METER
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
 
-    blast_radius_scale = 0.2  # coef controlling the blast radius at intersections
+    blast_radius_scale = 0.4  # coef controlling the blast radius at intersections
     intersect_res_scale  = 0.4  # coef controlling the resolution of the paved mesh at intersections
     # ------------------------- end basic inputs --------------------------- 
     
@@ -523,7 +527,7 @@ if __name__ == "__main__":
     search_length = river_threshold[1] * 1.1
     search_steps = int(river_threshold[1] / ds)
 
-    starndard_watershed_resolution = 150.0  # meters
+    starndard_watershed_resolution = 400.0  # meters
     nrow_arcs = 4  # the channel is resolved by "nrow_arcs" rows of elements
     # ------------------------- read thalweg --------------------------- 
     xyz, l2g, curv = get_all_points_from_shp(thalweg_shp_fname)
@@ -660,7 +664,7 @@ if __name__ == "__main__":
         blast_radius = np.array([0.0, 0.0])
         for k in [0, -1]:  # head and tail
             dist = thalweg_endpoints[:, :] - thalweg[k, :]
-            neighbor_thalwegs_endpoints = np.argwhere(dist[:, 0]**2 + dist[:, 1]**2 < 1e-6**2)
+            neighbor_thalwegs_endpoints = np.argwhere(dist[:, 0]**2 + dist[:, 1]**2 < 200**2)
             thalwegs_neighbors[i, k] = neighbor_thalwegs_endpoints
             if len(neighbor_thalwegs_endpoints) > 1:
                 blast_radius[k] = blast_radius_scale * np.mean(thalweg_endpoints_width[neighbor_thalwegs_endpoints])
@@ -747,7 +751,7 @@ if __name__ == "__main__":
     SMS_MAP(arcs=redistributed_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/redist_thalweg.map')
     SMS_MAP(arcs=corrected_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/corrected_thalweg.map')
     SMS_MAP(arcs=final_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/final_thalweg.map')
-    if intersect_res:  # not None
+    if intersect_res is not None:
         np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/intersection_res.xyz', intersect_res)
 
     # %%
