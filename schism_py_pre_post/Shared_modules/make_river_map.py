@@ -4,6 +4,7 @@ from pylib import loadz, proj_pts
 from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, curvature
 import numpy as np
 import copy
+import glob
 from copy import deepcopy
 import os
 import math
@@ -24,17 +25,6 @@ class dem_data():
     dx: float
     dy: float
 
-@dataclass
-class Bomb():
-    x: np.ndarray
-    y: np.ndarray
-    lon: np.ndarray
-    lat: np.ndarray
-    parent_thalwegs : list
-    blast_radius: np.ndarray
-
-
-# %%
 def getAngle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
     return ang + 360 if ang < 0 else ang
@@ -45,10 +35,15 @@ def get_elev_from_tiles(x, y, tile_list):
     y: vector of x coordinates;
     tile_list: list of tiles
     '''
-    elev = []
-    return elev
+    invalid = np.ones(x.shape, dtype=bool)
+    elevs = np.empty(x.shape, dtype=float)
+    for S in tile_list:
+        j, i = Sidx(S, x, y)
+        elevs[invalid] = S.elev[i, j][invalid]
+        invalid = (elevs<-1e5) * (elevs>1e5)
 
-# %%
+    return elevs
+
 def Sidx(S, x, y):
     ''' return nearest index (i, j) in DEM mesh for point (x, y) '''
     dSx = S.lon[1] - S.lon[0]
@@ -57,7 +52,7 @@ def Sidx(S, x, y):
     j = (np.round((y - S.lat[0]) / dSy)).astype(int)
     return [i, j]
 
-def improve_thalwegs(S, line, search_length, perp):
+def improve_thalwegs(S, dl, line, search_length, perp):
     x = line[:, 0]
     y = line[:, 1]
 
@@ -66,11 +61,14 @@ def improve_thalwegs(S, line, search_length, perp):
     xt_left = line[:, 0] + search_length * np.cos(perp + np.pi)
     yt_left = line[:, 1] + search_length * np.sin(perp + np.pi)
 
-    __search_steps = int(np.max(search_length/ds))
+    __search_steps = int(np.max(search_length/dl))
 
-    j, i = Sidx(S, x, y)
-    I_lr = np.c_[i, i] * 0
-    J_lr = copy.deepcopy(I_lr)
+    # j, i = Sidx(S, x, y)
+    # I_lr = np.c_[i, i] * 0
+    # J_lr = copy.deepcopy(I_lr)
+    x_new = np.empty((len(x), 2), dtype=float); x_new.fill(np.nan)
+    y_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
+    elev_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
     thalweg_idx = np.ones(xt_right.shape) * 9999
     for k, [xt, yt] in enumerate([[xt_left, yt_left], [xt_right, yt_right]]):
         xts = np.linspace(x, xt, __search_steps, axis=1)
@@ -81,19 +79,27 @@ def improve_thalwegs(S, line, search_length, perp):
             elevs = S.elev[ii, jj]
             low = np.argpartition(elevs, min(10, elevs.shape[1]-1), axis=1)
             thalweg_idx = np.median(low[:, :10], axis=1).astype(int)
+
             # thalweg_idx = np.argmin(elevs, axis=1)
 
-            I_lr[:, k] = ii[range(0, len(x)), thalweg_idx]
-            J_lr[:, k] = jj[range(0, len(x)), thalweg_idx]
-        except IndexError:
-            return np.c_[x, y], False
+            # I_lr[:, k] = ii[range(0, len(x)), thalweg_idx]
+            # J_lr[:, k] = jj[range(0, len(x)), thalweg_idx]
 
-    lr = S.elev[I_lr[:,0], J_lr[:,0]] > S.elev[I_lr[:,1], J_lr[:,1]]
-    j = J_lr[range(0, len(x)), lr.astype(int)]
-    i = I_lr[range(0, len(x)), lr.astype(int)]
-    
-    x_real = S.lon[j]
-    y_real = S.lat[i]
+            x_new[:, k] = xts[range(len(x)), thalweg_idx]
+            y_new[:, k] = yts[range(len(x)), thalweg_idx]
+            elev_new[:, k] = elevs[range(len(x)), thalweg_idx]
+        except IndexError:
+            return np.c_[x, y], False  # return orignial thalweg
+
+    # lr = S.elev[I_lr[:,0], J_lr[:,0]] > S.elev[I_lr[:,1], J_lr[:,1]]
+    # j = J_lr[range(0, len(x)), lr.astype(int)]
+    # i = I_lr[range(0, len(x)), lr.astype(int)]
+    # x_real = S.lon[j]
+    # y_real = S.lat[i]
+
+    left_or_right = elev_new[:, 0] > elev_new[:, 1]
+    x_real = x_new[range(len(x)), left_or_right.astype(int)]  # if left higher than right, then use right
+    y_real = y_new[range(len(x)), left_or_right.astype(int)]
 
     return np.c_[x_real, y_real], True
 
@@ -125,8 +131,10 @@ def get_bank(S, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
     # R_sort_idx = np.argsort(R)
     # bank_idx = np.min(R_sort_idx[:, :min(search_steps, search_tolerance)], axis=1)
 
-    x_banks = S.lon[jj[range(0, len(x)), bank_idx]]
-    y_banks = S.lat[ii[range(0, len(x)), bank_idx]]
+    # x_banks = S.lon[jj[range(0, len(x)), bank_idx]]
+    # y_banks = S.lat[ii[range(0, len(x)), bank_idx]]
+    x_banks = xts[range(len(x)), bank_idx]
+    y_banks = yts[range(len(x)), bank_idx]
 
     return x_banks, y_banks
 
@@ -337,7 +345,7 @@ class river_seg():
     def make_inner_arcs(self, narcs=2):
         inner_arcs = np.linspace(self.left_bank, self.right_bank, narcs)
 
-def get_two_banks(line):
+def get_two_banks(S, line, search_length, search_steps):
     range_arcs = []
     # find perpendicular direction along thalweg at each point
     perp = get_perpendicular_angle(line)
@@ -355,8 +363,10 @@ def get_two_banks(line):
     thalweg_eta = set_eta(line[:, 0], line[:, 1])
 
     # find two banks
-    x_banks_left, y_banks_left = get_bank(S, line[:, 0], line[:, 1], thalweg_eta, xt_left, yt_left, search_steps=search_steps)
-    x_banks_right, y_banks_right = get_bank(S, line[:, 0], line[:, 1], thalweg_eta, xt_right, yt_right, search_steps=search_steps)
+    x_banks_left, y_banks_left = \
+        get_bank(S, line[:, 0], line[:, 1], thalweg_eta, xt_left, yt_left, search_steps)
+    x_banks_right, y_banks_right = \
+        get_bank(S, line[:, 0], line[:, 1], thalweg_eta, xt_right, yt_right, search_steps)
 
     # get attributes of the initial banks
     # average width, for deciding nudging distance
@@ -366,7 +376,7 @@ def get_two_banks(line):
 
     bank2bank_width = ( (x_banks_left - x_banks_right)**2 + (y_banks_left - y_banks_right)**2 ) **0.5
 
-    SMS_MAP(arcs=range_arcs).writer(filename=f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank_range.map')
+    # SMS_MAP(arcs=range_arcs).writer(filename=f'{output_dir}/bank_range.map')
 
     return x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, bank2bank_width
 
@@ -493,10 +503,14 @@ def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
 
     return valid_idx
 
-def make_river_map():
-
-if __name__ == "__main__":
-
+def make_river_map(
+    tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'],
+    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp',
+    thalweg_smooth_shp_fname = None,  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
+    selected_thalweg = None,
+    output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/',
+    output_prefix = ''
+):
     # ------------------------- basic inputs --------------------------- 
     MapUnit2METER = 1 #00000
 
@@ -512,9 +526,6 @@ if __name__ == "__main__":
     # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp'
     # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
-    tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'
-    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp'
-    thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
     # tif_fname = '/sciclone/data10/jiabi/nwm/tx-all.tif'
     # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/TX_watershed_nwm_projected_26915_v2_cleaned.shp'
@@ -529,25 +540,41 @@ if __name__ == "__main__":
     
     # %%
     # ------------------------- read DEM --------------------------- 
-    if pathlib.Path(tif_fname).suffix == ".npz":
-        S = loadz(tif_fname)
-    elif pathlib.Path(tif_fname).suffix == ".tif" : 
-        S = Tif2XYZ(tif_fname=tif_fname)
-    else:
-        raise Exception("Unknown DEM format.")
-    print(f'DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
+    main_dem_id = 1
+    S_list = []
 
-    dx = S.lon[1] - S.lon[0]
-    dy = S.lat[1] - S.lat[0]
-    ds = (abs(dx) + abs(dy)) / 2
+    nvalid_tile = 0
+    for i, tif_fname in enumerate(tif_fnames):
+        if tif_fname is None:
+            continue
+        else:
+            nvalid_tile += 1
 
-    search_length = river_threshold[1] * 1.1
-    search_steps = int(river_threshold[1] / ds)
+        if pathlib.Path(tif_fname).suffix == ".npz":
+            S = loadz(tif_fname)
+        elif pathlib.Path(tif_fname).suffix == ".tif" : 
+            S = Tif2XYZ(tif_fname=tif_fname)
+        else:
+            raise Exception("Unknown DEM format.")
+        print(f'DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
+        S_list.append(S)
+
+        if nvalid_tile == main_dem_id:
+            dx = S.lon[1] - S.lon[0]
+            dy = S.lat[1] - S.lat[0]
+            dl = (abs(dx) + abs(dy)) / 2
+            search_length = river_threshold[1] * 1.1
+            search_steps = int(river_threshold[1] / dl)
+
+    if nvalid_tile == 0:
+        raise Exception('no valid DEM tiles')
 
     starndard_watershed_resolution = 400.0  # meters
     nrow_arcs = 4  # the channel is resolved by "nrow_arcs" rows of elements
+
     # ------------------------- read thalweg --------------------------- 
     xyz, l2g, curv = get_all_points_from_shp(thalweg_shp_fname)
+
     if thalweg_smooth_shp_fname is not None:
         xyz_s, l2g_s, curv_s = get_all_points_from_shp(thalweg_smooth_shp_fname)
 
@@ -555,16 +582,19 @@ if __name__ == "__main__":
     thalwegs_smooth = []
     thalwegs_curv = []
     thalweg_endpoints = np.empty((0, 2), dtype=float)
+    if selected_thalweg is None:
+        selected_thalweg = np.arange(len(l2g))
     for i, idx in enumerate(l2g):
-        # print(f'Arc {i+1} of {len(l2g)}')
-        thalwegs.append(xyz[idx, :])
-        thalwegs_curv.append(curv[idx])
-        thalweg_endpoints = np.r_[thalweg_endpoints, np.reshape(xyz[idx][0, :], (1, 2))]
-        thalweg_endpoints = np.r_[thalweg_endpoints, np.reshape(xyz[idx][-1, :], (1, 2))]
-        if thalweg_smooth_shp_fname is not None:
-            thalwegs_smooth.append(xyz_s[idx, :])
-        else:
-            thalwegs_smooth.append(None)
+        if i in selected_thalweg:
+            # print(f'Arc {i+1} of {len(l2g)}')
+            thalwegs.append(xyz[idx, :])
+            thalwegs_curv.append(curv[idx])
+            thalweg_endpoints = np.r_[thalweg_endpoints, np.reshape(xyz[idx][0, :], (1, 2))]
+            thalweg_endpoints = np.r_[thalweg_endpoints, np.reshape(xyz[idx][-1, :], (1, 2))]
+            if thalweg_smooth_shp_fname is not None:
+                thalwegs_smooth.append(xyz_s[idx, :])
+            else:
+                thalwegs_smooth.append(None)
 
     # ------------------------- Dry run ---------------------------
     print('Dry run')
@@ -574,7 +604,8 @@ if __name__ == "__main__":
     original_banks = []
     for i, [line, curv] in enumerate(zip(thalwegs, thalwegs_curv)):
         # print(f'Dry run: Arc {i+1} of {len(l2g)}')
-        x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = get_two_banks(line)
+        x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = \
+            get_two_banks(S, line, search_length, search_steps)
         thalweg_widths.append(width)
         if width is None:
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
@@ -631,11 +662,12 @@ if __name__ == "__main__":
             continue
 
         # re-make banks based on redistributed thalweg
-        x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = get_two_banks(thalweg)
+        x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
+            get_two_banks(S, thalweg, search_length, search_steps)
 
         # correct thalwegs
         width_moving_avg = moving_average(width, n=10)
-        thalweg, is_corrected= improve_thalwegs(S, thalweg, width_moving_avg*0.5, perp)
+        thalweg, is_corrected= improve_thalwegs(S, dl, thalweg, width_moving_avg*0.5, perp)
         if not is_corrected:
             print(f"warning: thalweg {i+1} failed to correct, using original thalweg ...")
         corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
@@ -650,7 +682,8 @@ if __name__ == "__main__":
         final_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
 
         # re-make banks based on corrected thalweg
-        x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = get_two_banks(thalweg)
+        x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
+            get_two_banks(S, thalweg, search_length, search_steps)
 
         # touch-ups on the two banks
         if x_banks_left is None or x_banks_right is None:
@@ -762,20 +795,31 @@ if __name__ == "__main__":
     # End wet run
 
     # ------------------------- write SMS maps --------------------------- 
-    SMS_MAP(arcs=bank_arcs.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank.map')
-    SMS_MAP(arcs=cc_arcs.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/cc_arcs.map')
-    SMS_MAP(arcs=bank_arcs_raw.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/bank_raw.map')
-    SMS_MAP(arcs=inner_arcs.reshape((-1, 1))).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/river.map')
-    SMS_MAP(arcs=smoothed_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/smoothed_thalweg.map')
-    SMS_MAP(arcs=redistributed_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/redist_thalweg.map')
-    SMS_MAP(arcs=corrected_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/corrected_thalweg.map')
-    SMS_MAP(arcs=final_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/final_thalweg.map')
-    if intersect_res is not None:
-        np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/intersection_res.xyz', intersect_res)
-    
-    total_map = SMS_MAP(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/cc_arcs.map') + \
-        SMS_MAP(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/river.map')
-    total_map.writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/total_arcs.map')
+    if any(bank_arcs.flatten()):  # not all arcs are None
+        SMS_MAP(arcs=bank_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank.map')
+        SMS_MAP(arcs=cc_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}cc_arcs.map')
+        SMS_MAP(arcs=bank_arcs_raw.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank_raw.map')
+        SMS_MAP(arcs=inner_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}river.map')
+        SMS_MAP(arcs=smoothed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}smoothed_thalweg.map')
+        SMS_MAP(arcs=redistributed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}redist_thalweg.map')
+        SMS_MAP(arcs=corrected_thalwegs).writer(filename=f'{output_dir}/{output_prefix}corrected_thalweg.map')
+        SMS_MAP(arcs=final_thalwegs).writer(filename=f'{output_dir}/{output_prefix}final_thalweg.map')
+        if intersect_res is not None:
+            np.savetxt(f'{output_dir}/{output_prefix}intersection_res.xyz', intersect_res)
+        
+        total_map = SMS_MAP(filename=f'{output_dir}/{output_prefix}cc_arcs.map') + \
+            SMS_MAP(filename=f'{output_dir}/{output_prefix}river.map')
+        total_map.writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
+    else:
+        print(f'No arcs found, aborting writing to *.map')
 
-    # %%
+
+if __name__ == "__main__":
+    make_river_map(
+        tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'],
+        thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp',
+        thalweg_smooth_shp_fname = None,  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
+        selected_thalweg = None,
+        output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/'
+    )
     pass

@@ -1,9 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
 import os
 from mpi4py import MPI
 import gc
 from schism_py_pre_post.Shared_modules.river_map_tif_preproc import find_thalweg_tile
+from schism_py_pre_post.Shared_modules.make_river_map import make_river_map
+from schism_py_pre_post.Grid.SMS import SMS_MAP
 
 
 comm = MPI.COMM_WORLD
@@ -87,7 +90,8 @@ def plot_schism2D_parallel(
 
 if __name__ == "__main__":
     dems_json_file = 'dems.json'
-    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp'
+    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp'
+    output_dir = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/'
 
     thalwegs2tile_groups, tile_groups_files, tile_groups2thalwegs = \
         find_thalweg_tile(dems_json_file=dems_json_file, thalweg_shp_fname=thalweg_shp_fname)
@@ -99,6 +103,22 @@ if __name__ == "__main__":
     for i, group in enumerate(my_groups):
         my_tile_files = my_groups[i]
         my_thalwegs = tile_groups2thalwegs[i]
-        make_river_map(my_tile_files, my_thalwegs)
+        make_river_map(
+            tif_fnames = my_tile_files,
+            thalweg_shp_fname = thalweg_shp_fname,
+            thalweg_smooth_shp_fname = None,  # '/GA_riverstreams_cleaned_corrected_utm17N.shp'
+            selected_thalweg = my_thalwegs,
+            output_dir = output_dir,
+            output_prefix = f'{rank}_{i}_'
+        )
+        pass
 
-    pass
+    # write
+    map_files = glob.glob(f'{output_dir}/*_river.map')
+    map_objects = [SMS_MAP(filename=map_file) for map_file in map_files]
+
+    total_map = map_objects[0]
+    for map_object in map_objects[1:]:
+        total_map += map_object
+    total_map.writer(filename=f'{output_dir}/total_arcs.map')
+    

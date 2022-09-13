@@ -186,6 +186,7 @@ class SMS_MAP():
         self.epsg = None
         self.arcs = []
         self.nodes = np.zeros((0, 2))
+        self.valid = True
 
         if filename is not None:
             self.reader(filename=filename)
@@ -194,7 +195,7 @@ class SMS_MAP():
                 arcs = np.squeeze(arcs).tolist()
             arcs = list(filter(lambda item: item is not None, arcs))
             if arcs == []:
-                raise Exception('At least one arc is required in the arcs list')
+                self.valid = False
             
             self.arcs = arcs
             self.epsg = epsg
@@ -239,6 +240,16 @@ class SMS_MAP():
         pass
     
     def writer(self, filename='test.map'):
+        import os
+
+        if not self.valid:
+            print(f'No arcs found in map, aborting writing to *.map')
+            return
+
+        fpath = os.path.dirname(filename)
+        if not os.path.exists(fpath):
+            os.mkdir(fpath)
+
         with open(filename, 'w') as f:
             # write header
             f.write('MAP VERSION 8\n')
