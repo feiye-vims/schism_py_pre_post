@@ -199,6 +199,10 @@ class SMS_MAP():
             self.arcs = arcs
             self.epsg = epsg
     
+    def __add__(self, other):
+        self.arcs = self.arcs + other.arcs
+        return SMS_MAP(arcs=self.arcs, epsg=self.epsg)
+    
     def reader(self, filename='test.map'):
         self.n_glb_nodes = 0
         self.n_arcs = 0
@@ -312,6 +316,8 @@ def curvature(pts):
     return cur
 
 def get_all_points_from_shp(fname):
+    print(f'reading shapefile: {fname}')
+
     sf = shapefile.Reader(fname)
     shapes = sf.shapes()
 
@@ -325,11 +331,13 @@ def get_all_points_from_shp(fname):
         # pts_cplx = np.array(pts).view(np.complex128)
         # dl = abs(pts_cplx[2:-1] - pts_cplx[1:-2])
 
-        print(f'shp {i+1} of {len(shapes)}, {len(pts)} points')
+        # print(f'shp {i+1} of {len(shapes)}, {len(pts)} points')
 
         xyz = np.append(xyz, shp.points, axis=0)
         shape_pts_l2g.append(np.array(np.arange(n, n+len(shp.points))))
         n += len(shp.points)
+
+    print(f'Number of shapes read: {len(shapes)}')
 
     return xyz, shape_pts_l2g, curv
 

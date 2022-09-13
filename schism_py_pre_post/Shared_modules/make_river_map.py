@@ -39,6 +39,15 @@ def getAngle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
     return ang + 360 if ang < 0 else ang
 
+def get_elev_from_tiles(x, y, tile_list):
+    '''
+    x: vector of x coordinates;
+    y: vector of x coordinates;
+    tile_list: list of tiles
+    '''
+    elev = []
+    return elev
+
 # %%
 def Sidx(S, x, y):
     ''' return nearest index (i, j) in DEM mesh for point (x, y) '''
@@ -287,6 +296,8 @@ def Tif2XYZ(tif_fname=None):
         S = dem_data(xp, yp, xp, yp, z, dx, dy)
         with open(cache_name, 'wb') as f:
             pickle.dump(S, f, protocol=pickle.HIGHEST_PROTOCOL)
+        
+        ds = None  # close dataset
 
     return S
 
@@ -482,6 +493,8 @@ def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
 
     return valid_idx
 
+def make_river_map():
+
 if __name__ == "__main__":
 
     # ------------------------- basic inputs --------------------------- 
@@ -499,13 +512,13 @@ if __name__ == "__main__":
     # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp'
     # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
-    # tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'
-    # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp'
-    # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
-
-    tif_fname = '/sciclone/data10/jiabi/nwm/tx-all.tif'
-    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/TX_watershed_nwm_projected_26915_v2_cleaned.shp'
+    tif_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'
+    thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp'
     thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
+
+    # tif_fname = '/sciclone/data10/jiabi/nwm/tx-all.tif'
+    # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/TX_watershed_nwm_projected_26915_v2_cleaned.shp'
+    # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
     river_threshold = np.array([15, 400]) / MapUnit2METER
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
@@ -759,6 +772,10 @@ if __name__ == "__main__":
     SMS_MAP(arcs=final_thalwegs).writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/final_thalweg.map')
     if intersect_res is not None:
         np.savetxt('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/intersection_res.xyz', intersect_res)
+    
+    total_map = SMS_MAP(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/cc_arcs.map') + \
+        SMS_MAP(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/river.map')
+    total_map.writer(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/total_arcs.map')
 
     # %%
     pass

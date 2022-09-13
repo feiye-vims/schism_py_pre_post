@@ -1,0 +1,20 @@
+{
+    "CRM": {
+        "name": "CRM",
+        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/*.tif",
+        "file_list": [],
+        "boxes": []
+    },
+    "CoNED": {
+        "name": "CoNED",
+        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CoNED/Combined/*.tif",
+        "file_list": [],
+        "boxes": []
+    },
+    "CuDEM": {
+        "name": "CuDEM",
+        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CuDEM/*.tif",
+        "file_list": [],
+        "boxes": []
+    }
+}
