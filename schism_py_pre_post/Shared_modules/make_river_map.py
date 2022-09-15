@@ -35,14 +35,18 @@ def get_elev_from_tiles(x, y, tile_list):
     y: vector of x coordinates;
     tile_list: list of tiles
     '''
-    invalid = np.ones(x.shape, dtype=bool)
     elevs = np.empty(x.shape, dtype=float)
+    iset = np.zeros(x.shape, dtype=bool)
     for S in tile_list:
-        j, i = Sidx(S, x, y)
-        elevs[invalid] = S.elev[i, j][invalid]
-        invalid = (elevs<-1e5) * (elevs>1e5)
-
-    return elevs
+        [j, i], valid = Sidx(S, x, y)
+        idx = ((~iset) * valid).astype(bool)  # only update valid entries that are not set already
+        elevs[idx] = S.elev[i[idx], j[idx]]
+        iset = (iset + idx).astype(bool)
+    
+    if not iset.all():
+        return None
+    else:
+        return elevs
 
 def Sidx(S, x, y):
     ''' return nearest index (i, j) in DEM mesh for point (x, y) '''
@@ -50,9 +54,11 @@ def Sidx(S, x, y):
     dSy = S.lat[1] - S.lat[0]
     i = (np.round((x - S.lon[0]) / dSx)).astype(int)
     j = (np.round((y - S.lat[0]) / dSy)).astype(int)
-    return [i, j]
+    
+    valid = (i < S.lon.shape) * (j < S.lat.shape) * (i >= 0) * (j >= 0) 
+    return [i, j], valid
 
-def improve_thalwegs(S, dl, line, search_length, perp):
+def improve_thalwegs(S_list, dl, line, search_length, perp):
     x = line[:, 0]
     y = line[:, 1]
 
@@ -63,9 +69,6 @@ def improve_thalwegs(S, dl, line, search_length, perp):
 
     __search_steps = int(np.max(search_length/dl))
 
-    # j, i = Sidx(S, x, y)
-    # I_lr = np.c_[i, i] * 0
-    # J_lr = copy.deepcopy(I_lr)
     x_new = np.empty((len(x), 2), dtype=float); x_new.fill(np.nan)
     y_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
     elev_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
@@ -74,28 +77,33 @@ def improve_thalwegs(S, dl, line, search_length, perp):
         xts = np.linspace(x, xt, __search_steps, axis=1)
         yts = np.linspace(y, yt, __search_steps, axis=1)
 
-        jj, ii = Sidx(S, xts[:], yts[:])
-        try:
+        ''' One tile
+        [jj, ii], valid = Sidx(S, xts[:], yts[:])
+        if valid.all():
             elevs = S.elev[ii, jj]
             low = np.argpartition(elevs, min(10, elevs.shape[1]-1), axis=1)
             thalweg_idx = np.median(low[:, :10], axis=1).astype(int)
 
-            # thalweg_idx = np.argmin(elevs, axis=1)
+            x_new[:, k] = xts[range(len(x)), thalweg_idx]
+            y_new[:, k] = yts[range(len(x)), thalweg_idx]
+            elev_new[:, k] = elevs[range(len(x)), thalweg_idx]
+        else:
+            return np.c_[x, y], False  # return orignial thalweg
+        '''
+        # multiple tiles in a tile list
+        elevs = get_elev_from_tiles(xts, yts, S_list)
+        if elevs is not None:
+            low = np.argpartition(elevs, min(10, elevs.shape[1]-1), axis=1)
+            thalweg_idx = np.median(low[:, :10], axis=1).astype(int)
 
-            # I_lr[:, k] = ii[range(0, len(x)), thalweg_idx]
-            # J_lr[:, k] = jj[range(0, len(x)), thalweg_idx]
+            if any(thalweg_idx<0) or any(thalweg_idx>=len(x)):
+                return np.c_[x, y], False  # return orignial thalweg
 
             x_new[:, k] = xts[range(len(x)), thalweg_idx]
             y_new[:, k] = yts[range(len(x)), thalweg_idx]
             elev_new[:, k] = elevs[range(len(x)), thalweg_idx]
-        except IndexError:
+        else:
             return np.c_[x, y], False  # return orignial thalweg
-
-    # lr = S.elev[I_lr[:,0], J_lr[:,0]] > S.elev[I_lr[:,1], J_lr[:,1]]
-    # j = J_lr[range(0, len(x)), lr.astype(int)]
-    # i = I_lr[range(0, len(x)), lr.astype(int)]
-    # x_real = S.lon[j]
-    # y_real = S.lat[i]
 
     left_or_right = elev_new[:, 0] > elev_new[:, 1]
     x_real = x_new[range(len(x)), left_or_right.astype(int)]  # if left higher than right, then use right
@@ -104,7 +112,7 @@ def improve_thalwegs(S, dl, line, search_length, perp):
     return np.c_[x_real, y_real], True
 
 # %%
-def get_bank(S, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
+def get_bank(S_list, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
     '''Get a bank on one side of the thalweg (x, y)'''
     # search_steps_tile = np.repeat(np.arange(search_steps).reshape(1, -1), len(x), axis=0)  # expanded to the search area
 
@@ -112,14 +120,29 @@ def get_bank(S, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
     xts = np.linspace(x, xt, search_steps, axis=1)
     yts = np.linspace(y, yt, search_steps, axis=1)
 
-    j, i = Sidx(S, x, y)
-    elevs_thalweg = np.ones(S.elev[i, j].shape) * eta  # elev on thalweg
+    ''' one tile
+    [j, i], valid = Sidx(S, x, y)
+    if all(valid):
+        elevs = S.elev[i, j]
+    else:
+        return None, None
+    '''
+    elevs = get_elev_from_tiles(x, y, S_list)
+    if elevs is None:
+        return None, None
+
+    elevs_thalweg = np.ones(elevs.shape) * eta  # elev on thalweg
     elevs_stream = np.tile(elevs_thalweg.reshape(-1, 1), (1, search_steps))  # expanded to the search area
 
-    jj, ii = Sidx(S, xts[:], yts[:])
-    try:
+    ''' one tile
+    [jj, ii], valid = Sidx(S, xts[:], yts[:])
+    if valid.all:
         elevs = S.elev[ii, jj]
-    except IndexError:
+    else:
+        return None, None
+    '''
+    elevs = get_elev_from_tiles(xts, yts, S_list)
+    if elevs is None:
         return None, None
 
     R = (elevs - elevs_stream)  # closeness to target depth: 0-1
@@ -270,8 +293,12 @@ def nudge_bank(line, perp, xs, ys, dist=np.array([35, 500])):
 
     return xs, ys
 
-def Tif2XYZ(tif_fname=None):
+def Tif2XYZ(tif_fname=None, remove_cache=False):
     cache_name = tif_fname + '.pkl'
+    if remove_cache:
+        if os.path.exists(cache_name):
+            os.remove(cache_name)
+
     if os.path.exists(cache_name):
         with open(cache_name, 'rb') as f:
             S = pickle.load(f)
@@ -345,7 +372,7 @@ class river_seg():
     def make_inner_arcs(self, narcs=2):
         inner_arcs = np.linspace(self.left_bank, self.right_bank, narcs)
 
-def get_two_banks(S, line, search_length, search_steps):
+def get_two_banks(S_list, line, search_length, search_steps):
     range_arcs = []
     # find perpendicular direction along thalweg at each point
     perp = get_perpendicular_angle(line)
@@ -364,9 +391,9 @@ def get_two_banks(S, line, search_length, search_steps):
 
     # find two banks
     x_banks_left, y_banks_left = \
-        get_bank(S, line[:, 0], line[:, 1], thalweg_eta, xt_left, yt_left, search_steps)
+        get_bank(S_list, line[:, 0], line[:, 1], thalweg_eta, xt_left, yt_left, search_steps)
     x_banks_right, y_banks_right = \
-        get_bank(S, line[:, 0], line[:, 1], thalweg_eta, xt_right, yt_right, search_steps)
+        get_bank(S_list, line[:, 0], line[:, 1], thalweg_eta, xt_right, yt_right, search_steps)
 
     # get attributes of the initial banks
     # average width, for deciding nudging distance
@@ -605,7 +632,7 @@ def make_river_map(
     for i, [line, curv] in enumerate(zip(thalwegs, thalwegs_curv)):
         # print(f'Dry run: Arc {i+1} of {len(l2g)}')
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = \
-            get_two_banks(S, line, search_length, search_steps)
+            get_two_banks(S_list, line, search_length, search_steps)
         thalweg_widths.append(width)
         if width is None:
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
@@ -663,11 +690,11 @@ def make_river_map(
 
         # re-make banks based on redistributed thalweg
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
-            get_two_banks(S, thalweg, search_length, search_steps)
+            get_two_banks(S_list, thalweg, search_length, search_steps)
 
         # correct thalwegs
         width_moving_avg = moving_average(width, n=10)
-        thalweg, is_corrected= improve_thalwegs(S, dl, thalweg, width_moving_avg*0.5, perp)
+        thalweg, is_corrected= improve_thalwegs(S_list, dl, thalweg, width_moving_avg*0.5, perp)
         if not is_corrected:
             print(f"warning: thalweg {i+1} failed to correct, using original thalweg ...")
         corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
@@ -683,7 +710,7 @@ def make_river_map(
 
         # re-make banks based on corrected thalweg
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
-            get_two_banks(S, thalweg, search_length, search_steps)
+            get_two_banks(S_list, thalweg, search_length, search_steps)
 
         # touch-ups on the two banks
         if x_banks_left is None or x_banks_right is None:

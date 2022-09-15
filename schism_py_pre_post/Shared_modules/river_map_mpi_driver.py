@@ -12,17 +12,16 @@ from schism_py_pre_post.Grid.SMS import SMS_MAP
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
-print(f'process {rank} of {size}\n')
+# print(f'process {rank} of {size}\n')
 
     
 def my_mpi_idx(N, size, rank):
-    if N > size:
-        n_per_rank, _ = divmod(N, size)
-        n_per_rank = n_per_rank + 1
-        return slice(rank*n_per_rank, min((rank+1)*n_per_rank, N))
-    else:
-        if rank+1 > N:
-            return slice
+    my_idx = np.zeros((N, ), dtype=bool)
+    n_per_rank, _ = divmod(N, size)
+    n_per_rank = n_per_rank + 1
+    # return slice())
+    my_idx[rank*n_per_rank:min((rank+1)*n_per_rank, N)] = True
+    return my_idx
 
 '''
 def plot_schism2D_parallel(
@@ -97,21 +96,20 @@ if __name__ == "__main__":
         find_thalweg_tile(dems_json_file=dems_json_file, thalweg_shp_fname=thalweg_shp_fname)
 
     # each core handles some groups
-    my_slice = my_mpi_idx(N=len(tile_groups_files), size=size, rank=rank)
-    my_groups = tile_groups_files[my_slice]
+    my_idx = my_mpi_idx(N=len(tile_groups_files), size=size, rank=rank)
+    my_tile_groups = tile_groups_files[my_idx]
+    my_tile_groups_thalwegs = tile_groups2thalwegs[my_idx]
+    print(f'Rank {rank} handles {np.argwhere(my_idx)}')
 
-    for i, group in enumerate(my_groups):
-        my_tile_files = my_groups[i]
-        my_thalwegs = tile_groups2thalwegs[i]
+    for i, (my_tile_group, my_tile_group_thalwegs) in enumerate(zip(my_tile_groups, my_tile_groups_thalwegs)):
         make_river_map(
-            tif_fnames = my_tile_files,
+            tif_fnames = my_tile_group,
             thalweg_shp_fname = thalweg_shp_fname,
             thalweg_smooth_shp_fname = None,  # '/GA_riverstreams_cleaned_corrected_utm17N.shp'
-            selected_thalweg = my_thalwegs,
+            selected_thalweg = my_tile_group_thalwegs,
             output_dir = output_dir,
             output_prefix = f'{rank}_{i}_'
         )
-        pass
 
     # write
     map_files = glob.glob(f'{output_dir}/*_river.map')

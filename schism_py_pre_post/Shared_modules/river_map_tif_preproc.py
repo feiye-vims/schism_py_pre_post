@@ -8,6 +8,9 @@ from schism_py_pre_post.Shared_modules.make_river_map import Tif2XYZ, get_all_po
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+import shapefile
+from schism_py_pre_post.Geometry.inpoly import find_node_in_shpfiles
+from pylib import schism_grid
 
 def get_tif_boxes(tif_files:list):
     tif_box = []
@@ -143,33 +146,36 @@ def find_thalweg_tile(
     # plt.hist(thalweg2large_group, bins=len(np.unique(thalweg2large_group)))
     # plt.show()
 
-    return thalweg2large_group, large_groups_files, large_group2thalwegs
+    return thalweg2large_group, large_groups_files, np.array(large_group2thalwegs, dtype=object)
 
 if __name__ == "__main__":
-    find_thalweg_tile()
-# %%
-# Reproject
-# tif_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/Lonlat/*.tif')
-# reproject_tifs(tif_files, 'EPSG:26917')
+    # find_thalweg_tile()
+    # %%
+    # Reproject
+    # tif_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/Lonlat/*.tif')
+    # reproject_tifs(tif_files, 'EPSG:26917')
 
-# Merge small coned tiles into larger ones (similar to CuDEM's tile size)
-# cudem_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CuDEM/*.tif')
-# cudem_boxes = get_tif_boxes(cudem_files)
+    # Merge small coned tiles into larger ones (similar to CuDEM's tile size)
+    # cudem_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CuDEM/*.tif')
+    # cudem_boxes = get_tif_boxes(cudem_files)
 
-# coned_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CoNED/Original/*.tif')
-# coned_boxes = get_tif_boxes(coned_files)
+    # coned_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CoNED/Original/*.tif')
+    # coned_boxes = get_tif_boxes(coned_files)
 
-# coned_centers = np.c_[
-#     (np.array(coned_boxes)[:, 0]+np.array(coned_boxes)[:, 2])/2, 
-#     (np.array(coned_boxes)[:, 1]+np.array(coned_boxes)[:, 3])/2,
-# ]
+    # coned_centers = np.c_[
+    #     (np.array(coned_boxes)[:, 0]+np.array(coned_boxes)[:, 2])/2, 
+    #     (np.array(coned_boxes)[:, 1]+np.array(coned_boxes)[:, 3])/2,
+    # ]
 
-# for i, cudem_box in enumerate(cudem_boxes):
-#     in_box = (coned_centers[:, 0] >  cudem_box[0]) * \
-#              (coned_centers[:, 0] <= cudem_box[2]) * \
-#              (coned_centers[:, 1] >  cudem_box[1]) * \
-#              (coned_centers[:, 1] <= cudem_box[3])
-#     in_box_files = (np.array(coned_files)[in_box]).tolist()
-#     g = gdal.Warp(f"/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CoNED/Combined/GA_CoNED_merged_{i}.tif",
-#                   in_box_files, format="GTiff", options=["COMPRESS=LZW", "TILED=YES"])
-#     g = None # Close file and flush to disk
+    # for i, cudem_box in enumerate(cudem_boxes):
+    #     in_box = (coned_centers[:, 0] >  cudem_box[0]) * \
+    #              (coned_centers[:, 0] <= cudem_box[2]) * \
+    #              (coned_centers[:, 1] >  cudem_box[1]) * \
+    #              (coned_centers[:, 1] <= cudem_box[3])
+    #     in_box_files = (np.array(coned_files)[in_box]).tolist()
+    #     g = gdal.Warp(f"/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CoNED/Combined/GA_CoNED_merged_{i}.tif",
+    #                   in_box_files, format="GTiff", options=["COMPRESS=LZW", "TILED=YES"])
+    #     g = None # Close file and flush to disk
+
+    pass
+
