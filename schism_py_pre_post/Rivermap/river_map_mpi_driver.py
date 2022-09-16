@@ -4,8 +4,8 @@ import glob
 import os
 from mpi4py import MPI
 import gc
-from schism_py_pre_post.Shared_modules.river_map_tif_preproc import find_thalweg_tile
-from schism_py_pre_post.Shared_modules.make_river_map import make_river_map
+from schism_py_pre_post.Rivermap.river_map_tif_preproc import find_thalweg_tile
+from schism_py_pre_post.Rivermap.make_river_map import make_river_map
 from schism_py_pre_post.Grid.SMS import SMS_MAP
 import time
 

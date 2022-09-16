@@ -1,7 +1,7 @@
 # %%
 import os
 from osgeo import gdal
-from schism_py_pre_post.Shared_modules.make_river_map import Tif2XYZ
+from schism_py_pre_post.Rivermap.make_river_map import Tif2XYZ
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import interpolate

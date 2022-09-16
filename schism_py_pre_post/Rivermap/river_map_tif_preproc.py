@@ -4,7 +4,7 @@ from statistics import median
 from osgeo import gdal
 from glob import glob
 import copy
-from schism_py_pre_post.Shared_modules.make_river_map import Tif2XYZ, get_all_points_from_shp
+from schism_py_pre_post.Rivermap.make_river_map import Tif2XYZ, get_all_points_from_shp
 import numpy as np
 import os
 import matplotlib.pyplot as plt
