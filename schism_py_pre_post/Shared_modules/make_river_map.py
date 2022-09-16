@@ -536,7 +536,8 @@ def make_river_map(
     thalweg_smooth_shp_fname = None,  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
     selected_thalweg = None,
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/',
-    output_prefix = ''
+    output_prefix = '',
+    mpi_print_prefix = ''
 ):
     # ------------------------- basic inputs --------------------------- 
     MapUnit2METER = 1 #00000
@@ -583,7 +584,7 @@ def make_river_map(
             S = Tif2XYZ(tif_fname=tif_fname)
         else:
             raise Exception("Unknown DEM format.")
-        print(f'DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
+        print(f'{mpi_print_prefix} DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
         S_list.append(S)
 
         if nvalid_tile == main_dem_id:
@@ -613,7 +614,7 @@ def make_river_map(
         selected_thalweg = np.arange(len(l2g))
     for i, idx in enumerate(l2g):
         if i in selected_thalweg:
-            # print(f'Arc {i+1} of {len(l2g)}')
+            # print(f'Arc {i+1} of {len(thalwegs)}')
             thalwegs.append(xyz[idx, :])
             thalwegs_curv.append(curv[idx])
             thalweg_endpoints = np.r_[thalweg_endpoints, np.reshape(xyz[idx][0, :], (1, 2))]
@@ -624,13 +625,13 @@ def make_river_map(
                 thalwegs_smooth.append(None)
 
     # ------------------------- Dry run ---------------------------
-    print('Dry run')
+    print(f'{mpi_print_prefix} Dry run')
     thalweg_endpoints_width = np.empty((0), dtype=float)
     thalweg_widths = []
     valid_thalwegs = []
     original_banks = []
     for i, [line, curv] in enumerate(zip(thalwegs, thalwegs_curv)):
-        # print(f'Dry run: Arc {i+1} of {len(l2g)}')
+        # print(f'Dry run: Arc {i+1} of {len(thalwegs)}')
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = \
             get_two_banks(S_list, line, search_length, search_steps)
         thalweg_widths.append(width)
@@ -642,12 +643,12 @@ def make_river_map(
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, width[-1]]
 
         if len(line[:, 0]) < 2:
-            print(f"warning: thalweg {i+1} only has one point, neglecting ...")
+            print(f"{mpi_print_prefix} warning: thalweg {i+1} only has one point, neglecting ...")
             valid_thalwegs.append(False)
             continue
 
         if x_banks_left is None or x_banks_right is None:
-            print(f"warning: thalweg {i+1} out of DEM coverage, neglecting ...")
+            print(f"{mpi_print_prefix} warning: thalweg {i+1} out of DEM coverage, neglecting ...")
             valid_thalwegs.append(False)
             continue
 
@@ -673,10 +674,10 @@ def make_river_map(
 
     # enumerate each thalweg
     for i, [thalweg, curv, width, valid_thalweg, thalweg_smooth] in enumerate(zip(thalwegs, thalwegs_curv, thalweg_widths, valid_thalwegs, thalwegs_smooth)):
-        print(f'Wet run: Arc {i+1} of {len(l2g)}')
+        # print(f'{mpi_print_prefix} Wet run: Arc {i+1} of {len(thalwegs)}')
 
         if not valid_thalweg:
-            print(f"marked as invalid in dry run, skipping ...")
+            print(f"{mpi_print_prefix} marked as invalid in dry run, skipping ...")
             continue
 
         # Redistribute thalwegs vertices
@@ -685,7 +686,7 @@ def make_river_map(
         redistributed_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
 
         if len(thalweg[:, 0]) < 2:
-            print(f"warning: thalweg {i+1} only has one point after redistribution, neglecting ...")
+            print(f"{mpi_print_prefix} warning: thalweg {i+1} only has one point after redistribution, neglecting ...")
             continue
 
         # re-make banks based on redistributed thalweg
@@ -696,7 +697,7 @@ def make_river_map(
         width_moving_avg = moving_average(width, n=10)
         thalweg, is_corrected= improve_thalwegs(S_list, dl, thalweg, width_moving_avg*0.5, perp)
         if not is_corrected:
-            print(f"warning: thalweg {i+1} failed to correct, using original thalweg ...")
+            print(f"{mpi_print_prefix} warning: thalweg {i+1} failed to correct, using original thalweg ...")
         corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
 
         # Redistribute thalwegs vertices
@@ -714,7 +715,7 @@ def make_river_map(
 
         # touch-ups on the two banks
         if x_banks_left is None or x_banks_right is None:
-            print(f'warning: cannot find banks for thalweg {i+1} after redistribution, neglecting ... ')
+            print(f'{mpi_print_prefix} warning: cannot find banks for thalweg {i+1} after redistribution, neglecting ... ')
             continue
 
         # nudge banks
@@ -838,7 +839,7 @@ def make_river_map(
             SMS_MAP(filename=f'{output_dir}/{output_prefix}river.map')
         total_map.writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
     else:
-        print(f'No arcs found, aborting writing to *.map')
+        print(f'{mpi_print_prefix} No arcs found, aborting writing to *.map')
 
 
 if __name__ == "__main__":

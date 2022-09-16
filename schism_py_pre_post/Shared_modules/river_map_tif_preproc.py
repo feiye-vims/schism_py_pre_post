@@ -11,20 +11,29 @@ import matplotlib.pyplot as plt
 import shapefile
 from schism_py_pre_post.Geometry.inpoly import find_node_in_shpfiles
 from pylib import schism_grid
+import pickle
 
 def get_tif_boxes(tif_files:list):
     tif_box = []
     for i, tif_file in enumerate(tif_files):
-        # print(f'reading tifs: {i+1} of {len(tif_files)}, {tif_file}')
+        print(f'reading tifs: {i+1} of {len(tif_files)}, {tif_file}')
         tif = Tif2XYZ(tif_file)
         tif_box.append([min(tif.x), min(tif.y), max(tif.x), max(tif.y)])
     return tif_box
 
-def reproject_tifs(tif_files:list, dstSRS='EPSG:26918'):
-    for tif_file in tif_files:
-        tif_outfile = os.path.splitext(tif_file)[0] + '.utm17N.tif'
-        g = gdal.Warp(tif_outfile, tif_file, dstSRS=dstSRS)
-        g = None
+def reproject_tifs(tif_files:list, srcSRS='EPSG:4326', dstSRS='EPSG:26917', outdir='./'):
+    '''
+    The function failed on CRM tiles, for which use the cmd line tool gdalwarp, e.g.:
+    gdalwarp -s_srs EPSG:4326 -t_srs EPSG:26917 -of GTiff ../Lonlat/crm_vol5.tif crm_vol5.26917.tif
+    '''
+    for i, tif_file in enumerate(tif_files):
+        print(f'reprojecting tifs: {i+1} of {len(tif_files)}, {tif_file}')
+        epsg = dstSRS.split(':')[1]
+        tif_outfile = outdir + os.path.basename(tif_file).split('.')[0] + '.' + epsg + '.tif'
+        if ~os.path.exists(tif_outfile):
+            g = gdal.Warp(tif_outfile, tif_file, srcSRS=srcSRS, dstSRS=dstSRS)
+            g = None
+    
 
 def pts_in_box(pts, box):
     in_box = (pts[:, 0] >  box[0]) * (pts[:, 0] <= box[2]) * \
@@ -50,6 +59,7 @@ def tile2dem_file(dem_dict, dem_order, tile_code):
 def find_thalweg_tile(
     dems_json_file='dems.json',
     thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp',
+    iNoPrint=True
 ):
     '''
     Assign thalwegs to DEM tiles
@@ -61,14 +71,29 @@ def find_thalweg_tile(
     # get the box of each tile of each DEM
     dem_order = []
     for k, v in dem_dict.items():
+        if not iNoPrint: print(f"readling dem: {dem_dict[k]['name']}")
         dem_order.append(k)
-        dem_dict[k]['file_list'] = glob(dem_dict[k]['glob_pattern'])
-        dem_dict[k]['boxes'] = get_tif_boxes(dem_dict[k]['file_list'])
+        cache_name = os.path.dirname(os.path.abspath(dem_dict[k]['glob_pattern'])) + \
+            '/' + dem_dict[k]['name'] + '.cache'
+        if os.path.exists(cache_name):
+            if not iNoPrint: print(f"cache read for dem: {dem_dict[k]['name']}")
+            with open(cache_name, 'rb') as file:
+                tmp_dict = pickle.load(file)
+                dem_dict[k]['file_list'] = tmp_dict['file_list']
+                dem_dict[k]['boxes'] = tmp_dict['boxes']
+        else:
+            dem_dict[k]['file_list'] = glob(dem_dict[k]['glob_pattern'])
+            dem_dict[k]['boxes'] = get_tif_boxes(dem_dict[k]['file_list'])
+            tmp_dict = {
+                'file_list': dem_dict[k]['file_list'],
+                'boxes': dem_dict[k]['boxes']
+            }
+            with open(cache_name, 'wb') as file:
+                pickle.dump(tmp_dict, file)
 
     # read thalwegs
     thalweg_shp_fname = thalweg_shp_fname
     xyz, l2g, curv = get_all_points_from_shp(thalweg_shp_fname)
-
     # find DEM tiles for all thalwegs' points
     thalwegs2dems = [find_parent_box(xyz[:,:2], dem_dict[k]['boxes']) for k in dem_dict.keys()]
 
@@ -125,9 +150,9 @@ def find_thalweg_tile(
     grp2large_grp = grp2large_grp[:-1]  # remove the dummy group at the end
 
     large_groups = groups[np.unique(grp2large_grp)]
-    print(f'number of groups after reduction: {len(large_groups)}')
+    if not iNoPrint: print(f'number of groups after reduction: {len(large_groups)}')
     group_lens = [len(x) for x in large_groups]
-    print(f'group lengths: min {min(group_lens)}; max {max(group_lens)}; mean {np.mean(group_lens)}')
+    if not iNoPrint: print(f'group lengths: min {min(group_lens)}; max {max(group_lens)}; mean {np.mean(group_lens)}')
 
     thalweg2group = grp2large_grp[thalweg2group]
     map_grp = dict(zip(np.unique(grp2large_grp), np.arange(len(np.unique(grp2large_grp)))))
@@ -152,8 +177,8 @@ if __name__ == "__main__":
     # find_thalweg_tile()
     # %%
     # Reproject
-    # tif_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/Lonlat/*.tif')
-    # reproject_tifs(tif_files, 'EPSG:26917')
+    tif_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/Lonlat/*.tif')
+    reproject_tifs(tif_files, 'EPSG:26917', outdir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/UTM17/')
 
     # Merge small coned tiles into larger ones (similar to CuDEM's tile size)
     # cudem_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CuDEM/*.tif')

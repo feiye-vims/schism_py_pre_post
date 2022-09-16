@@ -1,6 +1,8 @@
 from dataclasses import replace
 from logging import raiseExceptions
+import pickle
 from sys import getallocatedblocks
+import os
 import numpy as np
 from shapely.geometry import LineString
 import matplotlib.pyplot as plt
@@ -326,29 +328,43 @@ def curvature(pts):
 
     return cur
 
-def get_all_points_from_shp(fname):
-    print(f'reading shapefile: {fname}')
+def get_all_points_from_shp(fname, iNoPrint=True):
+    if not iNoPrint: print(f'reading shapefile: {fname}')
 
-    sf = shapefile.Reader(fname)
-    shapes = sf.shapes()
+    cache_name = fname + '.pkl'
 
-    shape_pts_l2g = []
-    xyz = np.empty((0, 2), dtype=float)
-    curv = np.empty((0, ), dtype=float)
-    n = 0
-    for i, shp in enumerate(shapes):
-        pts = np.array(shp.points)
-        curv = np.r_[curv, curvature(pts)]
-        # pts_cplx = np.array(pts).view(np.complex128)
-        # dl = abs(pts_cplx[2:-1] - pts_cplx[1:-2])
+    if os.path.exists(cache_name):
+        with open(cache_name, 'rb') as file:
+            tmp_dict = pickle.load(file)
+            xyz = tmp_dict['xyz']
+            shape_pts_l2g = tmp_dict['shape_pts_l2g']
+            curv = tmp_dict['curv']
+        if not iNoPrint: print(f'Cache of the shapefile loaded.')
+    else:
+        sf = shapefile.Reader(fname)
+        shapes = sf.shapes()
 
-        # print(f'shp {i+1} of {len(shapes)}, {len(pts)} points')
+        shape_pts_l2g = []
+        xyz = np.empty((0, 2), dtype=float)
+        curv = np.empty((0, ), dtype=float)
+        n = 0
+        for i, shp in enumerate(shapes):
+            pts = np.array(shp.points)
+            curv = np.r_[curv, curvature(pts)]
+            # pts_cplx = np.array(pts).view(np.complex128)
+            # dl = abs(pts_cplx[2:-1] - pts_cplx[1:-2])
 
-        xyz = np.append(xyz, shp.points, axis=0)
-        shape_pts_l2g.append(np.array(np.arange(n, n+len(shp.points))))
-        n += len(shp.points)
+            # if not iNoPrint: print(f'shp {i+1} of {len(shapes)}, {len(pts)} points')
 
-    print(f'Number of shapes read: {len(shapes)}')
+            xyz = np.append(xyz, shp.points, axis=0)
+            shape_pts_l2g.append(np.array(np.arange(n, n+len(shp.points))))
+            n += len(shp.points)
+
+        if not iNoPrint: print(f'Number of shapes read: {len(shapes)}')
+
+        with open(cache_name, 'wb') as file:
+            tmp_dict = {'xyz': xyz, 'shape_pts_l2g': shape_pts_l2g, 'curv': curv}
+            pickle.dump(tmp_dict, file)
 
     return xyz, shape_pts_l2g, curv
 
