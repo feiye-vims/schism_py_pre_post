@@ -45,7 +45,7 @@ def make_tile_based_on_template(
         for bg_tif_file in background_tile_list:
             bg_tif = Tif2XYZ(bg_tif_file)
             elev = bg_tif.elev
-            elev[np.isnan(elev)] = -9e9
+            elev[np.isnan(elev)] = -9999
             f.append(interpolate.interp2d(bg_tif.x, bg_tif.y, bg_tif.elev, kind='linear'))
         with open(f_cache_fname, 'wb') as file:
             pickle.dump(f, file)
@@ -75,16 +75,16 @@ def make_tile_based_on_template(
 
         # overwrite elevation with interpolated values from CRM
         i_arr = np.zeros(arr.shape, dtype=bool)
-        new_arr = np.ones(arr.shape, dtype='float32') * -9e9
+        new_arr = np.ones(arr.shape, dtype='float32') * -9999
         for bg_idx in np.argwhere(in_bg_tile[k]):
             idx = int(bg_idx)
             bg_tif = Tif2XYZ(background_tile_list[idx])
             elev = bg_tif.elev
-            elev[np.isnan(elev)] = -9e9
+            elev[np.isnan(elev)] = -9999
             this_f = f[idx]
             tmp = this_f(tplt_tif.x+shift_x, tplt_tif.y+shift_y).astype('float32')
             new_arr[~i_arr] = tmp[~i_arr]
-            i_arr += (new_arr > -9e8)
+            i_arr += (new_arr > -9999)
 
         # write new tile
         [rows, cols] = arr.shape
