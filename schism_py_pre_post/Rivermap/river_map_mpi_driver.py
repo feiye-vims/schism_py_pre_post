@@ -8,6 +8,7 @@ from schism_py_pre_post.Rivermap.river_map_tif_preproc import find_thalweg_tile
 from schism_py_pre_post.Rivermap.make_river_map import make_river_map
 from schism_py_pre_post.Grid.SMS import SMS_MAP
 import time
+import pickle
 
 
 comm = MPI.COMM_WORLD
@@ -96,37 +97,50 @@ if __name__ == "__main__":
     thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/v13_thalweg_utm17n.shp'
     output_dir = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/SMS_MAP/'
 
-    thalwegs2tile_groups, tile_groups_files, tile_groups2thalwegs = \
-        find_thalweg_tile(
-            dems_json_file=dems_json_file,
-            thalweg_shp_fname=thalweg_shp_fname,
-            iNoPrint=bool(rank)  # only rank 0 prints to screen
-        )
+    # group thalwegs
+    cache_name = '/sciclone/schism10/feiye/Cache/' + \
+        os.path.basename(dems_json_file) + '_' + \
+        os.path.basename(thalweg_shp_fname) + '_grouping.cache'
+    if os.path.exists(cache_name):
+        with open(cache_name, 'rb') as file:
+            thalwegs2tile_groups, tile_groups_files, tile_groups2thalwegs = pickle.load(file)
+    else:
+        thalwegs2tile_groups, tile_groups_files, tile_groups2thalwegs = \
+            find_thalweg_tile(
+                dems_json_file=dems_json_file,
+                thalweg_shp_fname=thalweg_shp_fname,
+                iNoPrint=bool(rank)  # only rank 0 prints to screen
+            )
+        with open(cache_name, 'wb') as file:
+            pickle.dump([thalwegs2tile_groups, tile_groups_files, tile_groups2thalwegs], file)
+
     if rank == 0: print(f'Thalwegs are divided into {len(tile_groups2thalwegs)} groups.')
     comm.barrier()
 
     # each core handles some groups
     my_idx = my_mpi_idx(N=len(tile_groups_files), size=size, rank=rank)
+    my_idx.fill(False); my_idx[[302, 427, 500, 472]] = True
     my_tile_groups = tile_groups_files[my_idx]
     my_tile_groups_thalwegs = tile_groups2thalwegs[my_idx]
-    print(f'Rank {rank} handles {np.squeeze(np.argwhere(my_idx))}')
+    print(f'Rank {rank} handles Group {np.squeeze(np.argwhere(my_idx))}')
+
 
     time_all_groups_start = time.time()
 
     for i, (my_tile_group, my_tile_group_thalwegs) in enumerate(zip(my_tile_groups, my_tile_groups_thalwegs)):
         time_this_group_start = time.time()
-        try:
-            make_river_map(
-                tif_fnames = my_tile_group,
-                thalweg_shp_fname = thalweg_shp_fname,
-                thalweg_smooth_shp_fname = None,  # '/GA_riverstreams_cleaned_corrected_utm17N.shp'
-                selected_thalweg = my_tile_group_thalwegs,
-                output_dir = output_dir,
-                output_prefix = f'{rank}_{i}_',
-                mpi_print_prefix = f'[Rank {rank}, Group {i+1} of {len(my_tile_groups)}] ',
-            )
-        except:
-            print(f'Rank {rank}: Group {i+1} of {len(my_tile_groups)} FAILED')
+        # try:
+        make_river_map(
+            tif_fnames = my_tile_group,
+            thalweg_shp_fname = thalweg_shp_fname,
+            thalweg_smooth_shp_fname = None,  # '/GA_riverstreams_cleaned_corrected_utm17N.shp'
+            selected_thalweg = my_tile_group_thalwegs,
+            output_dir = output_dir,
+            output_prefix = f'{rank}_{i}_',
+            mpi_print_prefix = f'[Rank {rank}, Group {i+1} of {len(my_tile_groups)}] ',
+        )
+        # except:
+        #     print(f'Rank {rank}: Group {i+1} of {len(my_tile_groups)} FAILED')
         
         print(f'Rank {rank}: Group {i+1} run time: {time.time()-time_this_group_start} seconds.')
     

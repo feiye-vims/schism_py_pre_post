@@ -71,7 +71,7 @@ def find_thalweg_tile(
     # get the box of each tile of each DEM
     dem_order = []
     for k, v in dem_dict.items():
-        if not iNoPrint: print(f"readling dem: {dem_dict[k]['name']}")
+        if not iNoPrint: print(f"reading dem: {dem_dict[k]['name']}")
         dem_order.append(k)
         cache_name = os.path.dirname(os.path.abspath(dem_dict[k]['glob_pattern'])) + \
             '/' + dem_dict[k]['name'] + '.cache'
@@ -177,8 +177,8 @@ if __name__ == "__main__":
     # find_thalweg_tile()
     # %%
     # Reproject
-    tif_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/Lonlat/*.tif')
-    reproject_tifs(tif_files, 'EPSG:26917', outdir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/UTM17/')
+    # tif_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/Lonlat/*.tif')
+    # reproject_tifs(tif_files, 'EPSG:26917', outdir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/UTM17/')
 
     # Merge small coned tiles into larger ones (similar to CuDEM's tile size)
     # cudem_files = glob(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CuDEM/*.tif')
