@@ -1,0 +1,26 @@
+import geopandas as gpd
+import numpy as np
+from schism_py_pre_post.Grid.SMS import curvature
+
+thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/LA_region1_utm17n.shp'
+thalweg_shp_fname = "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/ALL/CUDEM_merged_thalwegs_1e6_utm17n.shp"
+thalweg_shp_fname = "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/v13_thalweg_utm17n.shp"
+
+shapefile = gpd.read_file(thalweg_shp_fname)
+shapefile.iloc[2, :]
+shapefile.iloc[2, :]['geometry'].coords.xy[1]
+
+npts = 0
+shape_pts_l2g = []
+for i in range(shapefile.shape[0]):
+    shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
+    shape_pts_l2g.append(np.array(np.arange(npts, npts+shp_points)))
+    npts += shp_points
+
+xyz = np.empty((npts, 2), dtype=float)
+curv = np.empty((npts, ), dtype=float)
+for i in range(shapefile.shape[0]):
+    xyz[shape_pts_l2g[i], :] = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T
+    curv[shape_pts_l2g[i]] = curvature(xyz[shape_pts_l2g[i], :])
+
+pass

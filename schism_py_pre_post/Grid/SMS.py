@@ -12,7 +12,32 @@ import re
 import shapefile
 from scipy import spatial
 from schism_py_pre_post.Geometry.inpoly import find_pts_in_shpfiles
+import geopandas as gpd
+from pathlib import Path
 
+
+def lonlat2cpp(lon, lat, lon0=0, lat0=0):
+    R = 6378206.4
+
+    lon_radian, lat_radian = lon/180*np.pi, lat/180*np.pi
+    lon0_radian, lat0_radian = lon0/180*np.pi, lat0/180*np.pi
+
+    xout = R * (lon_radian - lon0_radian) * np.cos(lat0_radian)
+    yout = R * lat_radian
+
+    return [xout, yout]
+
+def cpp2lonlat(x, y, lon0=0, lat0=0):
+    R = 6378206.4
+
+    lon0_radian, lat0_radian = lon0/180*np.pi, lat0/180*np.pi
+
+    lon_radian = lon0_radian + x/R/np.cos(lat0_radian)
+    lat_radian = y / R
+    
+    lon, lat = lon_radian*180/np.pi, lat_radian*180/np.pi 
+
+    return [lon, lat]
 
 def normalizeVec(x, y):
     distance = np.sqrt(x*x+y*y)
@@ -138,8 +163,11 @@ LEND
 
 class SMS_ARC():
     '''class for manipulating arcs in SMS maps''' 
-    def __init__(self, points=None, node_idx=[0, -1]):
+    def __init__(self, points=None, node_idx=[0, -1], src_prj='cpp', dst_prj='epsg:4326'):
         # self.isDummy = (len(points) == 0)
+
+        if src_prj == 'cpp' and dst_prj == 'epsg:4326':
+            points[:, 0], points[: ,1] = cpp2lonlat(points[:, 0], points[: ,1])
 
         npoints, ncol = points.shape
         self.points = np.zeros((npoints, 3), dtype=float)
@@ -190,6 +218,8 @@ class SMS_MAP():
         self.nodes = np.zeros((0, 2))
         self.valid = True
 
+        self.epsg = epsg
+
         if filename is not None:
             self.reader(filename=filename)
         else:
@@ -200,7 +230,6 @@ class SMS_MAP():
                 self.valid = False
             
             self.arcs = arcs
-            self.epsg = epsg
     
     def __add__(self, other):
         self.arcs = self.arcs + other.arcs
@@ -237,7 +266,7 @@ class SMS_MAP():
                         this_arc_verts[i, :] = np.array([strs[0], strs[1]])
                     node_1 = np.reshape(self.nodes[this_arc_node_idx[0], :], (1, 2))
                     node_2 = np.reshape(self.nodes[this_arc_node_idx[1], :], (1, 2))
-                    this_arc = SMS_ARC(points=np.r_[node_1, this_arc_verts, node_2])
+                    this_arc = SMS_ARC(points=np.r_[node_1, this_arc_verts, node_2], src_prj=f'epsg: {self.epsg}')
                     self.arcs.append(this_arc)
         pass
     
@@ -314,6 +343,18 @@ class Levee_SMS_MAP(SMS_MAP):
                 self.offsetline_list.append(SMS_ARC(points=np.c_[x_off, y_off]))
         return SMS_MAP(arcs=self.subsampled_centerline_list), SMS_MAP(arcs=self.offsetline_list)
 
+def get_perpendicular_angle(line):
+    line_cplx = np.squeeze(line.copy().view(np.complex128))
+    angles = np.angle(np.diff(line_cplx))
+    angle_diff0 = np.diff(angles)
+    angle_diff = np.diff(angles)
+    angle_diff[angle_diff0 > np.pi] -= 2 * np.pi
+    angle_diff[angle_diff0 < -np.pi] += 2 * np.pi
+    perp = angles[:-1] + angle_diff / 2 - np.pi / 2
+    perp = np.r_[angles[0] - np.pi / 2, perp, angles[-1] - np.pi / 2]
+
+    return perp
+
 def curvature(pts):
     if len(pts[:, 0]) < 3:
         cur = np.zeros((len(pts[:, 0])))
@@ -328,10 +369,17 @@ def curvature(pts):
 
     return cur
 
-def get_all_points_from_shp(fname, iNoPrint=True):
+def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=None):
     if not iNoPrint: print(f'reading shapefile: {fname}')
 
-    cache_name = fname + '.pkl'
+    if cache_folder is None:
+        cache_folder = ''
+
+    cache_name = cache_folder + Path(fname).stem + '.pkl'
+
+    if iCache == False:
+        if os.path.exists(cache_name):
+            os.remove(cache_name)
 
     if os.path.exists(cache_name):
         with open(cache_name, 'rb') as file:
@@ -339,8 +387,10 @@ def get_all_points_from_shp(fname, iNoPrint=True):
             xyz = tmp_dict['xyz']
             shape_pts_l2g = tmp_dict['shape_pts_l2g']
             curv = tmp_dict['curv']
+            perp = tmp_dict['perp']
         if not iNoPrint: print(f'Cache of the shapefile loaded.')
     else:
+        '''using pyshp
         sf = shapefile.Reader(fname)
         shapes = sf.shapes()
 
@@ -359,14 +409,39 @@ def get_all_points_from_shp(fname, iNoPrint=True):
             xyz = np.append(xyz, shp.points, axis=0)
             shape_pts_l2g.append(np.array(np.arange(n, n+len(shp.points))))
             n += len(shp.points)
+        '''
+        
+        # using geopandas, more efficient than pyshp
+        shapefile = gpd.read_file(fname)
+        npts = 0
+        shape_pts_l2g = []
+        for i in range(shapefile.shape[0]):
+            try:
+                shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
+            except NotImplementedError:
+                print(f"Warning: multi-part geometries, neglecting ...")
+                continue
+            except:
+                raiseExceptions(f'Undefined error reading shapefile {fname}')
+
+            shape_pts_l2g.append(np.array(np.arange(npts, npts+shp_points)))
+            npts += shp_points
+
+        xyz = np.empty((npts, 2), dtype=float)
+        curv = np.empty((npts, ), dtype=float)
+        perp = np.empty((npts, ), dtype=float)
+        for i in range(shapefile.shape[0]):
+            xyz[shape_pts_l2g[i], :] = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T
+            curv[shape_pts_l2g[i]] = curvature(xyz[shape_pts_l2g[i], :])
+            perp[shape_pts_l2g[i]] = get_perpendicular_angle(xyz[shape_pts_l2g[i], :2])
 
         if not iNoPrint: print(f'Number of shapes read: {len(shapes)}')
 
         with open(cache_name, 'wb') as file:
-            tmp_dict = {'xyz': xyz, 'shape_pts_l2g': shape_pts_l2g, 'curv': curv}
+            tmp_dict = {'xyz': xyz, 'shape_pts_l2g': shape_pts_l2g, 'curv': curv, 'perp': perp}
             pickle.dump(tmp_dict, file)
 
-    return xyz, shape_pts_l2g, curv
+    return xyz, shape_pts_l2g, curv, perp
 
 def replace_shp_pts(inshp_fname, pts, l2g, outshp_fname):
     sf = shapefile.Reader(inshp_fname)

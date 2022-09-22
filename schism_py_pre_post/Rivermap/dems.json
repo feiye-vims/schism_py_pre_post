@@ -1,19 +1,13 @@
 {
     "CuDEM": {
         "name": "CuDEM",
-        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CuDEM/UTM17/*.tif",
-        "file_list": [],
-        "boxes": []
-    },
-    "CoNED": {
-        "name": "CoNED",
-        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CoNED/Combined/*.tif",
+        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CuDEM/Lonlat/*.tif",
         "file_list": [],
         "boxes": []
     },
     "CRM": {
         "name": "CRM",
-        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/CRM/UTM17/*.tif",
+        "glob_pattern": "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/DEMs/CRM/Lonlat/*.tif",
         "file_list": [],
         "boxes": []
     }

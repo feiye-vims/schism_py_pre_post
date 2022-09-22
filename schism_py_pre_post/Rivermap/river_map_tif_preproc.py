@@ -1,4 +1,5 @@
 # %%    
+from functools import cache
 import json
 from statistics import median
 from osgeo import gdal
@@ -9,7 +10,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import shapefile
-from schism_py_pre_post.Geometry.inpoly import find_node_in_shpfiles
+from schism_py_pre_post.Grid.SMS import lonlat2cpp, cpp2lonlat
 from pylib import schism_grid
 import pickle
 
@@ -30,7 +31,7 @@ def reproject_tifs(tif_files:list, srcSRS='EPSG:4326', dstSRS='EPSG:26917', outd
         print(f'reprojecting tifs: {i+1} of {len(tif_files)}, {tif_file}')
         epsg = dstSRS.split(':')[1]
         tif_outfile = outdir + os.path.basename(tif_file).split('.')[0] + '.' + epsg + '.tif'
-        if ~os.path.exists(tif_outfile):
+        if not os.path.exists(tif_outfile):
             g = gdal.Warp(tif_outfile, tif_file, srcSRS=srcSRS, dstSRS=dstSRS)
             g = None
     
@@ -59,7 +60,8 @@ def tile2dem_file(dem_dict, dem_order, tile_code):
 def find_thalweg_tile(
     dems_json_file='dems.json',
     thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp',
-    iNoPrint=True
+    cache_folder=None,
+    iNoPrint=True, i_DEM_cache=True, i_thalweg_cache=True
 ):
     '''
     Assign thalwegs to DEM tiles
@@ -73,9 +75,15 @@ def find_thalweg_tile(
     for k, v in dem_dict.items():
         if not iNoPrint: print(f"reading dem: {dem_dict[k]['name']}")
         dem_order.append(k)
-        cache_name = os.path.dirname(os.path.abspath(dem_dict[k]['glob_pattern'])) + \
+        if cache_folder is None:
+            cache_folder = os.path.dirname(os.path.abspath(dem_dict[k]['glob_pattern']))  # same as *.shp's folder
+        cache_name =  cache_folder + \
             '/' + dem_dict[k]['name'] + '.cache'
-        if os.path.exists(cache_name):
+        # Remove the existing cache if i_DEM_cache is False,
+        # this assumes the cache file needs to be updated
+        if (not i_DEM_cache) and os.path.exists(cache_name): os.remove(cache_name)
+
+        if i_DEM_cache and os.path.exists(cache_name):
             if not iNoPrint: print(f"cache read for dem: {dem_dict[k]['name']}")
             with open(cache_name, 'rb') as file:
                 tmp_dict = pickle.load(file)
@@ -92,26 +100,41 @@ def find_thalweg_tile(
                 pickle.dump(tmp_dict, file)
 
     # read thalwegs
+    print(f'Reading thalwegs from {thalweg_shp_fname} ...')
     thalweg_shp_fname = thalweg_shp_fname
-    xyz, l2g, curv = get_all_points_from_shp(thalweg_shp_fname)
-    # find DEM tiles for all thalwegs' points
-    thalwegs2dems = [find_parent_box(xyz[:,:2], dem_dict[k]['boxes']) for k in dem_dict.keys()]
+    xyz, l2g, curv, perp = get_all_points_from_shp(thalweg_shp_fname, iCache=i_thalweg_cache, cache_folder=cache_folder)
 
-    # find DEM tiles for each thalweg
+    # find DEM tiles for all thalwegs' points
+    print(f'finding DEM tiles for each thalweg ...')
+    x_cpp, y_cpp = lonlat2cpp(xyz[:, 0], xyz[:, 1])
+    estimated_range = 1000  # meters
+    xt_right = x_cpp + estimated_range * np.cos(perp)
+    yt_right = y_cpp + estimated_range * np.sin(perp)
+    xt_left = x_cpp + estimated_range * np.cos(perp + np.pi)
+    yt_left = y_cpp + estimated_range * np.sin(perp + np.pi)
+    # find thalweg itself and two search boundaries (one on each side)
+    thalwegs2dems = [find_parent_box(xyz[:,:2], dem_dict[k]['boxes']) for k in dem_dict.keys()]
+    thalwegs_right2dems = [find_parent_box(np.array(cpp2lonlat(xt_right, yt_right)).T, dem_dict[k]['boxes']) for k in dem_dict.keys()] 
+    thalwegs_left2dems = [find_parent_box(np.array(cpp2lonlat(xt_left, yt_left)).T, dem_dict[k]['boxes']) for k in dem_dict.keys()]
+
+    # use cpp projection hereafter, because meter unit is easier for parameterization
+    xyz[:, 0], xyz[:, 1] = x_cpp, y_cpp
+
     thalwegs = []
     thalwegs_parents = []
-    for i, idx in enumerate(l2g):
-        line = xyz[idx,:]
+    for i, idx in enumerate(l2g):  # enumerate thalwegs
+        line = xyz[idx,:]  # one segment of a thalweg
         thalwegs.append(line)
 
         thalweg_parents = []  # one thalweg can have parent tiles from all DEM sources
-        for i_dem, thalwegs2dem in enumerate(thalwegs2dems):
-            thalweg2dem = np.unique(thalwegs2dem[idx]).tolist()
+        for i_dem, [thalwegs2dem, thalwegs_left2dem, thalwegs_right2dem] in enumerate(zip(thalwegs2dems, thalwegs_right2dems, thalwegs_left2dems)):
+            # find all DEM tiles that a thalweg (including its left and right search boundaries) touches
+            thalweg2dem = np.unique(np.r_[thalwegs2dem[idx], thalwegs_left2dem[idx], thalwegs_right2dem[idx]]).tolist()
             thalweg_parents += [complex(i_dem, x) for x in thalweg2dem]  # real part is DEM id; complex part is tile id
-
         thalwegs_parents.append(thalweg_parents)
 
     # Group thalwegs: thalwegs from the same group have the same parent tiles
+    print(f'grouping thalwegs ...')
     groups = []
     group_id = 0
     thalweg2group = -np.ones((len(thalwegs)), dtype=int)
@@ -143,7 +166,7 @@ def find_thalweg_tile(
     while any(idx):
         grp2large_grp[idx] = parents[idx]  # reset parent to parent's parent
         parents = parents[parents]  # advance family tree
-        idx = parents != len(groups)  # see where parent's parent still exists
+        idx = parents != len(groups)  # get the idx where parent's parent still exists
 
     idx = grp2large_grp==len(groups)  # where parent's parent is no-existent
     grp2large_grp[idx] = np.arange(len(groups)+1)[idx]  # parent group is self

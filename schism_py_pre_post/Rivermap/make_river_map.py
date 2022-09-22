@@ -1,7 +1,7 @@
 # %%
 import matplotlib.pyplot as plt
 from pylib import loadz, proj_pts
-from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, curvature
+from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, curvature, cpp2lonlat, lonlat2cpp, get_perpendicular_angle
 import numpy as np
 import copy
 import glob
@@ -13,7 +13,9 @@ from dataclasses import dataclass
 import pathlib
 import pickle
 from scipy import interpolate
+import numpy as np
 
+np.seterr(all='raise')
 
 @dataclass
 class dem_data():
@@ -29,36 +31,47 @@ def getAngle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
     return ang + 360 if ang < 0 else ang
 
-def get_elev_from_tiles(x, y, tile_list):
+
+def get_elev_from_tiles(x_cpp, y_cpp, tile_list):
     '''
-    x: vector of x coordinates;
-    y: vector of x coordinates;
+    x: vector of x coordinates, assuming cpp;
+    y: vector of x coordinates, assuming cpp;
     tile_list: list of tiles
     '''
-    elevs = np.empty(x.shape, dtype=float)
-    iset = np.zeros(x.shape, dtype=bool)
+
+    lon, lat = cpp2lonlat(x_cpp, y_cpp)
+    
+    elevs = np.empty(lon.shape, dtype=float); elevs.fill(np.nan)
+    iset = np.zeros(lon.shape, dtype=bool)
     for S in tile_list:
-        [j, i], valid = Sidx(S, x, y)
+        [j, i], valid = Sidx(S, lon, lat)
         idx = ((~iset) * valid).astype(bool)  # only update valid entries that are not set already
         elevs[idx] = S.elev[i[idx], j[idx]]
         iset = (iset + idx).astype(bool)
+    
+    if np.isnan(elevs).any():
+        pass
+        # raise Exception('failed to find elevation')
     
     if not iset.all():
         return None
     else:
         return elevs
 
-def Sidx(S, x, y):
-    ''' return nearest index (i, j) in DEM mesh for point (x, y) '''
+def Sidx(S, lon, lat):
+    '''
+    return nearest index (i, j) in DEM mesh for point (x, y),
+    assuming lon/lat, not projected coordinates
+    '''
     dSx = S.lon[1] - S.lon[0]
     dSy = S.lat[1] - S.lat[0]
-    i = (np.round((x - S.lon[0]) / dSx)).astype(int)
-    j = (np.round((y - S.lat[0]) / dSy)).astype(int)
+    i = (np.round((lon - S.lon[0]) / dSx)).astype(int)
+    j = (np.round((lat - S.lat[0]) / dSy)).astype(int)
     
-    valid = (i < S.lon.shape) * (j < S.lat.shape) * (i >= 0) * (j >= 0) 
+    valid = (i < S.lon.shape) * (j < S.lat.shape) * (i >= 0) * (j >= 0)
     return [i, j], valid
 
-def improve_thalwegs(S_list, dl, line, search_length, perp):
+def improve_thalwegs(S_list, dl, line, search_length, perp, mpi_print_prefix):
     x = line[:, 0]
     y = line[:, 1]
 
@@ -68,6 +81,7 @@ def improve_thalwegs(S_list, dl, line, search_length, perp):
     yt_left = line[:, 1] + search_length * np.sin(perp + np.pi)
 
     __search_steps = int(np.max(search_length/dl))
+    __search_steps = max(5, __search_steps)  # give it at least something to search for, i.e., the length of 5 grid points
 
     x_new = np.empty((len(x), 2), dtype=float); x_new.fill(np.nan)
     y_new = np.empty((len(x), 2), dtype=float); y_new.fill(np.nan)
@@ -92,9 +106,19 @@ def improve_thalwegs(S_list, dl, line, search_length, perp):
         '''
         # multiple tiles in a tile list
         elevs = get_elev_from_tiles(xts, yts, S_list)
+        if np.isnan(elevs).any():
+            print(f'{mpi_print_prefix} Warning: nan found in elevs\n' + \
+                  f'when trying to improve Thalweg: {np.c_[x, y]}')
+            return np.c_[x, y], False  # return orignial thalweg
+
         if elevs is not None:
-            low = np.argpartition(elevs, min(10, elevs.shape[1]-1), axis=1)
-            thalweg_idx = np.median(low[:, :10], axis=1).astype(int)
+            if elevs.shape[1] < 2:
+                print(f'{mpi_print_prefix} Warning: elevs shape[1] < 2')
+                return np.c_[x, y], False  # return orignial thalweg
+
+            n_low = min(10, elevs.shape[1]-1)
+            low = np.argpartition(elevs, n_low, axis=1)
+            thalweg_idx = np.median(low[:, :n_low], axis=1).astype(int)
 
             if any(thalweg_idx<0) or any(thalweg_idx>=len(x)):
                 return np.c_[x, y], False  # return orignial thalweg
@@ -336,18 +360,6 @@ def Tif2XYZ(tif_fname=None, remove_cache=False):
 
     return S
 
-def get_perpendicular_angle(line):
-    line_cplx = np.squeeze(line.copy().view(np.complex128))
-    angles = np.angle(np.diff(line_cplx))
-    angle_diff0 = np.diff(angles)
-    angle_diff = np.diff(angles)
-    angle_diff[angle_diff0 > np.pi] -= 2 * np.pi
-    angle_diff[angle_diff0 < -np.pi] += 2 * np.pi
-    perp = angles[:-1] + angle_diff / 2 - np.pi / 2
-    perp = np.r_[angles[0] - np.pi / 2, perp, angles[-1] - np.pi / 2]
-
-    return perp
-
 def set_eta(x, y):
     # thalweg_eta = np.maximum(0.0, (y - 3313760.0))/(3367300.0 - 3313760.0) * 1.2
     # thalweg_eta = np.ones(y.shape) * 0.5
@@ -372,7 +384,7 @@ class river_seg():
     def make_inner_arcs(self, narcs=2):
         inner_arcs = np.linspace(self.left_bank, self.right_bank, narcs)
 
-def get_two_banks(S_list, line, search_length, search_steps):
+def get_two_banks(S_list, line, search_length, search_steps, min_width):
     range_arcs = []
     # find perpendicular direction along thalweg at each point
     perp = get_perpendicular_angle(line)
@@ -401,6 +413,14 @@ def get_two_banks(S_list, line, search_length, search_steps):
         print('warning: failed to find banks ... ')
         return None, None, None, None, None, None
 
+    bank2bank_width = ( (x_banks_left - x_banks_right)**2 + (y_banks_left - y_banks_right)**2 ) **0.5
+
+    # deal with very small widths
+    ismall = bank2bank_width < min_width
+    x_banks_right[ismall] = line[ismall, 0] + min_width/2 * np.cos(perp[ismall])
+    y_banks_right[ismall] = line[ismall, 1] + min_width/2 * np.sin(perp[ismall])
+    x_banks_left[ismall] = line[ismall, 0] + min_width/2 * np.cos(perp[ismall] + np.pi)
+    y_banks_left[ismall] = line[ismall, 1] + min_width/2 * np.sin(perp[ismall] + np.pi)
     bank2bank_width = ( (x_banks_left - x_banks_right)**2 + (y_banks_left - y_banks_right)**2 ) **0.5
 
     # SMS_MAP(arcs=range_arcs).writer(filename=f'{output_dir}/bank_range.map')
@@ -559,11 +579,13 @@ def make_river_map(
     # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/TX_watershed_nwm_projected_26915_v2_cleaned.shp'
     # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
-    river_threshold = np.array([15, 400]) / MapUnit2METER
+    river_threshold = np.array([5, 400]) / MapUnit2METER
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
 
     blast_radius_scale = 0.4  # coef controlling the blast radius at intersections
     intersect_res_scale  = 0.4  # coef controlling the resolution of the paved mesh at intersections
+
+    i_thalweg_cache = True
     # ------------------------- end basic inputs --------------------------- 
     
     # %%
@@ -584,12 +606,13 @@ def make_river_map(
             S = Tif2XYZ(tif_fname=tif_fname)
         else:
             raise Exception("Unknown DEM format.")
-        print(f'{mpi_print_prefix} DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
+        print(f'{mpi_print_prefix} [{os.path.basename(tif_fname)}] DEM box: {min(S.lon)}, {min(S.lat)}, {max(S.lon)}, {max(S.lat)}')
         S_list.append(S)
 
         if nvalid_tile == main_dem_id:
-            dx = S.lon[1] - S.lon[0]
-            dy = S.lat[1] - S.lat[0]
+            S_x, S_y = lonlat2cpp(S.lon[:2], S.lat[:2])
+            dx = S_x[1] - S_x[0]
+            dy = S_y[1] - S_y[0]
             dl = (abs(dx) + abs(dy)) / 2
             search_length = river_threshold[1] * 1.1
             search_steps = int(river_threshold[1] / dl)
@@ -601,10 +624,13 @@ def make_river_map(
     nrow_arcs = 4  # the channel is resolved by "nrow_arcs" rows of elements
 
     # ------------------------- read thalweg --------------------------- 
-    xyz, l2g, curv = get_all_points_from_shp(thalweg_shp_fname)
+    xyz, l2g, curv, _ = get_all_points_from_shp(thalweg_shp_fname, iCache=i_thalweg_cache)
+    xyz[:, 0], xyz[:, 1] = lonlat2cpp(xyz[:, 0], xyz[:, 1])
 
     if thalweg_smooth_shp_fname is not None:
-        xyz_s, l2g_s, curv_s = get_all_points_from_shp(thalweg_smooth_shp_fname)
+        xyz_s, l2g_s, curv_s, _ = get_all_points_from_shp(thalweg_smooth_shp_fname)
+        xyz_s[:, 0], xyz_s[:, 1] = lonlat2cpp(xyz_s[:, 0], xyz_s[:, 1])
+
 
     thalwegs = []
     thalwegs_smooth = []
@@ -633,7 +659,7 @@ def make_river_map(
     for i, [line, curv] in enumerate(zip(thalwegs, thalwegs_curv)):
         # print(f'Dry run: Arc {i+1} of {len(thalwegs)}')
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = \
-            get_two_banks(S_list, line, search_length, search_steps)
+            get_two_banks(S_list, line, search_length, search_steps, min_width=river_threshold[0])
         thalweg_widths.append(width)
         if width is None:
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
@@ -691,13 +717,13 @@ def make_river_map(
 
         # re-make banks based on redistributed thalweg
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
-            get_two_banks(S_list, thalweg, search_length, search_steps)
+            get_two_banks(S_list, thalweg, search_length, search_steps, min_width=river_threshold[0])
 
         # correct thalwegs
         width_moving_avg = moving_average(width, n=10)
-        thalweg, is_corrected= improve_thalwegs(S_list, dl, thalweg, width_moving_avg*0.5, perp)
+        thalweg, is_corrected= improve_thalwegs(S_list, dl, thalweg, width_moving_avg*0.5, perp, mpi_print_prefix)
         if not is_corrected:
-            print(f"{mpi_print_prefix} warning: thalweg {i+1} failed to correct, using original thalweg ...")
+            print(f"{mpi_print_prefix} warning: thalweg {i+1} (head: {thalweg[0]}; tail: {thalweg[-1]}) failed to correct, using original thalweg ...")
         corrected_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
 
         # Redistribute thalwegs vertices
@@ -711,7 +737,7 @@ def make_river_map(
 
         # re-make banks based on corrected thalweg
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
-            get_two_banks(S_list, thalweg, search_length, search_steps)
+            get_two_banks(S_list, thalweg, search_length, search_steps, min_width=river_threshold[0])
 
         # touch-ups on the two banks
         if x_banks_left is None or x_banks_right is None:
@@ -796,14 +822,13 @@ def make_river_map(
                     center_point = np.mean(intersect_ring, axis=0).reshape(1, -1)
 
                     diff = intersect_ring - center_point
-                    mean_radius = np.mean((diff[:, 0]**2 + diff[:, 1]**2)**0.5)
+                    radius = np.maximum((diff[:, 0]**2 + diff[:, 1]**2)**0.5, 3.0)  # set minimum to 3.0 m to avoid division by 0
+                    stretch = (np.maximum(1.2, radius/np.mean(radius))/(radius/np.mean(radius))).reshape(-1, 1)
 
                     # outter ring is nudged to 120% based on the intersection ring
                     outter_ring = (intersect_ring - center_point) * 1.2 + center_point
                     # nudge the outter ring points to make the outter ring more or less a circle, avoiding outter_ring points inside intersection ring
                     diff = outter_ring - center_point
-                    radius = (diff[:, 0]**2 + diff[:, 1]**2)**0.5
-                    stretch = (np.maximum(1.2, radius/mean_radius)/(radius/mean_radius)).reshape(-1, 1)
                     outter_ring = np.tile(stretch, (1,3)) * (outter_ring - center_point) + center_point
 
                     outter_ring[:, -1] = starndard_watershed_resolution
@@ -835,9 +860,10 @@ def make_river_map(
         if intersect_res is not None:
             np.savetxt(f'{output_dir}/{output_prefix}intersection_res.xyz', intersect_res)
         
-        total_map = SMS_MAP(filename=f'{output_dir}/{output_prefix}cc_arcs.map') + \
-            SMS_MAP(filename=f'{output_dir}/{output_prefix}river.map')
-        total_map.writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
+        if (cc_arcs!=None).all() and (inner_arcs!=None).all():
+            total_map = SMS_MAP(filename=f'{output_dir}/{output_prefix}cc_arcs.map', epsg=4326) + \
+                SMS_MAP(filename=f'{output_dir}/{output_prefix}river.map', epsg=4326)
+            total_map.writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
     else:
         print(f'{mpi_print_prefix} No arcs found, aborting writing to *.map')
 
