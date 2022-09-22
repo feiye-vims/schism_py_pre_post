@@ -46,7 +46,7 @@ def read_nwm_file(filename):
         except RuntimeError:
             print(f"warning: failed to read netcdf file {filename}, Attempt {n}")
         except:
-            raise Exception(f'failed to read netcdf file {this_file}')
+            raise Exception(f'failed to read netcdf file {filename}')
 
     return [fID_all, stream_flow_all]
 

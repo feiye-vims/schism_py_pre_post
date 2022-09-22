@@ -588,7 +588,6 @@ def make_river_map(
     i_thalweg_cache = True
     # ------------------------- end basic inputs --------------------------- 
     
-    # %%
     # ------------------------- read DEM --------------------------- 
     main_dem_id = 1
     S_list = []
