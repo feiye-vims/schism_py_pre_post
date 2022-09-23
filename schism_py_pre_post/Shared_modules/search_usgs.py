@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from ast import Try
+from shutil import ExecError
 import shapefile
 import numpy as np
 import os
@@ -38,17 +39,20 @@ def BinA(A=None, B=None):
 
 def read_nwm_file(filename):
     n = 0
-    while n <= 10:   # try 10 times
+    while n < 10:   # try 10 times
         try:
             d = xr.open_dataset(filename)
             fID_all, stream_flow_all  = copy.deepcopy(d.feature_id.data), copy.deepcopy(d.streamflow.data)
             d.close()
+            return [fID_all, stream_flow_all]
         except RuntimeError:
             print(f"warning: failed to read netcdf file {filename}, Attempt {n}")
         except:
             raise Exception(f'failed to read netcdf file {filename}')
+        n += 1
+    
+    raise Exception(f'Failed to read {filename} after 10 trys')
 
-    return [fID_all, stream_flow_all]
 
 
 def read_nwm_data(data_dir=None, fIDs=[], date_range=pd.date_range("2015-06-01 00:00:00", "2015-08-01 00:00:00", freq="60min")):
@@ -177,8 +181,8 @@ if __name__ == "__main__":
     f_shapefile = "/sciclone/schism10/feiye/schism20/REPO/NWM/Shapefiles/ecgc/ecgc.shp"
     run_dir = '/sciclone/schism10/feiye/ICOGS/RUN06k/'
     nwm_data_dir = '/sciclone/schism10/whuang07/schism20/NWM_v2.1/'
-    usgs_data_fname = '/sciclone/schism10/feiye/schism20/REPO/USGS/25_yr_iv_discharge_1993_2018/allstates_discharge.pkl'
-    # usgs_data_fname = '/sciclone/schism10/feiye/schism20/REPO/USGS/25_yr_iv_discharge_1993_2018/ME/ME_discharge.pkl'
+    # usgs_data_fname = '/sciclone/schism10/feiye/schism20/REPO/USGS/25_yr_iv_discharge_1993_2018/allstates_discharge.pkl'
+    usgs_data_fname = '/sciclone/schism10/feiye/schism20/REPO/USGS/25_yr_iv_discharge_1993_2018/VA/VA_discharge.pkl'
     output_dir = '/sciclone/schism10/feiye/ICOGS/RUN06k/USGS_NWM/'
 
     # -----------------------------------------------------------------------------------
@@ -231,7 +235,7 @@ if __name__ == "__main__":
     with open(f'{run_dir}/ele_fid_dict') as json_file:
         mysrc_nwm_fid = json.load(json_file)
     source_eles = Prop(f'{run_dir}/source_sink.in', 2).ip_group[0]
-    my_th = TimeHistory(f'{run_dir}/vsource.th', '2015-06-01 00:00:00', mask_val=None)
+    my_th = TimeHistory(f'{run_dir}/vsource.th', start_time_str=start_time_str, mask_val=None)
     end_time_str = my_th.df.iloc[-1, 0].strftime("%m/%d/%Y, %H:%M:%S")
 
     my_sources = np.empty((len(source_eles)), dtype=vsource)
@@ -270,6 +274,13 @@ if __name__ == "__main__":
     print(f'---------------searching usgs stations took: {time.time()-t1} s ---------------\n')
 
     # -----------------------------------------------------------------------------------
+    # Read USGS data
+    # -----------------------------------------------------------------------------------
+    t1 = time.time()
+    my_obs = ObsData(usgs_data_fname, from_raw_data=False)
+    print(f'---------------reading usgs data took: {time.time()-t1} s ---------------\n')
+
+    # -----------------------------------------------------------------------------------
     #  reading NWM data
     # -----------------------------------------------------------------------------------
     t1 = time.time()
@@ -292,13 +303,6 @@ if __name__ == "__main__":
     nwm_df = nwm_df.set_index('datetime').resample("H").mean()
 
     print(f'---------------reading nwm data took: {time.time()-t1} s ---------------\n')
-
-    # -----------------------------------------------------------------------------------
-    # Read USGS data
-    # -----------------------------------------------------------------------------------
-    t1 = time.time()
-    my_obs = ObsData(usgs_data_fname, from_raw_data=False)
-    print(f'---------------reading usgs data took: {time.time()-t1} s ---------------\n')
 
     # -----------------------------------------------------------------------------------
     # plot
@@ -367,5 +371,5 @@ if __name__ == "__main__":
         # replace vsource at this source
         my_th.df.iloc[:, i] = adjusted_source
 
-    my_th.df_propogate()
-    my_th.writer('adjusted_vsource.th')
+    my_th.df_propagate()
+    my_th.writer(f'{output_dir}/adjusted_vsource.th')

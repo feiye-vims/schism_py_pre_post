@@ -1,3 +1,4 @@
+from functools import cache
 from climata.usgs import InstantValueIO, SiteIO
 import pandas as pd
 import numpy as np
@@ -8,6 +9,7 @@ from datetime import datetime, timedelta
 # from pandas.plotting import register_matplotlib_converters
 from pylib import schism_grid
 import matplotlib.pyplot as plt
+from schism_py_pre_post.Download.Data import ObsData, Station
 
 
 # dict of param ids:
@@ -89,14 +91,13 @@ class GenericObsData():
         self.station_info = station_info
         self.df = df
 
-def download_stations(param_id=None, var=None, station_ids=[], datelist=pd.date_range(start='2000-01-01', end='2000-01-02')):
+def download_stations(param_id=None, station_ids=[], datelist=pd.date_range(start='2000-01-01', end='2000-01-02')):
     stations_chunk_size = 200
 
     if type(station_ids) is np.ndarray:
         station_ids = station_ids.tolist()
 
     print(f'station ids: {station_ids}\n')
-    print(f'var: {var}\n')
 
     # download
     total_data = []
@@ -147,7 +148,7 @@ def write_time_average(input_data, param_id=None, unit_conv=1, outfilename=None)
     # except:
     #   print(f'No salinity at station {sid}')
 
-def all_states_time_average(param_id=None, var=None, unit_conv=1, states=None,
+def all_states_time_average(param_id=None, unit_conv=1, states=None,
                             datelist=pd.date_range(start='2000-01-01', end='2000-01-02'),
                             outfilename=None):
     '''
@@ -175,13 +176,13 @@ def all_states_time_average(param_id=None, var=None, unit_conv=1, states=None,
     if not os.path.exists(os.path.dirname(outfilename)):
         os.mkdir(os.path.dirname(outfilename))
 
-    total_data = download_stations(param_id=param_id, var=var, station_ids=station_ids, datelist=datelist)
+    total_data = download_stations(param_id=param_id, station_ids=station_ids, datelist=datelist)
     write_time_average(input_data=total_data, param_id=param_id, unit_conv=unit_conv, outfilename=outfilename)
 
 
 def download_single_station(
     station_id='04044755',
-    param_id='00010', var='temperature',
+    param_id='00010',
     datelist=pd.date_range(start='2019-10-10', end='2019-11-10')
 ):
     data_chunk = InstantValueIO(start_date=datelist[0], end_date=datelist[-1],
@@ -190,7 +191,7 @@ def download_single_station(
     return data_list
 
 
-def get_usgs_obs_for_stofs3d(vars=None, outdir=None, start_date_str='2015-09-18', end_date_str=None):
+def get_usgs_obs_for_stofs3d(outdir=None, start_date_str='2015-09-18', end_date_str=None):
     if vars is None:
         vars = ['temperature', 'salinity', 'conductance']
     if end_date_str is None:
@@ -203,7 +204,6 @@ def get_usgs_obs_for_stofs3d(vars=None, outdir=None, start_date_str='2015-09-18'
     for var in vars:
         outfilenames.append(f'{outdir}/mean_{var}_xyz_{start_date_str}')
         all_states_time_average(
-            var=var,
             param_id=usgs_var_dict[var]["id"],
             unit_conv=usgs_var_dict[var]["unit_conv"],
             datelist=pd.date_range(start=start_date_str, end=end_date_str),
@@ -220,8 +220,71 @@ def get_usgs_obs_for_stofs3d(vars=None, outdir=None, start_date_str='2015-09-18'
         os.remove(f"{outdir}/mean_tem_xyz_{start_date_str}")
     os.symlink(f"mean_temperature_xyz_{start_date_str}", f"{outdir}/mean_tem_xyz_{start_date_str}")
 
+def convert_to_ObsData(total_data:list, cache_fname=''):
+    '''
+    Convert the downloaded "total_data" (see Sample 1 in __main__) to an old format used by some early scripts
+    '''
+    stations = []
+    for data in total_data:
+        my_station = Station(fname=None)
+        my_station.id = data.station_info['id']
+        my_station.lon = data.station_info['lon']
+        my_station.lat = data.station_info['lat']
+        my_station.df = data.df.set_index(pd.DatetimeIndex(pd.to_datetime(data.df["date"], utc=True)))
+        stations.append(my_station)
+    
+    obs_data = ObsData(fname=None)
+    obs_data.stations = stations
+    obs_data.set_fID2id()
+    obs_data.saved_file = cache_fname
+    obs_data.save(obs_data.saved_file)
+
+    return obs_data
+    
+
 if __name__ == "__main__":
-    # get_usgs_obs_for_stofs3d(vars=['gauge height'], outdir='/sciclone/schism10/feiye/STOFS3D-v4/Data/', start_date_str='2021-03-01', end_date_str='2021-03-20')
+
+    # Sample 1: Download discharge data for all stations in selected states
+    # ------------------------- inputs --------------------------- 
+    states = ['NJ', 'CT', 'NY']
+    download_var = 'streamflow'  # check the dictionary at the beginning of this script
+    outdir = '/sciclone/schism10/feiye/Test/'
+    cache_fname = f"{outdir}/{'_'.join(states)}.pkl"
+    start_date_str = '2021-03-01'
+    end_date_str = '2021-03-21'
+    # ------------------------- end inputs --------------------------- 
+    
+    # get station info
+    station_info = get_usgs_stations_from_state(states=states, parameter=usgs_var_dict[download_var]["id"])
+    station_lon = station_info['dec_long_va'].to_numpy()
+    station_lat = station_info['dec_lat_va'].to_numpy()
+    # get rid of invalid stations
+    valid = (station_lon != '') & (station_lat != '')
+    station_ids = station_info["site_no"].to_numpy()
+    station_ids = station_ids[valid]
+    station_lon = station_lon[valid].astype(float)
+    station_lat = station_lat[valid].astype(float)
+
+    # download data. 
+    # "total_data" is the preferred format, which can be saved as *.pkl for later use
+    # , or see Sample 3 for writing total_data to *.txt
+    total_data = download_stations(
+        param_id=usgs_var_dict[download_var]['id'],
+        station_ids=station_ids,
+        datelist=pd.date_range(start=start_date_str, end=end_date_str)
+    )
+    # note: the actual downloaded stations may be slightly different from the requested "station_ids" due to data availablility
+    valid_stations = [data.station_info['id'] for data in total_data]
+
+    # save data in an old obs format (ObsData) in *.pkl, because some earlier script reads that format
+    convert_to_ObsData(total_data=total_data, cache_fname=cache_fname)
+    pass
+
+    '''
+    # Sample 2: STOFS3D
+    get_usgs_obs_for_stofs3d(vars=['gauge height'], outdir='/sciclone/schism10/feiye/STOFS3D-v4/Data/', start_date_str='2021-03-01', end_date_str='2021-03-20')
+
+    # Sample 3: get stations inside hgrid and plot
     outdir = '/sciclone/schism10/feiye/STOFS3D-v4/Data/'
 
     station_info = get_usgs_stations_from_state(states=ecgc_states, parameter="00065")
@@ -241,7 +304,7 @@ if __name__ == "__main__":
 
     total_data = download_stations(
         param_id=usgs_var_dict['gauge height']['id'],
-        var='guage height', station_ids=in_grid_station_ids,
+        station_ids=in_grid_station_ids,
         datelist=pd.date_range(start='2021-03-01', end='2021-03-21')
     )
     valid_stations = [data.station_info['id'] for data in total_data]
@@ -262,6 +325,7 @@ if __name__ == "__main__":
         plt.savefig(f'{outdir}/Chunk_{i}.png')
 
     # data = download_single_station(station_id='04044755', param_id='00060',
-    #                                var='streamflow', unit_conv='0.028316846592',
+    #                                unit_conv='0.028316846592',
     #                                datelist=pd.date_range(start='2022-01-01', end='2022-02-10'))
+'''
     pass
