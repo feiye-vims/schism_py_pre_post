@@ -136,8 +136,14 @@ def improve_thalwegs(S_list, dl, line, search_length, perp, mpi_print_prefix):
     return np.c_[x_real, y_real], True
 
 # %%
-def get_bank(S_list, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
-    '''Get a bank on one side of the thalweg (x, y)'''
+def get_bank(S_list, x, y, thalweg_eta, xt, yt, search_steps=100, search_tolerance=5):
+    '''
+    Get a bank on one side of the thalweg (x, y)
+    Inputs:
+        x, y, eta along a thalweg
+        parameter deciding the search area: search_stps
+    '''
+
     # search_steps_tile = np.repeat(np.arange(search_steps).reshape(1, -1), len(x), axis=0)  # expanded to the search area
 
     # form a search area between thalweg and search limit
@@ -151,12 +157,8 @@ def get_bank(S_list, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
     else:
         return None, None
     '''
-    elevs = get_elev_from_tiles(x, y, S_list)
-    if elevs is None:
-        return None, None
 
-    elevs_thalweg = np.ones(elevs.shape) * eta  # elev on thalweg
-    elevs_stream = np.tile(elevs_thalweg.reshape(-1, 1), (1, search_steps))  # expanded to the search area
+    eta_stream = np.tile(thalweg_eta.reshape(-1, 1), (1, search_steps))  # expanded to the search area
 
     ''' one tile
     [jj, ii], valid = Sidx(S, xts[:], yts[:])
@@ -169,7 +171,7 @@ def get_bank(S_list, x, y, eta, xt, yt, search_steps=100, search_tolerance=5):
     if elevs is None:
         return None, None
 
-    R = (elevs - elevs_stream)  # closeness to target depth: 0-1
+    R = (elevs - eta_stream)  # closeness to target depth
     bank_idx = np.argmax(R>0, axis=1)
     
     invalid = bank_idx == 0
@@ -361,13 +363,33 @@ def Tif2XYZ(tif_fname=None, remove_cache=False):
     return S
 
 def set_eta(x, y):
+    eta = np.zeros(x.shape, dtype=float)
+
     # thalweg_eta = np.maximum(0.0, (y - 3313760.0))/(3367300.0 - 3313760.0) * 1.2
     # thalweg_eta = np.ones(y.shape) * 0.5
 
-    y0 = [0, 23388517, 3461404, 9e9]
-    eta0 = [0, 0, 0, 0]
+    # y0 = [0, 23388517, 3461404, 9e9]
+    # eta0 = [0, 0, 0, 0]
+    # eta = np.interp(y, y0, eta0)
+    return eta
 
-    eta = np.interp(y, y0, eta0)
+def set_eta_thalweg(x, y, z):
+    # approximation based on bathymetry
+    eta = np.zeros(x.shape, dtype=float)
+
+    # smooth bathymetry along thalweg because the elevation is smoother than bathymetry
+    const_depth = 1.0
+
+    # coastal: assume zero
+    # do nothing, use intial value 0
+
+    # upland: assume constant depth
+    idx = z >= -const_depth
+    # eta[idx] = z[idx] + const_depth
+
+    # transitional zone: assume linear transition
+    idx = (z>=-2.0)*(z<-const_depth)
+    # eta[idx] = (z[idx]+const_depth) * (z+2)/(-const_depth+2.0)
 
     return eta
 
@@ -384,28 +406,25 @@ class river_seg():
     def make_inner_arcs(self, narcs=2):
         inner_arcs = np.linspace(self.left_bank, self.right_bank, narcs)
 
-def get_two_banks(S_list, line, search_length, search_steps, min_width):
+def get_two_banks(S_list, thalweg, thalweg_eta, search_length, search_steps, min_width):
     range_arcs = []
     # find perpendicular direction along thalweg at each point
-    perp = get_perpendicular_angle(line)
+    perp = get_perpendicular_angle(thalweg)
 
     # find search area for a thalweg, consisting of two lines on each side
-    xt_right = line[:, 0] + search_length * np.cos(perp)
-    yt_right = line[:, 1] + search_length * np.sin(perp)
-    xt_left = line[:, 0] + search_length * np.cos(perp + np.pi)
-    yt_left = line[:, 1] + search_length * np.sin(perp + np.pi)
+    xt_right = thalweg[:, 0] + search_length * np.cos(perp)
+    yt_right = thalweg[:, 1] + search_length * np.sin(perp)
+    xt_left = thalweg[:, 0] + search_length * np.cos(perp + np.pi)
+    yt_left = thalweg[:, 1] + search_length * np.sin(perp + np.pi)
 
     # Diagnostic: save search area as SMS arcs
     range_arcs += [SMS_ARC(points=np.c_[xt_left, yt_left]), SMS_ARC(points=np.c_[xt_right, yt_right])]
 
-    # set water level at each point along the thalweg, based on observation, simulation, estimation, etc.
-    thalweg_eta = set_eta(line[:, 0], line[:, 1])
-
     # find two banks
     x_banks_left, y_banks_left = \
-        get_bank(S_list, line[:, 0], line[:, 1], thalweg_eta, xt_left, yt_left, search_steps)
+        get_bank(S_list, thalweg[:, 0], thalweg[:, 1], thalweg_eta, xt_left, yt_left, search_steps)
     x_banks_right, y_banks_right = \
-        get_bank(S_list, line[:, 0], line[:, 1], thalweg_eta, xt_right, yt_right, search_steps)
+        get_bank(S_list, thalweg[:, 0], thalweg[:, 1], thalweg_eta, xt_right, yt_right, search_steps)
 
     # get attributes of the initial banks
     # average width, for deciding nudging distance
@@ -417,10 +436,10 @@ def get_two_banks(S_list, line, search_length, search_steps, min_width):
 
     # deal with very small widths
     ismall = bank2bank_width < min_width
-    x_banks_right[ismall] = line[ismall, 0] + min_width/2 * np.cos(perp[ismall])
-    y_banks_right[ismall] = line[ismall, 1] + min_width/2 * np.sin(perp[ismall])
-    x_banks_left[ismall] = line[ismall, 0] + min_width/2 * np.cos(perp[ismall] + np.pi)
-    y_banks_left[ismall] = line[ismall, 1] + min_width/2 * np.sin(perp[ismall] + np.pi)
+    x_banks_right[ismall] = thalweg[ismall, 0] + min_width/2 * np.cos(perp[ismall])
+    y_banks_right[ismall] = thalweg[ismall, 1] + min_width/2 * np.sin(perp[ismall])
+    x_banks_left[ismall] = thalweg[ismall, 0] + min_width/2 * np.cos(perp[ismall] + np.pi)
+    y_banks_left[ismall] = thalweg[ismall, 1] + min_width/2 * np.sin(perp[ismall] + np.pi)
     bank2bank_width = ( (x_banks_left - x_banks_right)**2 + (y_banks_left - y_banks_right)**2 ) **0.5
 
     # SMS_MAP(arcs=range_arcs).writer(filename=f'{output_dir}/bank_range.map')
@@ -657,8 +676,17 @@ def make_river_map(
     original_banks = []
     for i, [line, curv] in enumerate(zip(thalwegs, thalwegs_curv)):
         # print(f'Dry run: Arc {i+1} of {len(thalwegs)}')
+        elevs = get_elev_from_tiles(line[:, 0], line[:, 1], S_list)
+        if elevs is None:
+            print(f"{mpi_print_prefix} warning: some elevs not found on thalweg {i+1}, neglecting ...")
+            valid_thalwegs.append(False)
+            continue
+
+        # set water level at each point along the thalweg, based on observation, simulation, estimation, etc.
+        thalweg_eta = set_eta_thalweg(line[:, 0], line[:, 1], elevs)
+
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = \
-            get_two_banks(S_list, line, search_length, search_steps, min_width=river_threshold[0])
+            get_two_banks(S_list, line, thalweg_eta, search_length, search_steps, min_width=river_threshold[0])
         thalweg_widths.append(width)
         if width is None:
             thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
@@ -714,9 +742,13 @@ def make_river_map(
             print(f"{mpi_print_prefix} warning: thalweg {i+1} only has one point after redistribution, neglecting ...")
             continue
 
+        # update thalweg info
+        elevs = get_elev_from_tiles(thalweg[:, 0],thalweg[:, 1], S_list)
+        thalweg_eta = set_eta_thalweg(thalweg[:, 0], thalweg[:, 1], elevs)
+
         # re-make banks based on redistributed thalweg
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
-            get_two_banks(S_list, thalweg, search_length, search_steps, min_width=river_threshold[0])
+            get_two_banks(S_list, thalweg, thalweg_eta, search_length, search_steps, min_width=river_threshold[0])
 
         # correct thalwegs
         width_moving_avg = moving_average(width, n=10)
@@ -734,9 +766,13 @@ def make_river_map(
         thalweg, perp = smooth_thalweg(thalweg, ang_diff_shres=np.pi/2.4)
         final_thalwegs[i] = SMS_ARC(points=np.c_[thalweg[:, 0], thalweg[:, 1]])
 
+        # update thalweg info
+        elevs = get_elev_from_tiles(thalweg[:, 0],thalweg[:, 1], S_list)
+        thalweg_eta = set_eta_thalweg(thalweg[:, 0], thalweg[:, 1], elevs)
+
         # re-make banks based on corrected thalweg
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, perp, width = \
-            get_two_banks(S_list, thalweg, search_length, search_steps, min_width=river_threshold[0])
+            get_two_banks(S_list, thalweg, thalweg_eta, search_length, search_steps, min_width=river_threshold[0])
 
         # touch-ups on the two banks
         if x_banks_left is None or x_banks_right is None:

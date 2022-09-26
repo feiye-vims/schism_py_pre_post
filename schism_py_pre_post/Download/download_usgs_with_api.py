@@ -250,8 +250,8 @@ if __name__ == "__main__":
     download_var = 'streamflow'  # check the dictionary at the beginning of this script
     outdir = '/sciclone/schism10/feiye/Test/'
     cache_fname = f"{outdir}/{'_'.join(states)}.pkl"
-    start_date_str = '2021-03-01'
-    end_date_str = '2021-03-21'
+    start_date_str = '2015-07-01'
+    end_date_str = '2015-11-21'
     # ------------------------- end inputs --------------------------- 
     
     # get station info

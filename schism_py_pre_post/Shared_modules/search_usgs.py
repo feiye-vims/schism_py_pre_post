@@ -181,8 +181,8 @@ if __name__ == "__main__":
     f_shapefile = "/sciclone/schism10/feiye/schism20/REPO/NWM/Shapefiles/ecgc/ecgc.shp"
     run_dir = '/sciclone/schism10/feiye/ICOGS/RUN06k/'
     nwm_data_dir = '/sciclone/schism10/whuang07/schism20/NWM_v2.1/'
-    # usgs_data_fname = '/sciclone/schism10/feiye/schism20/REPO/USGS/25_yr_iv_discharge_1993_2018/allstates_discharge.pkl'
-    usgs_data_fname = '/sciclone/schism10/feiye/schism20/REPO/USGS/25_yr_iv_discharge_1993_2018/VA/VA_discharge.pkl'
+    # usgs_data_fname = ''
+    usgs_data_fname = '/sciclone/schism10/feiye/Test/NJ_CT_NY.pkl'
     output_dir = '/sciclone/schism10/feiye/ICOGS/RUN06k/USGS_NWM/'
 
     # -----------------------------------------------------------------------------------
