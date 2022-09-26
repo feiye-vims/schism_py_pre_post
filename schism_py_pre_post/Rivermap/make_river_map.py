@@ -378,18 +378,23 @@ def set_eta_thalweg(x, y, z):
     eta = np.zeros(x.shape, dtype=float)
 
     # smooth bathymetry along thalweg because the elevation is smoother than bathymetry
-    const_depth = 1.0
+    mean_dl = np.mean(get_dist_increment(np.c_[x, y]))
+    z_smooth = moving_average(z, n=int(max(100.0/mean_dl, 2)), self_weights=2)
 
-    # coastal: assume zero
+    const_depth = 1.0
+    coastal_z = [0.0, 3.0]
+
+    # coastal (deep): assume zero
+    idx = z_smooth <= coastal_z[0]
     # do nothing, use intial value 0
 
-    # upland: assume constant depth
-    idx = z >= -const_depth
-    # eta[idx] = z[idx] + const_depth
+    # upland (high): assume constant depth
+    idx = z_smooth >= coastal_z[1]
+    eta[idx] = z_smooth[idx] + const_depth
 
     # transitional zone: assume linear transition
-    idx = (z>=-2.0)*(z<-const_depth)
-    # eta[idx] = (z[idx]+const_depth) * (z+2)/(-const_depth+2.0)
+    idx = (z_smooth>coastal_z[0])*(z_smooth<coastal_z[1])
+    eta[idx] = (z_smooth[idx]+const_depth) * (z_smooth[idx]-coastal_z[0])/(coastal_z[1]-coastal_z[0])
 
     return eta
 
@@ -681,7 +686,6 @@ def make_river_map(
             print(f"{mpi_print_prefix} warning: some elevs not found on thalweg {i+1}, neglecting ...")
             valid_thalwegs.append(False)
             continue
-
         # set water level at each point along the thalweg, based on observation, simulation, estimation, etc.
         thalweg_eta = set_eta_thalweg(line[:, 0], line[:, 1], elevs)
 
