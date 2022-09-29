@@ -42,7 +42,8 @@ if __name__ == "__main__":
     dems_json_file = 'dems.json'  # files for all DEM tiles
 
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
-    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/LA_sub_ll.shp'
+    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/LA_sub4_ll.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
 
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/' + \
         f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'
@@ -140,8 +141,7 @@ if __name__ == "__main__":
 
     # write
     if rank == 0:
-        map_files = glob.glob(f'{output_dir}/*_river.map')
-
+        map_files = glob.glob(f'{output_dir}/*_total*.map')
         if len(map_files) > 0:
             map_objects = [SMS_MAP(filename=map_file) for map_file in map_files]
 
@@ -151,5 +151,19 @@ if __name__ == "__main__":
             total_map.writer(filename=f'{output_dir}/total_arcs.map')
         else:
             print('No map files found in final combination ...')
+
+        map_files = glob.glob(f'{output_dir}/*bomb*.map')
+        if len(map_files) > 0:
+            map_objects = [SMS_MAP(filename=map_file) for map_file in map_files]
+
+            total_map = map_objects[0]
+            for map_object in map_objects[1:]:
+                total_map += map_object
+            total_map.writer(filename=f'{output_dir}/total_bombs.map')
+        else:
+            print('No map files found in final combination ...')
+        
+        xyz_files = glob.glob(f'{output_dir}/*.xyz')
+        os.system(f'cat {" ".join(xyz_files)} > {output_dir}/intersection_res.xyz')
 
         print(f'Total run time: {time.time()-time_all_groups_start} seconds.')

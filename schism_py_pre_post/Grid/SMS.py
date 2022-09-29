@@ -27,6 +27,17 @@ def lonlat2cpp(lon, lat, lon0=0, lat0=0):
 
     return [xout, yout]
 
+def dl_cpp2lonlat(dl, y, lat0=0):
+    R = 6378206.4
+
+    lat0_radian = lat0/180*np.pi
+
+    dlon_radian = dl/R/np.cos(lat0_radian)
+    
+    dlon = dlon_radian*180/np.pi
+
+    return dlon
+
 def cpp2lonlat(x, y, lon0=0, lat0=0):
     R = 6378206.4
 
@@ -212,10 +223,11 @@ class SMS_ARC():
    
 class SMS_MAP():
     '''class for manipulating SMS maps''' 
-    def __init__(self, filename=None, arcs=[], epsg=4326):
+    def __init__(self, filename=None, arcs=[], detached_nodes=[], epsg=4326):
         self.epsg = None
         self.arcs = []
         self.nodes = np.zeros((0, 2))
+        self.detached_nodes = np.zeros((0, 2))
         self.valid = True
 
         self.epsg = epsg
@@ -226,19 +238,23 @@ class SMS_MAP():
             if type(arcs) == np.ndarray:
                 arcs = np.squeeze(arcs).tolist()
             arcs = list(filter(lambda item: item is not None, arcs))
-            if arcs == []:
+            if arcs == [] and detached_nodes==[]:
                 self.valid = False
             
             self.arcs = arcs
+            self.detached_nodes = detached_nodes
     
     def __add__(self, other):
         self.arcs = self.arcs + other.arcs
-        return SMS_MAP(arcs=self.arcs, epsg=self.epsg)
+        self.detached_nodes = np.r_[self.detached_nodes, other.detached_nodes]
+        return SMS_MAP(arcs=self.arcs, detached_nodes=self.detached_nodes, epsg=self.epsg)
     
     def reader(self, filename='test.map'):
         self.n_glb_nodes = 0
         self.n_arcs = 0
+        self.n_detached_nodes = 0
 
+        arc_nodes = []
         with open(filename) as f:
             while True:
                 line = f.readline()
@@ -251,9 +267,16 @@ class SMS_MAP():
                         self.epsg = 4326
                     else:
                         raiseExceptions('unkown epsg')
-                elif strs[0] == 'XY':
+                elif strs[0] == 'NODE':
+                    line = f.readline()
+                    strs = re.split(' +', line.strip())
                     self.n_glb_nodes += 1
                     self.nodes = np.append(self.nodes, np.reshape([float(strs[1]), float(strs[2])], (1,2)), axis=0)
+                elif line.strip() == 'POINT':
+                    line = f.readline()
+                    strs = re.split(' +', line.strip())
+                    self.n_detached_nodes += 1
+                    self.detached_nodes = np.append(self.detached_nodes, np.reshape([float(strs[1]), float(strs[2])], (1,2)), axis=0)
                 elif line.strip() == 'ARC':
                     self.n_arcs += 1
                 elif strs[0] == 'NODES':
@@ -268,6 +291,8 @@ class SMS_MAP():
                     node_2 = np.reshape(self.nodes[this_arc_node_idx[1], :], (1, 2))
                     this_arc = SMS_ARC(points=np.r_[node_1, this_arc_verts, node_2], src_prj=f'epsg: {self.epsg}')
                     self.arcs.append(this_arc)
+                    arc_nodes.append(this_arc_node_idx[0])
+                    arc_nodes.append(this_arc_node_idx[1])
         pass
     
     def writer(self, filename='test.map'):
@@ -311,6 +336,14 @@ class SMS_MAP():
                     f.write(f'XY {node[0]} {node[1]} {node[2]}\n')
                     f.write(f'ID {node_counter}\n')
                     f.write('END\n')
+
+            for i, node in enumerate(self.detached_nodes):
+                node_counter += 1
+                f.write('POINT\n')
+                f.write(f'XY {node[0]} {node[1]} 0.0\n')
+                f.write(f'ID {node_counter}\n')
+                f.write('END\n')
+
             for i, arc in enumerate(self.arcs):
                 f.write('ARC\n')
                 f.write(f'ID {i+1}\n')
@@ -411,29 +444,48 @@ def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=Non
             n += len(shp.points)
         '''
         
-        # using geopandas, more efficient than pyshp
+        # using geopandas, which seems more efficient than pyshp
         shapefile = gpd.read_file(fname)
         npts = 0
         shape_pts_l2g = []
+
+        xyz = np.empty((0, 2), dtype=float)
         for i in range(shapefile.shape[0]):
             try:
                 shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
-            except NotImplementedError:
-                print(f"Warning: multi-part geometries, neglecting ...")
-                continue
             except:
-                raiseExceptions(f'Undefined error reading shapefile {fname}')
-
+                print(f"warning: shape {i+1} of {shapefile.shape[0]} is invalid")
+                continue
+            xyz = np.r_[xyz, np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T]
             shape_pts_l2g.append(np.array(np.arange(npts, npts+shp_points)))
             npts += shp_points
 
-        xyz = np.empty((npts, 2), dtype=float)
         curv = np.empty((npts, ), dtype=float)
         perp = np.empty((npts, ), dtype=float)
-        for i in range(shapefile.shape[0]):
-            xyz[shape_pts_l2g[i], :] = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T
-            curv[shape_pts_l2g[i]] = curvature(xyz[shape_pts_l2g[i], :])
-            perp[shape_pts_l2g[i]] = get_perpendicular_angle(xyz[shape_pts_l2g[i], :2])
+        for i, _ in enumerate(shape_pts_l2g):
+            line = xyz[shape_pts_l2g[i], :]
+            curv[shape_pts_l2g[i]] = curvature(line)
+            perp[shape_pts_l2g[i]] = get_perpendicular_angle(line)
+        
+        # for i in range(shapefile.shape[0]):
+        #     try:
+        #         shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
+        #     except NotImplementedError:
+        #         print(f"Warning: multi-part geometries, neglecting ...")
+        #         continue
+        #     except:
+        #         raiseExceptions(f'Undefined error reading shapefile {fname}')
+
+        #     shape_pts_l2g.append(np.array(np.arange(npts, npts+shp_points)))
+        #     npts += shp_points
+        # xyz = np.empty((npts, 2), dtype=float)
+
+        # curv = np.empty((npts, ), dtype=float)
+        # perp = np.empty((npts, ), dtype=float)
+        # for i in range(shapefile.shape[0]):
+        #     xyz[shape_pts_l2g[i], :] = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T
+        #     curv[shape_pts_l2g[i]] = curvature(xyz[shape_pts_l2g[i], :])
+        #     perp[shape_pts_l2g[i]] = get_perpendicular_angle(xyz[shape_pts_l2g[i], :2])
 
         if not iNoPrint: print(f'Number of shapes read: {len(shapes)}')
 

@@ -1,10 +1,45 @@
 import geopandas as gpd
 import numpy as np
-from schism_py_pre_post.Grid.SMS import curvature
+from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, curvature, cpp2lonlat, lonlat2cpp, get_perpendicular_angle
+from schism_py_pre_post.Rivermap.make_river_map import get_thalweg_neighbors
+import copy
+
+
+def find_connected_thalweg(i, k, thalwegs, thalweg_endpoints, i_merged, shape_pts_l2g):
+    '''
+    From a line's endpoint, recursively search for its connected neighboring line.
+    When all connected lines are found, attach them to the starting line then remove them
+    '''
+    dist = thalweg_endpoints[:, :] - thalwegs[i][k]
+    neighbor_thalwegs_endpoints = np.argwhere(dist[:, 0]**2 + dist[:, 1]**2 < 100.0**2)
+    thalwegs_neighbors[i, k] = neighbor_thalwegs_endpoints
+
+    if len(neighbor_thalwegs_endpoints) == 2:  # minimum is 1 (self), len=2 when no branches
+        self = 2*i+(-k)
+        i_neighbor_endpoint = thalwegs_neighbors[i][k] != [self]
+        if (sum(i_neighbor_endpoint)!=1):
+            raise Exception("impossible number of neighboring endpoints found.")
+        i_neigh_thalweg, k_neigh_thalweg = divmod(thalwegs_neighbors[i][k][i_neighbor_endpoint][0], 2)
+        if k_neigh_thalweg == 0:  # joining the endpoint of the neighboring thalweg
+            l2g = shape_pts_l2g[i_neigh_thalweg]
+        else:
+            # inverse the neighboring thalweg's points
+            l2g = np.flip(shape_pts_l2g[i_neigh_thalweg])
+        l2g = np.append(l2g, find_connected_thalweg(i_neigh_thalweg, k_neigh_thalweg-1, thalwegs, thalweg_endpoints, i_merged, shape_pts_l2g))
+
+        i_merged[i_neigh_thalweg] = True
+    
+    else:
+        l2g = np.array([], dtype=int)
+
+    return l2g
+
 
 thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/LA_region1_utm17n.shp'
 thalweg_shp_fname = "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/ALL/CUDEM_merged_thalwegs_1e6_utm17n.shp"
 thalweg_shp_fname = "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_parallel/v13_thalweg_utm17n.shp"
+thalweg_shp_fname = "/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_single.shp"
+thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/LA_sub4_ll_fix.shp'
 
 shapefile = gpd.read_file(thalweg_shp_fname)
 shapefile.iloc[2, :]
@@ -12,15 +47,61 @@ shapefile.iloc[2, :]['geometry'].coords.xy[1]
 
 npts = 0
 shape_pts_l2g = []
+xyz = np.empty((0, 2), dtype=float)
 for i in range(shapefile.shape[0]):
-    shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
+    try:
+        shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
+    except:
+        print(f"warning: shape {i+1} of {shapefile.shape[0]} is invalid")
+        continue
+    xyz = np.r_[xyz, np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T]
     shape_pts_l2g.append(np.array(np.arange(npts, npts+shp_points)))
     npts += shp_points
 
-xyz = np.empty((npts, 2), dtype=float)
 curv = np.empty((npts, ), dtype=float)
-for i in range(shapefile.shape[0]):
-    xyz[shape_pts_l2g[i], :] = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T
-    curv[shape_pts_l2g[i]] = curvature(xyz[shape_pts_l2g[i], :])
+for i, _ in enumerate(shape_pts_l2g):
+    line = xyz[shape_pts_l2g[i], :]
+    curv[shape_pts_l2g[i]] = curvature(line)
 
+x_cpp, y_cpp = lonlat2cpp(xyz[:, 0], xyz[:, 1])
+xy_cpp = np.c_[x_cpp, y_cpp]
+
+thalwegs_ll = []
+thalwegs = []
+thalwegs_curv = []
+thalweg_endpoints = np.empty((len(shape_pts_l2g)*2, 2), dtype=float)
+thalweg_endpoints_ll = np.empty((len(shape_pts_l2g)*2, 2), dtype=float)
+for i, idx in enumerate(shape_pts_l2g):
+    thalwegs_ll.append(xyz[idx, :])
+    thalwegs.append(xy_cpp[idx, :])
+    thalwegs_curv.append(curv[idx])
+    thalweg_endpoints[2*i, :] = xy_cpp[idx][0, :]
+    thalweg_endpoints[2*i+1, :] = xy_cpp[idx][-1, :]
+    thalweg_endpoints_ll[2*i, :] = xyz[idx][0, :]
+    thalweg_endpoints_ll[2*i+1, :] = xyz[idx][-1, :]
+
+thalwegs_neighbors = np.empty((len(thalwegs), 2), dtype=object)
+new_shape_pts_l2g = copy.deepcopy(shape_pts_l2g)
+
+i_merged = np.zeros((len(thalwegs),), dtype=bool)  # initially none of the lines are merged
+# try a few times until no connected lines are found
+for i, _ in enumerate(thalwegs):
+    if not i_merged[i]:
+        for k in [-1]:  # head and tail
+            l2g = find_connected_thalweg(i, k, thalwegs, thalweg_endpoints, i_merged, shape_pts_l2g)
+            shape_pts_l2g[i] = np.append(shape_pts_l2g[i], l2g)
+
+# assemble cleaned thalwegs and write
+cleaned_thalwegs = []
+for i, idx in enumerate(new_shape_pts_l2g):
+    if i_merged[i]:
+        continue
+    cleaned_thalwegs.append(xyz[idx, :])
+
+cleaned_thalwegs_arcs = [None] * len(cleaned_thalwegs)
+for i, cleaned_thalweg in enumerate(cleaned_thalwegs):
+    cleaned_thalwegs_arcs[i] = SMS_ARC(points=np.c_[cleaned_thalweg[:, 0], cleaned_thalweg[:, 1]], src_prj='epsg:4326')
+SMS_MAP(arcs=cleaned_thalwegs_arcs).writer(filename=f'./cleaned_thalweg.map')
 pass
+
+# for i, thalweg_neighbors in enumerate(thalwegs_neighbors):

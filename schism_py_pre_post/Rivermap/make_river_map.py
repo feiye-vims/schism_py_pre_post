@@ -1,7 +1,9 @@
 # %%
 import matplotlib.pyplot as plt
 from pylib import loadz, proj_pts
-from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, SMS_ARC, SMS_MAP, curvature, cpp2lonlat, lonlat2cpp, get_perpendicular_angle
+from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, \
+    SMS_ARC, SMS_MAP, curvature, cpp2lonlat, lonlat2cpp, dl_cpp2lonlat, \
+    get_perpendicular_angle
 import numpy as np
 import copy
 import glob
@@ -26,6 +28,48 @@ class dem_data():
     elev: np.ndarray
     dx: float
     dy: float
+
+@dataclass
+class Bombs():
+    def __init__(self, center_x=None, center_y=None,
+                 x=np.empty((0,1), dtype=float),
+                 y=np.empty((0,1), dtype=float),
+                 res=np.empty((0,1), dtype=float)):
+        self.center = None
+        self.points = None
+        self.res = None
+
+        if center_x is not None and center_y is not None:
+            self.center = complex(center_x, center_y)
+        if bool(x.shape) and x.shape==y.shape:
+            self.points = np.squeeze(np.c_[x, y].view(np.complex128))
+        if len(res)>0:
+            self.res = res
+
+    def __add__(self, other):
+        if other is not None:
+            self.points = np.r_[self.points, other.points]
+            self.res = np.r_[self.res, other.res]
+        return self
+    
+    def clean(self):
+        # lon, lat = cpp2lonlat(self.points.real, self.points.imag)
+        # if (abs(lon+93.72869978753)<0.00001).any():
+        #     print()
+        i_valid = np.ones((len(self.points),), dtype=bool)
+        for i, _ in enumerate(self.points):
+            if i_valid[i]:
+                dist = abs(self.points[i] - self.points)
+                nearby_idx = np.where(dist<0.5*self.res[i])[0]
+                nearby_idx = nearby_idx[nearby_idx!=i]
+                i_valid[nearby_idx] = False
+        
+        if sum(i_valid) == 0:
+            raise Exception("impossible: all points bombed.")
+        
+        self.points = self.points[i_valid]
+             
+        return np.c_[self.points.real, self.points.imag]
 
 def getAngle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
@@ -379,7 +423,7 @@ def set_eta_thalweg(x, y, z):
 
     # smooth bathymetry along thalweg because the elevation is smoother than bathymetry
     mean_dl = np.mean(get_dist_increment(np.c_[x, y]))
-    z_smooth = moving_average(z, n=int(max(100.0/mean_dl, 2)), self_weights=2)
+    z_smooth = moving_average(z, n=int(max(100.0/(mean_dl+1e-6), 2)), self_weights=2)
 
     const_depth = 1.0
     coastal_z = [0.0, 3.0]
@@ -475,6 +519,12 @@ def moving_average(a, n=10, self_weights=0):
         return ret2
 
 def redistribute_arc(line, line_smooth, channel_width, smooth_option=1, R_coef=0.4, width_coef=4.0, reso_thres=[3, 300]):
+    retained_points = np.ones((line.shape[0]), dtype=bool)
+
+    if (line.shape[0] < 2):
+        print(f'warning: line only has one point, no need for redistributing')
+        return line, line_smooth, np.zeros(line.shape[0], dtype=float), retained_points
+    
     # along-river distance, for redistribution
     dist_along_thalweg = get_dist_increment(line)
 
@@ -510,11 +560,18 @@ def redistribute_arc(line, line_smooth, channel_width, smooth_option=1, R_coef=0
                 curv[j::i] = np.maximum(curv[j::i], curvature(line_smooth[j::i]))
 
     R = 1.0/(curv+1e-10)
+    # resolution at points
     river_resolution = np.minimum(R_coef * R, width_coef * channel_width)
     river_resolution = np.minimum(np.maximum(reso_thres[0], river_resolution), reso_thres[1])
+    # increase resolution near endpoints for better intersections
+    endpoints_scale = 3.0
+    starting_points = np.r_[0.0, np.cumsum(dist_along_thalweg)] < sum(river_resolution[:2])
+    river_resolution[starting_points] /= endpoints_scale
+    ending_points = np.flip(np.r_[0.0, np.cumsum(np.flip(dist_along_thalweg))]) < sum(river_resolution[-2:])
+    river_resolution[ending_points] /= endpoints_scale
+    # resolution between two points
     river_resolution_seg = (river_resolution[:-1]+river_resolution[1:])/2  # resolution between two points
 
-    retained_points = np.ones((line.shape[0]), dtype=bool)
     idx = 0
     this_seg_length = dist_along_thalweg[0]  # dist between pt0 and pt1
     while idx < len(dist_along_thalweg)-1:
@@ -565,14 +622,16 @@ def get_thalweg_neighbors(thalwegs, thalweg_endpoints):
         
 def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
     valid_idx = np.ones(len(line[:, 0]), dtype=bool)
+    valid_idx_headtail = np.ones((len(line[:, 0]), 2), dtype=bool)
     if i_check_valid:
         for k in [0, -1]:
-            valid_idx *= (line[:, 0] - line[k, 0])**2 + (line[:, 1] - line[k, 1])**2 > blast_radius[k]**2
+            valid_idx_headtail[:, -k] = (line[:, 0] - line[k, 0])**2 + (line[:, 1] - line[k, 1])**2 > blast_radius[k]**2
+            valid_idx *= valid_idx_headtail[:, -k]
         if sum(valid_idx) < 1:
             print(f'warning: thalweg {thalweg_id+1} has less than 1 points after bombing, neglecting ...')
-            return valid_idx  # no changes
+            return valid_idx, valid_idx_headtail  # no changes
 
-    return valid_idx
+    return valid_idx, valid_idx_headtail
 
 def make_river_map(
     tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'],
@@ -606,8 +665,12 @@ def make_river_map(
     river_threshold = np.array([5, 400]) / MapUnit2METER
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
 
-    blast_radius_scale = 0.4  # coef controlling the blast radius at intersections
+    i_blast_intersection = True
+    blast_radius_scale = 0.6  # coef controlling the blast radius at intersections
     intersect_res_scale  = 0.4  # coef controlling the resolution of the paved mesh at intersections
+
+    starndard_watershed_resolution = 400.0  # meters
+    nrow_arcs = 4  # the channel is resolved by "nrow_arcs" rows of elements
 
     i_thalweg_cache = True
     # ------------------------- end basic inputs --------------------------- 
@@ -643,9 +706,6 @@ def make_river_map(
     if nvalid_tile == 0:
         raise Exception('no valid DEM tiles')
 
-    starndard_watershed_resolution = 400.0  # meters
-    nrow_arcs = 4  # the channel is resolved by "nrow_arcs" rows of elements
-
     # ------------------------- read thalweg --------------------------- 
     xyz, l2g, curv, _ = get_all_points_from_shp(thalweg_shp_fname, iCache=i_thalweg_cache)
     xyz[:, 0], xyz[:, 1] = lonlat2cpp(xyz[:, 0], xyz[:, 1])
@@ -675,43 +735,42 @@ def make_river_map(
 
     # ------------------------- Dry run ---------------------------
     print(f'{mpi_print_prefix} Dry run')
-    thalweg_endpoints_width = np.empty((0), dtype=float)
-    thalweg_widths = []
-    valid_thalwegs = []
-    original_banks = []
+    thalweg_endpoints_width = np.empty((len(thalwegs)*2, 1), dtype=float); thalweg_endpoints_width.fill(np.nan)
+    thalweg_widths = [None] * len(thalwegs)
+    valid_thalwegs = [True] * len(thalwegs)
+    original_banks = [None] * len(thalwegs) * 2
     for i, [line, curv] in enumerate(zip(thalwegs, thalwegs_curv)):
         # print(f'Dry run: Arc {i+1} of {len(thalwegs)}')
         elevs = get_elev_from_tiles(line[:, 0], line[:, 1], S_list)
         if elevs is None:
             print(f"{mpi_print_prefix} warning: some elevs not found on thalweg {i+1}, neglecting ...")
-            valid_thalwegs.append(False)
+            valid_thalwegs[i] = False
             continue
         # set water level at each point along the thalweg, based on observation, simulation, estimation, etc.
         thalweg_eta = set_eta_thalweg(line[:, 0], line[:, 1], elevs)
 
         x_banks_left, y_banks_left, x_banks_right, y_banks_right, _, width = \
             get_two_banks(S_list, line, thalweg_eta, search_length, search_steps, min_width=river_threshold[0])
-        thalweg_widths.append(width)
+        thalweg_widths[i] = width
         if width is None:
-            thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
-            thalweg_endpoints_width = np.r_[thalweg_endpoints_width, 0.0]
+            thalweg_endpoints_width[i*2] = 0.0
+            thalweg_endpoints_width[i*2+1] = 0.0
         else:
-            thalweg_endpoints_width = np.r_[thalweg_endpoints_width, width[0]]
-            thalweg_endpoints_width = np.r_[thalweg_endpoints_width, width[-1]]
+            thalweg_endpoints_width[i*2] = width[0]
+            thalweg_endpoints_width[i*2+1] = width[-1]
 
         if len(line[:, 0]) < 2:
             print(f"{mpi_print_prefix} warning: thalweg {i+1} only has one point, neglecting ...")
-            valid_thalwegs.append(False)
+            valid_thalwegs[i] = False
             continue
 
         if x_banks_left is None or x_banks_right is None:
             print(f"{mpi_print_prefix} warning: thalweg {i+1} out of DEM coverage, neglecting ...")
-            valid_thalwegs.append(False)
+            valid_thalwegs[i] = False
             continue
 
-        original_banks.append(SMS_ARC(points=np.c_[x_banks_left, y_banks_left]))
-        original_banks.append(SMS_ARC(points=np.c_[x_banks_right, y_banks_right]))
-        valid_thalwegs.append(True)
+        original_banks[2*i] = SMS_ARC(points=np.c_[x_banks_left, y_banks_left])
+        original_banks[2*i+1] = SMS_ARC(points=np.c_[x_banks_right, y_banks_right])
 
     # End Dry run: found valid river segments; record channel width
     
@@ -728,13 +787,15 @@ def make_river_map(
     intersection_res_scatters = []
     thalwegs_neighbors = deepcopy(bank_arcs)  # [, 0] is head, [, 1] is tail
     real_bank_width = np.zeros((len(thalwegs), 2), dtype=float)  # [, 0] is head, [, 1] is tail
+    bombed_points = np.empty((0, 3), dtype=float)  # left bank and right bank for each thalweg
+    bombs = [None]* len(thalwegs) *2 # left bank and right bank for each thalweg
 
     # enumerate each thalweg
     for i, [thalweg, curv, width, valid_thalweg, thalweg_smooth] in enumerate(zip(thalwegs, thalwegs_curv, thalweg_widths, valid_thalwegs, thalwegs_smooth)):
         # print(f'{mpi_print_prefix} Wet run: Arc {i+1} of {len(thalwegs)}')
 
         if not valid_thalweg:
-            print(f"{mpi_print_prefix} marked as invalid in dry run, skipping ...")
+            print(f"{mpi_print_prefix} Thalweg {i} marked as invalid in dry run, skipping ...")
             continue
 
         # Redistribute thalwegs vertices
@@ -807,6 +868,7 @@ def make_river_map(
 
         # determine blast radius based on mean channel width at an intersection
         blast_radius = np.array([0.0, 0.0])
+        valid_points = np.ones(x_banks_left.shape, dtype=bool)
         for k in [0, -1]:  # head and tail
             dist = thalweg_endpoints[:, :] - thalweg[k, :]
             neighbor_thalwegs_endpoints = np.argwhere(dist[:, 0]**2 + dist[:, 1]**2 < 200**2)
@@ -816,9 +878,17 @@ def make_river_map(
             else:  # no intersections
                 blast_radius[k] = 0.0
 
+        # bomb intersections
+        valid_l, valid_l_headtail = bomb_line(np.c_[x_banks_left, y_banks_left], blast_radius, i, i_check_valid=True)
+        valid_r, valid_r_headtail = bomb_line(np.c_[x_banks_right, y_banks_right], blast_radius, i, i_check_valid=True)
+        valid_points = valid_l * valid_r
+        valid_points_headtail = valid_l_headtail * valid_r_headtail
+
+        bombed_idx = ~valid_points
+        if not i_blast_intersection:
+            valid_points[:] = True
+
         # assemble banks
-        valid_points = bomb_line(np.c_[x_banks_left, y_banks_left], blast_radius, i, i_check_valid=True) * \
-                       bomb_line(np.c_[x_banks_right, y_banks_right], blast_radius, i, i_check_valid=True)
         for k, line in enumerate([np.c_[x_banks_left, y_banks_left], np.c_[x_banks_right, y_banks_right]]):
             bank_arcs_raw[i, k] = SMS_ARC(points=np.c_[line[:, 0], line[:, 1]])
             if sum(valid_points) > 0:
@@ -831,24 +901,32 @@ def make_river_map(
         # quality check river arcs
         if river_quality(x_inner_arcs, y_inner_arcs, valid_points):
             # assemble inner arcs
+            bombs_xyz = [np.empty((0,3), dtype=float)] * 2
             for k, [x_inner_arc, y_inner_arc] in enumerate(zip(x_inner_arcs, y_inner_arcs)):
                 line = np.c_[x_inner_arc, y_inner_arc]
                 if sum(valid_points) > 0:
                     line = snap_vertices(line, width * 0.3)  # optional: thalweg_resolution*0.75
                     inner_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]])
-
+                    # output bombed points
+                    bombed_points = np.r_[bombed_points, np.c_[line[bombed_idx, 0], line[bombed_idx, 1], width[bombed_idx]/nrow_arcs]]
+                # test bombs
+                for l in [0, 1]:
+                    if sum(~valid_points_headtail[:, l]) > 0:
+                        bombs_xyz[l] = np.r_[bombs_xyz[l], np.c_[line[~valid_points_headtail[:, l]][:, :2], width[~valid_points_headtail[:, l]]/nrow_arcs]]
+            for l in [0, 1]:
+                bombs[2*i+l] = Bombs(x=bombs_xyz[l][:, 0], y=bombs_xyz[l][:, 1], res=bombs_xyz[l][:, 2])
             # assemble cross-channel arcs
             if sum(valid_points) > 0:
                 for j in [0, -1]:
                     cc_arcs[i, j] = SMS_ARC(points=np.c_[x_inner_arcs[:, valid_points][:, j], y_inner_arcs[:, valid_points][:, j]])
 
-    # assemble intersectional resolution scatters
+    # assemble intersection resolution scatters
     for i, thalweg_neighbors in enumerate(thalwegs_neighbors):
         for j, neibs in enumerate(thalweg_neighbors):  # head and tail
             if neibs is not None and len(neibs) > 1:
                 # intersect_ring is the effective refining region, consisting of bank endpoints at the intersection of multiple thalwegs
                 intersect_ring = np.zeros((0, 3), dtype=float)
-                for j, nei in enumerate(neibs):
+                for nei in neibs:
                     id = int(nei/2)
                     i_tail_head = int(nei%2)
                     if bank_arcs[id, 0] is not None:
@@ -856,9 +934,11 @@ def make_river_map(
                     if bank_arcs[id, 1] is not None:
                         intersect_ring = np.r_[intersect_ring, np.c_[bank_arcs[id, 1].nodes[i_tail_head, :2].reshape(1, -1), intersect_res_scale * real_bank_width[id, i_tail_head]]]
 
-                # make a scatter set consisting of a center point (where further refining is optional) and a outer ring (where resolution reverts to normal value)
+                # make a scatter set consisting of a center point (where further refining is optional) and an outer ring (where resolution reverts to normal value)
                 if len(intersect_ring) > 0:
                     center_point = np.mean(intersect_ring, axis=0).reshape(1, -1)
+                    if bombs[2*i+j] is not None:
+                        bombs[2*i+j].center = complex(center_point[0, 0], center_point[0, 1])
 
                     diff = intersect_ring - center_point
                     radius = np.maximum((diff[:, 0]**2 + diff[:, 1]**2)**0.5, 3.0)  # set minimum to 3.0 m to avoid division by 0
@@ -878,31 +958,51 @@ def make_river_map(
 
     intersect_res = None
     if intersection_res_scatters:  # len > 0
-        intersect_res = np.concatenate(intersection_res_scatters, axis=0)
+        intersect_res = np.r_[np.concatenate(intersection_res_scatters, axis=0), bombed_points]
         valid = intersect_res[:, -1] > 0
         intersect_res = intersect_res[valid, :]
+        # conver to lon/lat for outputs
+        intersect_res_lonlat = np.c_[intersect_res[:, :2], dl_cpp2lonlat(intersect_res[:, 2], intersect_res[:, 1])]
         
     # assemble river arcs
     # river_arcs = np.r_[bank_arcs.reshape((-1, 1)), inner_arcs.reshape((-1, 1))]
     # End wet run
+
+    # bombed_lon, bomed_lat = cpp2lonlat(bombed_points[:, 0], bombed_points[:, 1])
+
+    for i, thalweg_neighbors in enumerate(thalwegs_neighbors):
+        for j, neibs in enumerate(thalweg_neighbors):  # head and tail
+            if bombs[2*i+j] is not None:
+                for nei in neibs:
+                    nei = int(nei)
+                    if (2*i+j) != nei:
+                        bombs[2*i+j] += bombs[nei]
+                        bombs[nei] = None
+        
+
+    bombed_xy = np.empty((0,2), dtype=float)
+    for bomb in bombs:
+        if bomb is not None:
+            bomb.clean()
+            bombed_xy = np.r_[bombed_xy, np.c_[bomb.points.real, bomb.points.imag]]
+    bombed_lon, bomed_lat = cpp2lonlat(bombed_xy[:, 0], bombed_xy[:, 1])
 
     # ------------------------- write SMS maps --------------------------- 
     if any(bank_arcs.flatten()):  # not all arcs are None
         SMS_MAP(arcs=bank_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank.map')
         SMS_MAP(arcs=cc_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}cc_arcs.map')
         SMS_MAP(arcs=bank_arcs_raw.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}bank_raw.map')
-        SMS_MAP(arcs=inner_arcs.reshape((-1, 1))).writer(filename=f'{output_dir}/{output_prefix}river.map')
+        SMS_MAP(arcs=inner_arcs.reshape((-1, 1)), detached_nodes=bombed_points).writer(filename=f'{output_dir}/{output_prefix}river.map')
         SMS_MAP(arcs=smoothed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}smoothed_thalweg.map')
         SMS_MAP(arcs=redistributed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}redist_thalweg.map')
         SMS_MAP(arcs=corrected_thalwegs).writer(filename=f'{output_dir}/{output_prefix}corrected_thalweg.map')
         SMS_MAP(arcs=final_thalwegs).writer(filename=f'{output_dir}/{output_prefix}final_thalweg.map')
         if intersect_res is not None:
-            np.savetxt(f'{output_dir}/{output_prefix}intersection_res.xyz', intersect_res)
+            np.savetxt(f'{output_dir}/{output_prefix}intersection_res.xyz', intersect_res_lonlat)
         
-        if (cc_arcs!=None).all() and (inner_arcs!=None).all():
-            total_map = SMS_MAP(filename=f'{output_dir}/{output_prefix}cc_arcs.map', epsg=4326) + \
-                SMS_MAP(filename=f'{output_dir}/{output_prefix}river.map', epsg=4326)
-            total_map.writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
+        total_arcs = np.r_[inner_arcs.reshape((-1, 1))]
+        SMS_MAP(arcs=total_arcs).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
+        SMS_MAP(detached_nodes=np.c_[bombed_lon, bomed_lat]).writer(f'{output_dir}/{output_prefix}bombed_nodes.map')
     else:
         print(f'{mpi_print_prefix} No arcs found, aborting writing to *.map')
 
