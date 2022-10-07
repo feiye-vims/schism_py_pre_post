@@ -8,6 +8,15 @@
         "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v4/RUN23p10/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31}
     },
+    "Ian": {
+        "name": "Ian",
+        "plot_start_day_str": "2022-09-20 00:00:00",
+        "plot_end_day_str": "2022-10-05 00:00:00",
+        "model_start_day_str": "2022-09-20 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23q/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v4/RUN23q/",
+        "box": {"W": -83.5, "E": -79, "S": 25, "N": 31}
+    },
     "Ida_v5": {
         "name": "Ida",
         "plot_start_day_str": "2021-08-01 00:00:00",

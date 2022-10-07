@@ -1,4 +1,5 @@
-# %%    
+# %%
+from difflib import ndiff
 from functools import cache
 import json
 from statistics import median
@@ -13,6 +14,20 @@ import shapefile
 from schism_py_pre_post.Grid.SMS import lonlat2cpp, cpp2lonlat
 from pylib import schism_grid
 import pickle
+import math
+
+def parse_dem_tiles(dem_code, dem_tile_digits):
+    if dem_code == 0:
+        return [-1]  # no DEM found
+
+    dem_tile_ids = []
+    n_tiles = int(math.log10(dem_code)/dem_tile_digits) + 1
+    if n_tiles > 4:
+        raise Exception("Some thalweg points belong to more than 4 tiles from one DEM source, clean up the DEM tiles first.")
+    for digit in reversed(range(n_tiles)):
+        x, dem_code = divmod(dem_code, 10**(digit*dem_tile_digits))
+        dem_tile_ids.append(int(x-1))
+    return dem_tile_ids
 
 def get_tif_boxes(tif_files:list):
     tif_box = []
@@ -34,18 +49,23 @@ def reproject_tifs(tif_files:list, srcSRS='EPSG:4326', dstSRS='EPSG:26917', outd
         if not os.path.exists(tif_outfile):
             g = gdal.Warp(tif_outfile, tif_file, srcSRS=srcSRS, dstSRS=dstSRS)
             g = None
-    
+
 
 def pts_in_box(pts, box):
     in_box = (pts[:, 0] >  box[0]) * (pts[:, 0] <= box[2]) * \
              (pts[:, 1] >  box[1]) * (pts[:, 1] <= box[3])
-    return in_box 
+    return in_box
 
-def find_parent_box(pts, boxes):
-    parent = -np.ones((len(pts), 1), dtype=int)
+def find_parent_box(pts, boxes, i_overlap=False):
+    ndigits = int(math.log10(len(boxes))) + 1  # number of digits needed for representing tile id, e.g., CuDEM (819 tiles) needs 3 digits
+    parent = np.zeros((len(pts), 1), dtype='int')
+    digits = np.zeros((len(pts), 1), dtype='int')
     for j, box in enumerate(boxes):
         in_box = pts_in_box(pts[:,:2], box)
-        parent[in_box] = j
+        parent[in_box] += ((j+1) * 10.0 ** (digits[in_box])).astype(int)  # save multiple tiles in an integer, e.g.,
+                                                                          # 100101 of CuDEM (819 tiles) means tile 100 and tile 101;
+                                                                          # 12 of CRM (6 tiles) means tile 1 and tile 2;
+        digits[in_box] += ndigits
     # plt.hist(parent, bins=len(np.unique(parent)))
     # np.savetxt('thalweg_parent.xyz', np.c_[pts[:,:2], parent])
     return parent
@@ -114,8 +134,11 @@ def find_thalweg_tile(
     yt_left = y_cpp + estimated_range * np.sin(perp + np.pi)
     # find thalweg itself and two search boundaries (one on each side)
     thalwegs2dems = [find_parent_box(xyz[:,:2], dem_dict[k]['boxes']) for k in dem_dict.keys()]
-    thalwegs_right2dems = [find_parent_box(np.array(cpp2lonlat(xt_right, yt_right)).T, dem_dict[k]['boxes']) for k in dem_dict.keys()] 
+    thalwegs_right2dems = [find_parent_box(np.array(cpp2lonlat(xt_right, yt_right)).T, dem_dict[k]['boxes']) for k in dem_dict.keys()]
     thalwegs_left2dems = [find_parent_box(np.array(cpp2lonlat(xt_left, yt_left)).T, dem_dict[k]['boxes']) for k in dem_dict.keys()]
+
+    # how many digits in tile numbers
+    dems_tile_digits = [int(math.log10(len(dem_dict[k]['boxes'])))+1 for k in dem_dict.keys()]
 
     # use cpp projection hereafter, because meter unit is easier for parameterization
     xyz[:, 0], xyz[:, 1] = x_cpp, y_cpp
@@ -130,7 +153,10 @@ def find_thalweg_tile(
         for i_dem, [thalwegs2dem, thalwegs_left2dem, thalwegs_right2dem] in enumerate(zip(thalwegs2dems, thalwegs_right2dems, thalwegs_left2dems)):
             # find all DEM tiles that a thalweg (including its left and right search boundaries) touches
             thalweg2dem = np.unique(np.r_[thalwegs2dem[idx], thalwegs_left2dem[idx], thalwegs_right2dem[idx]]).tolist()
-            thalweg_parents += [complex(i_dem, x) for x in thalweg2dem]  # real part is DEM id; complex part is tile id
+            for dem_code in thalweg2dem:
+                thalweg_parents += [complex(i_dem, x) for x in parse_dem_tiles(dem_code, dems_tile_digits[i_dem])]
+                pass
+            # thalweg_parents += [complex(i_dem, x) for x in thalweg2dem]  # real part is DEM id; complex part is tile id
         thalwegs_parents.append(thalweg_parents)
 
     # Group thalwegs: thalwegs from the same group have the same parent tiles
@@ -184,12 +210,12 @@ def find_thalweg_tile(
     large_group2thalwegs = [[] for _ in range(len(large_groups))]
     for i, x in enumerate(thalweg2large_group):
         large_group2thalwegs[x].append(i)
-    
+
     large_groups_files = copy.deepcopy(large_groups)
     for i, group in enumerate(large_groups):
         for j, tile_code in enumerate(group):
             large_groups_files[i][j] = tile2dem_file(dem_dict=dem_dict, dem_order=dem_order, tile_code=tile_code)
-            
+
     # histogram
     # plt.hist(thalweg2large_group, bins=len(np.unique(thalweg2large_group)))
     # plt.show()
@@ -211,7 +237,7 @@ if __name__ == "__main__":
     # coned_boxes = get_tif_boxes(coned_files)
 
     # coned_centers = np.c_[
-    #     (np.array(coned_boxes)[:, 0]+np.array(coned_boxes)[:, 2])/2, 
+    #     (np.array(coned_boxes)[:, 0]+np.array(coned_boxes)[:, 2])/2,
     #     (np.array(coned_boxes)[:, 1]+np.array(coned_boxes)[:, 3])/2,
     # ]
 

@@ -6,7 +6,7 @@ from mpi4py import MPI
 import gc
 from schism_py_pre_post.Rivermap.river_map_tif_preproc import find_thalweg_tile
 from schism_py_pre_post.Rivermap.make_river_map import make_river_map
-from schism_py_pre_post.Grid.SMS import SMS_MAP
+from schism_py_pre_post.Grid.SMS import merge_maps
 import time
 import pickle
 
@@ -41,9 +41,11 @@ if __name__ == "__main__":
     # files and dirs
     dems_json_file = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Rivermap/dems.json'  # files for all DEM tiles
 
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/LA_sub4_ll.shp'
-    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/test_tiles1.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
+    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/cudem_3_single_ll.shp'
 
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/' + \
         f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'
@@ -59,7 +61,7 @@ if __name__ == "__main__":
     i_thalweg_cache = True  # Whether or not read thalweg info from cache.
                              # The cache file saves coordinates, index, curvature, and direction at all thalweg points
                              # This is usually fast even without cache
-    i_grouping_cache = True  # Whether or not read grouping info from cache,
+    i_grouping_cache = True # Whether or not read grouping info from cache,
                               # which is useful when the same DEMs and thalweg_shp_fname are used.
                               # A cache file named "dems_json_file + thalweg_shp_fname_grouping.cache"
                               # will be saved regardless of the option value.
@@ -73,7 +75,8 @@ if __name__ == "__main__":
         if os.path.exists(output_dir):
             os.system(f"rm -r {output_dir}")
         else:
-            os.mkdir(output_dir)
+            os.makedirs(output_dir, exist_ok=True)
+    comm.barrier()
 
     # group thalwegs (with the option of cache)
     cache_name = cache_folder + \
@@ -108,7 +111,7 @@ if __name__ == "__main__":
                   f'Group {i+1} needs the following DEMs: {tile_groups_files[i]}\n')
     comm.barrier()
 
-    # each core handles some groups
+    # assign groups to each core
     my_idx = my_mpi_idx(N=len(tile_groups_files), size=size, rank=rank)
     # my_idx.fill(False); my_idx[[50]] = True
     my_tile_groups = tile_groups_files[my_idx]
@@ -118,14 +121,16 @@ if __name__ == "__main__":
 
     time_all_groups_start = time.time()
 
+    # each core handles its assigned groups sequentially
     for i, (my_tile_group, my_tile_group_thalwegs) in enumerate(zip(my_tile_groups, my_tile_groups_thalwegs)):
         time_this_group_start = time.time()
-        # try:
+        # if i!=251: continue # try:
         make_river_map(
             tif_fnames = my_tile_group,
             thalweg_shp_fname = thalweg_shp_fname,
             thalweg_smooth_shp_fname = None,  # '/GA_riverstreams_cleaned_corrected_utm17N.shp'
             selected_thalweg = my_tile_group_thalwegs,
+            cache_folder=cache_folder,
             output_dir = output_dir,
             output_prefix = f'{rank}_{i}_',
             mpi_print_prefix = f'[Rank {rank}, Group {i+1} of {len(my_tile_groups)}] ',
@@ -139,29 +144,14 @@ if __name__ == "__main__":
 
     comm.Barrier()
 
-    # write
+    # merge outputs on each core (for testing purposes)
+    merge_maps(f'{output_dir}/{rank}_*_total_arcs.map', merged_fname=f'{output_dir}/Rank{rank}_total_arcs.map')
+    comm.Barrier()
+
+    # merge outputs from all ranks
     if rank == 0:
-        map_files = glob.glob(f'{output_dir}/*_total*.map')
-        if len(map_files) > 0:
-            map_objects = [SMS_MAP(filename=map_file) for map_file in map_files]
-
-            total_map = map_objects[0]
-            for map_object in map_objects[1:]:
-                total_map += map_object
-            total_map.writer(filename=f'{output_dir}/total_arcs.map')
-        else:
-            print('No map files found in final combination ...')
-
-        map_files = glob.glob(f'{output_dir}/*bomb*.map')
-        if len(map_files) > 0:
-            map_objects = [SMS_MAP(filename=map_file) for map_file in map_files]
-
-            total_map = map_objects[0]
-            for map_object in map_objects[1:]:
-                total_map += map_object
-            total_map.writer(filename=f'{output_dir}/total_bombs.map')
-        else:
-            print('No map files found in final combination ...')
+        merge_maps(f'{output_dir}/Rank*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
+        merge_maps(f'{output_dir}/*bomb*.map', merged_fname=f'{output_dir}/total_bombs.map')
         
         xyz_files = glob.glob(f'{output_dir}/*.xyz')
         os.system(f'cat {" ".join(xyz_files)} > {output_dir}/intersection_res.xyz')

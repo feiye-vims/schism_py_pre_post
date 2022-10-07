@@ -1,9 +1,10 @@
 # %%
+from functools import cache
 import matplotlib.pyplot as plt
 from pylib import loadz, proj_pts
 from schism_py_pre_post.Grid.SMS import get_all_points_from_shp, \
     SMS_ARC, SMS_MAP, curvature, cpp2lonlat, lonlat2cpp, dl_cpp2lonlat, \
-    get_perpendicular_angle
+    get_perpendicular_angle, merge_maps
 import numpy as np
 import copy
 import glob
@@ -86,18 +87,14 @@ def get_elev_from_tiles(x_cpp, y_cpp, tile_list):
     lon, lat = cpp2lonlat(x_cpp, y_cpp)
     
     elevs = np.empty(lon.shape, dtype=float); elevs.fill(np.nan)
-    iset = np.zeros(lon.shape, dtype=bool)
     for S in tile_list:
-        [j, i], valid = Sidx(S, lon, lat)
-        idx = ((~iset) * valid).astype(bool)  # only update valid entries that are not set already
+        [j, i], in_box = Sidx(S, lon, lat)
+        idx = (np.isnan(elevs) * in_box).astype(bool)  # only update valid entries that are not already set and in DEM box
         elevs[idx] = S.elev[i[idx], j[idx]]
-        iset = (iset + idx).astype(bool)
     
     if np.isnan(elevs).any():
         pass
         # raise Exception('failed to find elevation')
-    
-    if not iset.all():
         return None
     else:
         return elevs
@@ -625,7 +622,7 @@ def bomb_line(line, blast_radius, thalweg_id, i_check_valid=False):
     valid_idx_headtail = np.ones((len(line[:, 0]), 2), dtype=bool)
     if i_check_valid:
         for k in [0, -1]:
-            valid_idx_headtail[:, -k] = (line[:, 0] - line[k, 0])**2 + (line[:, 1] - line[k, 1])**2 > blast_radius[k]**2
+            valid_idx_headtail[:, -k] = (line[:, 0] - line[k, 0])**2 + (line[:, 1] - line[k, 1])**2 >= blast_radius[k]**2
             valid_idx *= valid_idx_headtail[:, -k]
         if sum(valid_idx) < 1:
             print(f'warning: thalweg {thalweg_id+1} has less than 1 points after bombing, neglecting ...')
@@ -638,6 +635,7 @@ def make_river_map(
     thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp',
     thalweg_smooth_shp_fname = None,  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
     selected_thalweg = None,
+    cache_folder=None,
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/',
     output_prefix = '',
     mpi_print_prefix = ''
@@ -665,15 +663,22 @@ def make_river_map(
     river_threshold = np.array([5, 400]) / MapUnit2METER
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
 
+    i_close_poly = True
+
     i_blast_intersection = True
     blast_radius_scale = 0.6  # coef controlling the blast radius at intersections
     intersect_res_scale  = 0.4  # coef controlling the resolution of the paved mesh at intersections
 
     starndard_watershed_resolution = 400.0  # meters
-    nrow_arcs = 4  # the channel is resolved by "nrow_arcs" rows of elements
+    nrow_arcs = 4  # the channel is resolved by "nrows_arcs" along-channel arcs
 
     i_thalweg_cache = True
+
     # ------------------------- end basic inputs --------------------------- 
+
+    if i_thalweg_cache:
+        if cache_folder is None or not os.path.exists(cache_folder):
+            raise Exception("Cache folder not found.")
     
     # ------------------------- read DEM --------------------------- 
     main_dem_id = 1
@@ -704,10 +709,10 @@ def make_river_map(
             search_steps = int(river_threshold[1] / dl)
 
     if nvalid_tile == 0:
-        raise Exception('no valid DEM tiles')
+        raise Exception('Fatal Error: no valid DEM tiles')
 
     # ------------------------- read thalweg --------------------------- 
-    xyz, l2g, curv, _ = get_all_points_from_shp(thalweg_shp_fname, iCache=i_thalweg_cache)
+    xyz, l2g, curv, _ = get_all_points_from_shp(thalweg_shp_fname, iCache=i_thalweg_cache, cache_folder=cache_folder)
     xyz[:, 0], xyz[:, 1] = lonlat2cpp(xyz[:, 0], xyz[:, 1])
 
     if thalweg_smooth_shp_fname is not None:
@@ -905,7 +910,7 @@ def make_river_map(
             for k, [x_inner_arc, y_inner_arc] in enumerate(zip(x_inner_arcs, y_inner_arcs)):
                 line = np.c_[x_inner_arc, y_inner_arc]
                 if sum(valid_points) > 0:
-                    line = snap_vertices(line, width * 0.3)  # optional: thalweg_resolution*0.75
+                    line[valid_points, :] = snap_vertices(line[valid_points, :], width[valid_points] * 0.3)  # optional: thalweg_resolution*0.75
                     inner_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]])
                     # output bombed points
                     bombed_points = np.r_[bombed_points, np.c_[line[bombed_idx, 0], line[bombed_idx, 1], width[bombed_idx]/nrow_arcs]]
@@ -914,11 +919,13 @@ def make_river_map(
                     if sum(~valid_points_headtail[:, l]) > 0:
                         bombs_xyz[l] = np.r_[bombs_xyz[l], np.c_[line[~valid_points_headtail[:, l]][:, :2], width[~valid_points_headtail[:, l]]/nrow_arcs]]
             for l in [0, 1]:
-                bombs[2*i+l] = Bombs(x=bombs_xyz[l][:, 0], y=bombs_xyz[l][:, 1], res=bombs_xyz[l][:, 2])
+                if len(bombs_xyz[l]) > 0:
+                    bombs[2*i+l] = Bombs(x=bombs_xyz[l][:, 0], y=bombs_xyz[l][:, 1], res=bombs_xyz[l][:, 2])
             # assemble cross-channel arcs
             if sum(valid_points) > 0:
                 for j in [0, -1]:
                     cc_arcs[i, j] = SMS_ARC(points=np.c_[x_inner_arcs[:, valid_points][:, j], y_inner_arcs[:, valid_points][:, j]])
+                    pass
 
     # assemble intersection resolution scatters
     for i, thalweg_neighbors in enumerate(thalwegs_neighbors):
@@ -981,7 +988,7 @@ def make_river_map(
         
 
     bombed_xy = np.empty((0,2), dtype=float)
-    for bomb in bombs:
+    for i, bomb in enumerate(bombs):
         if bomb is not None:
             bomb.clean()
             bombed_xy = np.r_[bombed_xy, np.c_[bomb.points.real, bomb.points.imag]]
@@ -1000,13 +1007,15 @@ def make_river_map(
         if intersect_res is not None:
             np.savetxt(f'{output_dir}/{output_prefix}intersection_res.xyz', intersect_res_lonlat)
         
-        total_arcs = np.r_[inner_arcs.reshape((-1, 1))]
+        if i_close_poly:
+            total_arcs = np.r_[inner_arcs.reshape((-1, 1)), cc_arcs.reshape((-1, 1))]
+        else:
+            total_arcs = np.r_[inner_arcs.reshape((-1, 1))]
         SMS_MAP(arcs=total_arcs).writer(filename=f'{output_dir}/{output_prefix}total_arcs.map')
         SMS_MAP(detached_nodes=np.c_[bombed_lon, bomed_lat]).writer(f'{output_dir}/{output_prefix}bombed_nodes.map')
     else:
         print(f'{mpi_print_prefix} No arcs found, aborting writing to *.map')
-
-
+    
 if __name__ == "__main__":
     make_river_map(
         tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'],

@@ -3,10 +3,11 @@ from logging import raiseExceptions
 import pickle
 from sys import getallocatedblocks
 import os
+from telnetlib import IP
 import numpy as np
 from shapely.geometry import LineString
 import matplotlib.pyplot as plt
-import csv
+import glob
 import numpy as np
 import re
 import shapefile
@@ -172,6 +173,19 @@ BEGTS
 LEND
 '''
 
+def merge_maps(mapfile_glob_str, merged_fname):
+    map_file_list = glob.glob(mapfile_glob_str) 
+    if len(map_file_list) > 0:
+        map_objects = [SMS_MAP(filename=map_file) for map_file in map_file_list]
+
+        total_map = map_objects[0]
+        for map_object in map_objects[1:]:
+            total_map += map_object
+        total_map.writer(merged_fname)
+    else:
+        print(f'failed to combine {mapfile_glob_str}, no files found')
+
+
 class SMS_ARC():
     '''class for manipulating arcs in SMS maps''' 
     def __init__(self, points=None, node_idx=[0, -1], src_prj='cpp', dst_prj='epsg:4326'):
@@ -304,7 +318,7 @@ class SMS_MAP():
 
         fpath = os.path.dirname(filename)
         if not os.path.exists(fpath):
-            os.mkdir(fpath)
+            os.makedirs(fpath, exist_ok=True)
 
         with open(filename, 'w') as f:
             # write header
@@ -507,6 +521,40 @@ def replace_shp_pts(inshp_fname, pts, l2g, outshp_fname):
                 feature.shape.points = pts[l2g[i]]
                 w.shape(feature.shape)
 
+def extract_quad_polygons(input_fname='test.map', output_fname=None):
+    if output_fname is None:
+        output_fname = os.path.splitext(input_fname)[0] + '.quad.map'
+    
+    with open(output_fname, 'w') as fout:
+        lines_buffer = []
+        iPatch = False
+
+        n_read = 0
+        with open(input_fname) as f:
+            while True:
+                line = f.readline()
+                if not line: break
+                strs = re.split(' +', line.strip())
+
+                if strs[0] != 'POLYGON':
+                    fout.write(line)
+                else:
+                    lines_buffer.append(line)
+                    while True:
+                        line = f.readline()
+                        strs = re.split(' +', line.strip())
+                        lines_buffer.append(line)
+                        if strs[0] == 'PATCH':
+                            iPatch = True
+                        elif strs[0] == 'END':
+                            if iPatch:
+                                for line_buffer in lines_buffer:
+                                    fout.write(line_buffer)
+                                iPatch = False
+                                fout.flush()
+                            lines_buffer = []
+                            break
+
 
 if __name__ == '__main__':
-    pass
+    extract_quad_polygons(input_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.0_coastal.map')
