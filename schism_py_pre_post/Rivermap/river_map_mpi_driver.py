@@ -41,11 +41,11 @@ if __name__ == "__main__":
     # files and dirs
     dems_json_file = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Rivermap/dems.json'  # files for all DEM tiles
 
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/LA_sub4_ll.shp'
+    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/la_test.shp'
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/test_tiles1.shp'
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
-    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/cudem_3_single_ll.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/cudem_3_single_ll.shp'
 
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/' + \
         f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'

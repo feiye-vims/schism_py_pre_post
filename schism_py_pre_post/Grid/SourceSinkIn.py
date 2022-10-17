@@ -72,7 +72,7 @@ class SourceSinkIn():
         """return ele id with specified prop value"""
 
 
-class Prop(SourceSinkIn):  # temporary, for be backward compatible with some older scripts
+class Prop(SourceSinkIn):  # temporary, to be backward compatible with some older scripts
     def __init__(self, filename, number_of_groups):
         super().__init__(self, filename, number_of_groups)
 
@@ -80,7 +80,7 @@ class Prop(SourceSinkIn):  # temporary, for be backward compatible with some old
 class source_sink():
     """class for handling all source/sink inputs"""
     def __init__(self, source_dir=None, start_time_str='2000-01-01 00:00:00', timedeltas=[0.0, 86400.0*365],
-                 source_eles=[], sink_eles=[]):
+                 source_eles=[], sink_eles=[], vsource_data=None, vsink_data=None):
 
         dummy_source_sink = TimeHistory(
             file_name=None, start_time_str='2000-01-01 00:00:00',
@@ -92,9 +92,14 @@ class source_sink():
             nsources = len(source_eles)
             nsinks = len(sink_eles)
 
+            if vsource_data is None:
+                vsource_data = np.zeros([nt, nsources])
+            if vsink_data is None:
+                vsink_data = np.zeros([nt, nsinks])
+
             if nsources > 0:
                 self.vsource = TimeHistory(file_name=None, start_time_str=start_time_str,
-                                           data_array=np.c_[np.array(timedeltas), np.zeros([nt, nsources])],
+                                           data_array=np.c_[np.array(timedeltas), vsource_data],
                                            columns=['datetime']+source_eles)
                 self.msource = TimeHistory(file_name=None, start_time_str=start_time_str,
                                            data_array=np.c_[np.array(timedeltas), -9999*np.ones([nt, nsources]), np.zeros([nt, nsources])],
@@ -108,7 +113,7 @@ class source_sink():
 
             if nsinks > 0:
                 self.vsink = TimeHistory(file_name=None, start_time_str=start_time_str,
-                                         data_array=np.c_[np.array(timedeltas), np.zeros([nt, nsinks])],
+                                         data_array=np.c_[np.array(timedeltas), vsink_data],
                                          columns=['datetime']+sink_eles)
             else:
                 sink_eles = [1]  # dummy with 0 vsource
@@ -169,8 +174,12 @@ class source_sink():
         self.vsource.data = self.vsource.df.values[:, 1:]
 
     def __add__(self, other):
+        '''
+        Add source_sink B to source_sink A,
+        retaining A's time stamps
+        '''
         A = copy.deepcopy(self)
-        B = copy.deepcopy(other)
+        B = other
         for i, source_sink in enumerate(['vsource', 'vsink']):  # 0: source; 1: sink
             [_, new_eles_inds] = BinA(A.source_sink_in.ip_group[i],
                                       B.source_sink_in.ip_group[i])

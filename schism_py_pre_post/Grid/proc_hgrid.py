@@ -33,7 +33,7 @@ def quality_check_hgrid(gd, epsg=4326):
 
 
 def proc_hgrid():
-    file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/Combined_1.2.2/v5_1.2.2.2dm'
+    file_2dm = f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Mesh/la_cudem9_26918.2dm'
     dirname = os.path.dirname(file_2dm)
 
     gd = sms2grd(file_2dm)
@@ -68,8 +68,9 @@ def proc_hgrid():
     pass
 
 if __name__ == "__main__":
-    # proc_hgrid()
+    proc_hgrid()
     
+    '''
     gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23p11/hgrid.ll'
     gd_cache_fname = os.path.splitext(gd_fname)[0] + '.pkl'
     if os.path.exists(gd_cache_fname):
@@ -79,5 +80,5 @@ if __name__ == "__main__":
         gd.save(gd_cache_fname)
     
     quality_check_hgrid(gd)
-
+    '''
     pass

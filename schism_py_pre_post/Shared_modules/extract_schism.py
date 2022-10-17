@@ -82,6 +82,8 @@ def extract_schism(bpfiles=None, var=None, rundir=None, i_comb=None, stacks=None
 # -----------------------------------------------------------------------------------
 # ----------------------extract schism results-------------------------
 # -----------------------------------------------------------------------------------
+
+# ------------------------- time series --------------------------- 
 # rundir = '/sciclone/data10/feiye/vims20/work/ChesBay/RUN200p/'
 # bpname = 'center'
 # outfilenames = extract_schism(
@@ -96,7 +98,7 @@ def extract_schism(bpfiles=None, var=None, rundir=None, i_comb=None, stacks=None
 # shutil.copy(outfilenames[0], f'{rundir}/temp.dat.more.{bpname}')
 # pass
 
-# ChesBay transect
+# ------------------------- ChesBay transect (synoptic_transect3.m) --------------------------- 
 bpfiles = ['/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/side_w.bp']
 
 runid = 'RUN109x'
@@ -122,7 +124,7 @@ for var in vars:
     )
 pass
 
-# # ChesBay hvel
+# ------------------------- ChesBay hvel --------------------------- 
 # runid = 'RUN200i'
 # rundir = '/sciclone/data10/feiye/vims20/work/ChesBay/' + runid
 # bpdir = '/sciclone/data10/feiye/vims20/work/ChesBay/BPfiles/'

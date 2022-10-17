@@ -283,7 +283,7 @@ def smooth_thalweg(line, ang_diff_shres=np.pi/2.4, nmax=100, smooth_coef=0.2):
     return line, perp
 
 def river_quality(xs, ys, idx, ang_diff_shres=np.pi/2.4):
-    # identify channels that are too ambiguous and hopeless
+    # identify channels that are too ambiguous
     if sum(idx) < 2:
         return False
         
@@ -660,12 +660,12 @@ def make_river_map(
     # thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/TX_watershed_nwm_projected_26915_v2_cleaned.shp'
     # thalweg_smooth_shp_fname = None  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
 
-    river_threshold = np.array([5, 400]) / MapUnit2METER
+    river_threshold = np.array([12, 400]) / MapUnit2METER
     nudge_ratio = np.array((0.3, 2.0))  # ratio between nudging distance to mean half-channel-width
 
-    i_close_poly = True
+    i_close_poly = False
 
-    i_blast_intersection = True
+    i_blast_intersection = False
     blast_radius_scale = 0.6  # coef controlling the blast radius at intersections
     intersect_res_scale  = 0.4  # coef controlling the resolution of the paved mesh at intersections
 
