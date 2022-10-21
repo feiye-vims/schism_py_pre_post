@@ -557,4 +557,4 @@ def extract_quad_polygons(input_fname='test.map', output_fname=None):
 
 
 if __name__ == '__main__':
-    extract_quad_polygons(input_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.0_coastal.map')
+    extract_quad_polygons(input_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/cudem10_patches.map')

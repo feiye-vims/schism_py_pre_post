@@ -665,7 +665,7 @@ def make_river_map(
 
     i_close_poly = False
 
-    i_blast_intersection = False
+    i_blast_intersection = True
     blast_radius_scale = 0.6  # coef controlling the blast radius at intersections
     intersect_res_scale  = 0.4  # coef controlling the resolution of the paved mesh at intersections
 
