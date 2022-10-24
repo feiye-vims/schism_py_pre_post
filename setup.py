@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
   setuptools.setup(
   name='schism_py_pre_post',
-  version='0.0.5.7',
+  version='0.0.5.8',
   author='Fei Ye',
   author_email='feiye@vims.edu',
   description='Python tools for pre/post-processing SCHISM models',
