@@ -37,7 +37,7 @@ if __name__ == "__main__":
     which are fed to make_river_map.py one at a time
     '''
 
-    # ------------------------- input section --------------------------- 
+    # ------------------------- input section ---------------------------
     # files and dirs
     dems_json_file = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Rivermap/dems.json'  # files for all DEM tiles
 
@@ -46,11 +46,12 @@ if __name__ == "__main__":
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
     thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/cudem_3_single_ll.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_LA.shp'
 
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/' + \
         f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'
 
-    # parameters 
+    # parameters
     thalweg_buffer = 1000  # meters. This is the search range on either side of the thalweg.
                             # Because banks will be searched within this range,
                             # its value is needed now to associate DEM tiles with each thalweg
@@ -66,7 +67,7 @@ if __name__ == "__main__":
                               # A cache file named "dems_json_file + thalweg_shp_fname_grouping.cache"
                               # will be saved regardless of the option value.
                              # This is usually fast even without cache
-    # ------------------------- end input section --------------------------- 
+    # ------------------------- end input section ---------------------------
 
     if rank == 0: print(f'A total of {size} core(s) used.')
     comm.barrier()
@@ -152,7 +153,8 @@ if __name__ == "__main__":
     if rank == 0:
         merge_maps(f'{output_dir}/Rank*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
         merge_maps(f'{output_dir}/*bomb*.map', merged_fname=f'{output_dir}/total_bombs.map')
-        
+        merge_maps(f'{output_dir}/*relax*.map', merged_fname=f'{output_dir}/total_relax.map')
+
         xyz_files = glob.glob(f'{output_dir}/*.xyz')
         os.system(f'cat {" ".join(xyz_files)} > {output_dir}/intersection_res.xyz')
 

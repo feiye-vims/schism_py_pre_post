@@ -30,7 +30,9 @@ def set_additional_dp_v11_91(wdir='./', levee_info_dir='./Levee_info/Additional_
     os.system(f"cp {wdir}/hgrid.utm.gr3 {wdir}/hgrid.utm.26918")
 
 if __name__ == "__main__":
+    # needs hgrid.ll and hgrid.utm.gr3 (epsg:26918) in wdir
+    # needs Levee_info/, copy it into the wdir
     set_additional_dp_v11_91(
-        wdir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/LAMSAL_load_levees/',
-        levee_info_dir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Hgrid/Shapefiles/LAMSAL_load_levees/Levee_info/Additional_Polygons/'
+        wdir='./',
+        levee_info_dir='./Levee_info/Additional_Polygons/'
     )

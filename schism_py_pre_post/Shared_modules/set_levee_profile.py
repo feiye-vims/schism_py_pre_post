@@ -1,10 +1,8 @@
 import shapefile
 import numpy as np
 from pylib import schism_grid, inside_polygon, proj
-import pandas as pd
 from schism_py_pre_post.Shared_modules.hotstart_proc import nearest_neighbour
-from schism_py_pre_post.Shared_modules.download_nld import nld2map
-import matplotlib.pyplot as plt
+from schism_py_pre_post.Download.download_nld import nld2map
 import os
 
 
@@ -70,5 +68,5 @@ def set_levee_profile(wdir='./', levee_info_dir='./'):
 if __name__ == "__main__":
     '''Inputs under wdir: hgrid.utm.gr3, hgrid.ll'''
     '''Outputs to wdir: levee-loaded hgrid.utm.gr3, hgrid.ll'''
-    set_levee_profile(wdir='./')
+    set_levee_profile(wdir='./', levee_info_dir='./Levee_info/')
     pass
