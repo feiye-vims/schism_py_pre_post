@@ -25,7 +25,7 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
     else:
         downloaded_data = download_stations(
             param_id=usgs_var_dict['gauge height']['id'],
-            var='guage height', station_ids=station_ids,
+            station_ids=station_ids,
             datelist=pd.date_range(start=start_date, end=end_date)
         )
 

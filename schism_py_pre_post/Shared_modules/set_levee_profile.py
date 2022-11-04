@@ -6,8 +6,8 @@ from schism_py_pre_post.Download.download_nld import nld2map
 import os
 
 
-def set_levee_profile(wdir='./', levee_info_dir='./'):
-    
+def set_levee_profile(hgrid=None, wdir='./', levee_info_dir='./Levee_info/'):
+
     levee_names = ['LA_levees', 'FL_levees']
     levee_name_str = "_".join(levee_names)
     levee_xyz = np.zeros((0, 3), dtype=float)
@@ -24,13 +24,16 @@ def set_levee_profile(wdir='./', levee_info_dir='./'):
     # plt.plot(np.sort(levee_height))
     # plt.show()
 
-    gd = schism_grid(f'{wdir}/hgrid.utm.gr3')  # ; gd.save(f'{wdir}/hgrid.pkl')
-    gd_ll = schism_grid(f'{wdir}/hgrid.ll')  # ; gd.save(f'{wdir}/hgrid.pkl')
-    gd.lon = gd_ll.x
-    gd.lat = gd_ll.y
+    if hgrid is None:
+        gd = schism_grid(f'{wdir}/hgrid.ll')  # ; gd.save(f'{wdir}/hgrid.pkl')
+    else:
+        gd = hgrid
 
+    gd.lon = gd.x
+    gd.lat = gd.y
+    gd.proj(prj0='epsg:4326', prj1='epsg:26918')  # this overwrites gd.x, gd.y
 
-    # find levee center line points in hgrid
+    # find levee center line points in hgrid, use UTM to avoid truncation error
     shapefile_names = [
         f"{levee_info_dir}/Polygons/la_levee_center_line_buffer_13m.shp",
         f"{levee_info_dir}/Polygons/fl_levees_buffer_10m.shp",
@@ -57,16 +60,23 @@ def set_levee_profile(wdir='./', levee_info_dir='./'):
 
     gd.x = gd.lon
     gd.y = gd.lat
-    gd.write_hgrid(f'{wdir}/hgrid_{levee_name_str}_loaded_ll.gr3')
 
-    os.system(f"cp {wdir}/hgrid_{levee_name_str}_loaded_ll.gr3 {wdir}/hgrid.ll")
-    proj(
-        f'{wdir}/hgrid.ll', 0, 'epsg:4326',
-        f'{wdir}/hgrid.utm.gr3', 0, 'epsg:26918',
-    )
+    # os.system(f"cp {wdir}/hgrid_{levee_name_str}_loaded_ll.gr3 {wdir}/hgrid.ll")
+    # proj(
+    #     f'{wdir}/hgrid.ll', 0, 'epsg:4326',
+    #     f'{wdir}/hgrid.utm.gr3', 0, 'epsg:26918',
+    # )
+
+    return gd  # levee loaded hgrid.ll
 
 if __name__ == "__main__":
-    '''Inputs under wdir: hgrid.utm.gr3, hgrid.ll'''
-    '''Outputs to wdir: levee-loaded hgrid.utm.gr3, hgrid.ll'''
-    set_levee_profile(wdir='./', levee_info_dir='./Levee_info/')
+    '''
+    Inputs under wdir, hgrid.ll
+    Outputs to wdir: levee-loaded hgrid.ll
+    '''
+
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.2/Grid/'
+    gd = set_levee_profile(hgrid=None, wdir=wdir, levee_info_dir='./Levee_info/')
+    gd.write_hgrid(f'{wdir}/hgrid_additional_levee_loaded_ll.gr3')
+
     pass

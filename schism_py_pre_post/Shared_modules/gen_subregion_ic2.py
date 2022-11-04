@@ -41,7 +41,7 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
         # hycom_TS_file = '/sciclone/schism10/feiye/Coastal_Act/Hot/13c/TS_1.nc'
 
         # Define sub region within which {var} is to be modified/x_ma
-        f_grid_in = wdir + 'hgrid.ll'
+        f_grid_in = wdir + 'hgrid.gr3'
         # this region is manually made, which covers the entire watershed area
         f_sub_region = wdir + 'ecgc_sub_grid.reg'
 

@@ -802,6 +802,7 @@ def make_river_map(
     smoothed_thalwegs = [None] * len(thalwegs)
     redistributed_thalwegs = [None] * len(thalwegs)
     corrected_thalwegs = [None] * len(thalwegs)
+    centerlines = [None] * len(thalwegs)
     final_thalwegs = [None] * len(thalwegs)
     intersection_res_scatters = []
     thalwegs_neighbors = deepcopy(bank_arcs)  # [, 0] is head, [, 1] is tail
@@ -886,6 +887,8 @@ def make_river_map(
         x_inner_arcs = np.linspace(x_banks_left, x_banks_right, this_nrow_arcs)
         y_inner_arcs = np.linspace(y_banks_left, y_banks_right, this_nrow_arcs)
 
+        z_centerline = this_nrow_arcs + width/1e4
+
         # determine blast radius based on mean channel width at an intersection
         blast_radius = np.array([0.0, 0.0])
         valid_points = np.ones(x_banks_left.shape, dtype=bool)
@@ -920,22 +923,31 @@ def make_river_map(
 
         # quality check river arcs
         if river_quality(x_inner_arcs, y_inner_arcs, valid_points):
+            # save centerlines
             # assemble inner arcs
             bombs_xyz = [np.empty((0,3), dtype=float)] * 2
             for k, [x_inner_arc, y_inner_arc] in enumerate(zip(x_inner_arcs, y_inner_arcs)):
                 line = np.c_[x_inner_arc, y_inner_arc]
                 if sum(valid_points) > 0:
+                    # snap vertices too close to each other
                     line[valid_points, :] = snap_vertices(line[valid_points, :], width[valid_points] * 0.3)  # optional: thalweg_resolution*0.75
-                    inner_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1]])
-                    # output bombed points
+                    # save inner arcs
+                    inner_arcs[i, k] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]])
+                    # save centerline
+                    if k == int(len(x_inner_arcs)/2):
+                        centerlines[i] = SMS_ARC(points=np.c_[line[valid_points, 0], line[valid_points, 1], z_centerline[valid_points]])
+                    # save bombed points
                     bombed_points = np.r_[bombed_points, np.c_[line[bombed_idx, 0], line[bombed_idx, 1], width[bombed_idx]/this_nrow_arcs]]
+
                 # test bombs
                 for l in [0, 1]:
                     if sum(~valid_points_headtail[:, l]) > 0:
                         bombs_xyz[l] = np.r_[bombs_xyz[l], np.c_[line[~valid_points_headtail[:, l]][:, :2], width[~valid_points_headtail[:, l]]/this_nrow_arcs]]
+
             for l in [0, 1]:
                 if len(bombs_xyz[l]) > 0:
                     bombs[2*i+l] = Bombs(x=bombs_xyz[l][:, 0], y=bombs_xyz[l][:, 1], res=bombs_xyz[l][:, 2])
+
             # assemble cross-channel arcs
             if sum(valid_points) > 0:
                 for j in [0, -1]:
@@ -1019,6 +1031,7 @@ def make_river_map(
         SMS_MAP(arcs=smoothed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}smoothed_thalweg.map')
         SMS_MAP(arcs=redistributed_thalwegs).writer(filename=f'{output_dir}/{output_prefix}redist_thalweg.map')
         SMS_MAP(arcs=corrected_thalwegs).writer(filename=f'{output_dir}/{output_prefix}corrected_thalweg.map')
+        SMS_MAP(arcs=centerlines).writer(filename=f'{output_dir}/{output_prefix}centerlines.map')
         SMS_MAP(arcs=final_thalwegs).writer(filename=f'{output_dir}/{output_prefix}final_thalweg.map')
         if intersect_res is not None:
             np.savetxt(f'{output_dir}/{output_prefix}intersection_res.xyz', intersect_res_lonlat)

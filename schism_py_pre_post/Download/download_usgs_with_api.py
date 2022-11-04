@@ -191,7 +191,7 @@ def download_single_station(
     return data_list
 
 
-def get_usgs_obs_for_stofs3d(outdir=None, start_date_str='2015-09-18', end_date_str=None):
+def get_usgs_obs_for_stofs3d(outdir=None, start_date_str='2015-09-18', end_date_str=None, vars=None):
     if vars is None:
         vars = ['temperature', 'salinity', 'conductance']
     if end_date_str is None:
@@ -199,6 +199,7 @@ def get_usgs_obs_for_stofs3d(outdir=None, start_date_str='2015-09-18', end_date_
         
     if outdir is None:
         raise Exception('outdir not set')
+    os.makedirs(outdir, exist_ok=True)
 
     outfilenames = []
     for var in vars:

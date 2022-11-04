@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
     thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
     # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/cudem_3_single_ll.shp'
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_LA.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_LA2.shp'
 
     output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/' + \
         f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'
@@ -153,7 +153,8 @@ if __name__ == "__main__":
     if rank == 0:
         merge_maps(f'{output_dir}/Rank*_total_arcs.map', merged_fname=f'{output_dir}/total_arcs.map')
         merge_maps(f'{output_dir}/*bomb*.map', merged_fname=f'{output_dir}/total_bombs.map')
-        merge_maps(f'{output_dir}/*relax*.map', merged_fname=f'{output_dir}/total_relax.map')
+        merge_maps(f'{output_dir}/*inner_arcs.map', merged_fname=f'{output_dir}/total_inner_arcs.map')
+        merge_maps(f'{output_dir}/*centerlines.map', merged_fname=f'{output_dir}/total_centerlines.map')
 
         xyz_files = glob.glob(f'{output_dir}/*.xyz')
         os.system(f'cat {" ".join(xyz_files)} > {output_dir}/intersection_res.xyz')

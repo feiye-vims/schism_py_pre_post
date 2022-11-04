@@ -5,14 +5,21 @@ class Bpfile():
 
     """class for bpfiles"""
 
-    def __init__(self, filename, cols=4):
+    def __init__(self, filename=None, cols=4, xyz_array=None):
         """Initialization """
         self.nodes = []
         self.n_nodes = 0
         self.info = []
-        self.ncol = cols
+        self.ncol = 0
 
-        self.reader(filename, cols)
+        if xyz_array is not None:
+            self.nodes = xyz_array
+            self.n_nodes = xyz_array.shape[0]
+            self.ncol = xyz_array.shape[1] + 1
+        else:
+            self.ncol = cols
+            self.reader(filename, cols)
+
         self.make_dataframe()
 
         print(str(self.n_nodes) + "\n")
@@ -44,14 +51,17 @@ class Bpfile():
         import pandas as pd
         if col_name is None:
             self.st_id = []
-            for i, st in enumerate(self.info):
-                if self.ncol < 4:
-                    self.st_id.append(f'{i}')
-                else:
-                    if len(st)>0:  # station name
-                        self.st_id.append(st[0][1:])
+            if self.info != []:
+                for i, st in enumerate(self.info):
+                    if self.ncol < 4:
+                        self.st_id.append(f'{i}')
                     else:
-                        self.st_id.append(f'Station_{i+1}')
+                        if len(st)>0:  # station name
+                            self.st_id.append(st[0][1:])
+                        else:
+                            self.st_id.append(f'Station_{i+1}')
+            else:
+                self.st_id = [f'Station_{i+1}' for i in range(self.n_nodes)]
             col_name = self.st_id
 
         self.df = pd.DataFrame(data=self.nodes.T, index=row_name, columns=col_name)

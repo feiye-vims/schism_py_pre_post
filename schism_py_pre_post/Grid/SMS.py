@@ -28,7 +28,7 @@ def lonlat2cpp(lon, lat, lon0=0, lat0=0):
 
     return [xout, yout]
 
-def dl_cpp2lonlat(dl, y, lat0=0):
+def dl_cpp2lonlat(dl, lat0=0):
     R = 6378206.4
 
     lat0_radian = lat0/180*np.pi
@@ -240,8 +240,8 @@ class SMS_MAP():
     def __init__(self, filename=None, arcs=[], detached_nodes=[], epsg=4326):
         self.epsg = None
         self.arcs = []
-        self.nodes = np.zeros((0, 2))
-        self.detached_nodes = np.zeros((0, 2))
+        self.nodes = np.zeros((0, 3))
+        self.detached_nodes = np.zeros((0, 3))
         self.valid = True
 
         self.epsg = epsg
@@ -262,6 +262,20 @@ class SMS_MAP():
         self.arcs = self.arcs + other.arcs
         self.detached_nodes = np.r_[self.detached_nodes, other.detached_nodes]
         return SMS_MAP(arcs=self.arcs, detached_nodes=self.detached_nodes, epsg=self.epsg)
+    
+    def get_xyz(self):
+        self.n_xyz = 0
+        self.l2g = []
+
+        for arc in self.arcs:
+            self.l2g.append(np.array(np.arange(self.n_xyz, self.n_xyz+len(arc.points))))
+            self.n_xyz += len(arc.points)
+        
+        self.xyz = np.zeros((self.n_xyz, 3), dtype=float)
+        for ids, arc in zip(self.l2g, self.arcs):
+            self.xyz[ids, :] = arc.points
+
+        return self.xyz, self.l2g
     
     def reader(self, filename='test.map'):
         self.n_glb_nodes = 0
@@ -285,24 +299,24 @@ class SMS_MAP():
                     line = f.readline()
                     strs = re.split(' +', line.strip())
                     self.n_glb_nodes += 1
-                    self.nodes = np.append(self.nodes, np.reshape([float(strs[1]), float(strs[2])], (1,2)), axis=0)
+                    self.nodes = np.append(self.nodes, np.reshape([float(strs[1]), float(strs[2]), float(strs[3])], (1,3)), axis=0)
                 elif line.strip() == 'POINT':
                     line = f.readline()
                     strs = re.split(' +', line.strip())
                     self.n_detached_nodes += 1
-                    self.detached_nodes = np.append(self.detached_nodes, np.reshape([float(strs[1]), float(strs[2])], (1,2)), axis=0)
+                    self.detached_nodes = np.append(self.detached_nodes, np.reshape([float(strs[1]), float(strs[2]), float(strs[3])], (1,3)), axis=0)
                 elif line.strip() == 'ARC':
                     self.n_arcs += 1
                 elif strs[0] == 'NODES':
                     this_arc_node_idx = np.array([int(strs[1]), int(strs[2])])-1
                 elif strs[0] == 'ARCVERTICES':
                     this_arc_nvert = int(strs[1])
-                    this_arc_verts = np.zeros((this_arc_nvert, 2), dtype=float)
+                    this_arc_verts = np.zeros((this_arc_nvert, 3), dtype=float)
                     for i in range(this_arc_nvert):
                         strs = f.readline().strip().split(' ')
-                        this_arc_verts[i, :] = np.array([strs[0], strs[1]])
-                    node_1 = np.reshape(self.nodes[this_arc_node_idx[0], :], (1, 2))
-                    node_2 = np.reshape(self.nodes[this_arc_node_idx[1], :], (1, 2))
+                        this_arc_verts[i, :] = np.array([strs[0], strs[1], strs[2]])
+                    node_1 = np.reshape(self.nodes[this_arc_node_idx[0], :], (1, 3))
+                    node_2 = np.reshape(self.nodes[this_arc_node_idx[1], :], (1, 3))
                     this_arc = SMS_ARC(points=np.r_[node_1, this_arc_verts, node_2], src_prj=f'epsg: {self.epsg}')
                     self.arcs.append(this_arc)
                     arc_nodes.append(this_arc_node_idx[0])
@@ -557,4 +571,7 @@ def extract_quad_polygons(input_fname='test.map', output_fname=None):
 
 
 if __name__ == '__main__':
+    my_map = SMS_MAP(filename='test_z.map')
+    my_map.get_xyz()
+    my_map.writer('./test.map')
     extract_quad_polygons(input_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/cudem10_patches.map')
