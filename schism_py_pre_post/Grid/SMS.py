@@ -571,7 +571,8 @@ def extract_quad_polygons(input_fname='test.map', output_fname=None):
 
 
 if __name__ == '__main__':
-    my_map = SMS_MAP(filename='test_z.map')
-    my_map.get_xyz()
-    my_map.writer('./test.map')
-    extract_quad_polygons(input_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/cudem10_patches.map')
+    # my_map = SMS_MAP(filename='test_z.map')
+    # my_map.get_xyz()
+    # my_map.writer('./test.map')
+
+    extract_quad_polygons(input_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/14.33.map')

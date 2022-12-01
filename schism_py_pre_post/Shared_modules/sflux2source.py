@@ -44,8 +44,8 @@ def Sflux_var_at_points(sflux_dir, sflux_set='air_1', points=None, var_name=None
 
 
 if __name__ == "__main__":
-    rundir = '/sciclone/schism10/feiye/From_Nabi/RUN01b/'
-    model_start_time_str = "2018-08-24 00:00:00"
+    rundir = '/sciclone/scr10/feiye/RUN02/'
+    model_start_time_str = "2018-08-01 00:00:00"
 
     # read hgrid and get element info
     gd = schism_grid(f'{rundir}/hgrid.ll')
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     # make another set of source/sink files based on sflux
     # read variable values from sflux
-    var_at_ele_center = Sflux_var_at_points(f'{rundir}/sflux/', sflux_set='prc_2', points=np.c_[lon_ctr, lat_ctr], var_name='prate')
+    var_at_ele_center = Sflux_var_at_points(f'{rundir}/sflux/', sflux_set='prc_1', points=np.c_[lon_ctr, lat_ctr], var_name='prate')
     # read time info from sflux
     times = pd.to_datetime(var_at_ele_center[0].astype(str))
     start_time_str = times[0].strftime("%Y-%m-%d %H:%M:%S")
@@ -85,10 +85,21 @@ if __name__ == "__main__":
     total_ss = orignial_source_sink + added_ss
     if np.isnan(total_ss.vsource.data.astype(float)).any():
         raise Exception('nan found in sources')
+    if total_ss.vsource.data.min() < 0.0:
+        raise Exception('negative sources found in sources')
+
     if np.isnan(total_ss.vsink.data.astype(float)).any():
         raise Exception('nan found in sinks')
+    if total_ss.vsink.data.max() > 0.0:
+        raise Exception('positive sinks found in sources')
     
     # write
     total_ss.writer(f'{rundir}/Orignial+sflux_source_sink/')
     # total_ss.nc_writer(f'{rundir}/Orignial+sflux_source_sink/')  # needs to adapt to the latest pylib 
+
+    # import pickle
+    # with open('tmp.pkl', 'wb') as file:
+    #     pickle.dump([orignial_source_sink, added_ss], file)
+    # with open('tmp.pkl', 'rb') as file:
+    #     [orignial_source_sink, added_ss] = pickle.load(file)
 

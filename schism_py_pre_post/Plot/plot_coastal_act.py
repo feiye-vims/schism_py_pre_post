@@ -132,7 +132,7 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    hurricanes = ['Ian']
+    hurricanes = ['Florence']
     main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
 
     region = "Full_domain"  # "Landfall_region", "Full_domain", "Manual"
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     station_bp_file = hurricane_dict['All']['station_bp_file']
     station_subset = range(164)
 
-    other_dicts_files = []  # ['coastal_act_stats_period_3D_others.json']
+    other_dicts_files = ['/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
     other_line_styles = ['g']
     other_shifts = [0]
     other_subsets = [None]

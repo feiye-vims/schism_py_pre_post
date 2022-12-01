@@ -105,7 +105,7 @@ class source_sink():
                                            data_array=np.c_[np.array(timedeltas), -9999*np.ones([nt, nsources]), np.zeros([nt, nsources])],
                                            columns=['datetime']+source_eles+source_eles)
             else:
-                source_eles = [1]  # dummy with 0 vsource
+                source_eles = [1]  # one dummy source at Ele 1 with 0 m3/s
                 self.vsource = copy.deepcopy(dummy_source_sink)
                 self.msource = TimeHistory(file_name=None, start_time_str=start_time_str,
                                            data_array=np.c_[np.array(timedeltas), -9999*np.ones([nt, 1]), np.zeros([nt, 1])],
@@ -116,7 +116,7 @@ class source_sink():
                                          data_array=np.c_[np.array(timedeltas), vsink_data],
                                          columns=['datetime']+sink_eles)
             else:
-                sink_eles = [1]  # dummy with 0 vsource
+                sink_eles = [1]  # one dummy sink at Ele 1 with 0 m3/s
                 self.vsink = copy.deepcopy(dummy_source_sink)
 
             self.source_sink_in = SourceSinkIn(filename=None, number_of_groups=2, ele_groups=[source_eles, sink_eles])
@@ -193,21 +193,30 @@ class source_sink():
             B_ss = eval(f"B.{source_sink}")
             A_ss = eval(f"A.{source_sink}")
 
-            f_interp = interpolate.interp1d(B_ss.time, B_ss.df.iloc[:, 1:].to_numpy().T)
+            # use A's time origin
+            time_diff = (B_ss.df.iloc[0, 0] - A_ss.df.iloc[0, 0]).total_seconds()
+
+            f_interp = interpolate.interp1d(B_ss.time + time_diff, B_ss.df.iloc[:, 1:].to_numpy().T)
             B_df_interp = pd.DataFrame(data=f_interp(A_ss.time).T, columns=B_ss.df.columns[1:])
+
+            # clip the values in case of small negative/positive values due to trunction error during interpolation
+            if i == 0:  # source
+                B_df_interp = B_df_interp.clip(0.0, None)
+            else:
+                B_df_interp = B_df_interp.clip(None, 0.0)
 
             A_ss.df = copy.deepcopy(A_ss.df.join(B_df_interp[new_eles.astype(str)]))
             A_ss.df[existing_eles.astype('str')] += B_df_interp[existing_eles.astype('str')]
 
-            A.msource = TimeHistory(file_name=None,
-                                    data_array=np.c_[np.array([0.0, 86400*365*100]),
-                                                     -9999*np.ones([2, len(A.vsource.df.columns)-1]),
-                                                     np.zeros([2, len(A.vsource.df.columns)-1])],
-                                    columns=['datetime']+A.vsource.df.columns[1:].tolist()+A.vsource.df.columns[1:].tolist())
             A_ss.n_time = A_ss.df.shape[0]
             A_ss.n_station = A_ss.df.shape[1] - 1
 
-            A.update_vars()
+        A.msource = TimeHistory(file_name=None,
+                                data_array=np.c_[np.array([0.0, 86400*365*100]),
+                                                    -9999*np.ones([2, len(A.vsource.df.columns)-1]),
+                                                    np.zeros([2, len(A.vsource.df.columns)-1])],
+                                columns=['datetime']+A.vsource.df.columns[1:].tolist()+A.vsource.df.columns[1:].tolist())
+        A.update_vars()
 
         return A
 

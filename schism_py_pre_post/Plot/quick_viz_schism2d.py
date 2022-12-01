@@ -10,7 +10,7 @@ set_matplotlib_formats('svg')
 
 
 # %%
-gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23o/hgrid.gr3'
+gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23o/hgrid.gr3'
 gd_cache_fname = os.path.splitext(gd_fname)[0] + '.pkl'
 if os.path.exists(gd_cache_fname):
     gd = schism_grid(gd_cache_fname)

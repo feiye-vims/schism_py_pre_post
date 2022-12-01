@@ -67,8 +67,7 @@ class TimeHistory():
                              + timedelta(seconds=x*self.sec_per_time_unit) for x in self.time]
             self.df['datetime'] = self.datetime
         elif isinstance(self.df['datetime'][0], datetime):
-            time_delta = self.df['datetime'] - self.df['datetime'][0]
-            self.time = numpy.array([x.total_seconds() for x in time_delta])
+            self.time = numpy.array([(x-self.df['datetime'][0]).total_seconds() for x in self.df['datetime']])
             self.datetime = self.df['datetime']
         else:
             raise Exception('unknown datatype for the first column, neither datetime or float')

@@ -1049,8 +1049,6 @@ if __name__ == "__main__":
     make_river_map(
         tif_fnames = ['/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_dem_merged_utm17N.tif'],
         thalweg_shp_fname = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/v4.shp',
-        thalweg_smooth_shp_fname = None,  # '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_corrected_utm17N.shp'
-        selected_thalweg = None,
         output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/'
     )
     pass

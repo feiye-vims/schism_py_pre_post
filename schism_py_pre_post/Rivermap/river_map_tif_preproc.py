@@ -80,6 +80,7 @@ def tile2dem_file(dem_dict, dem_order, tile_code):
 def find_thalweg_tile(
     dems_json_file='dems.json',
     thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/GA_riverstreams_cleaned_utm17N.shp',
+    thalweg_buffer=1000,
     cache_folder=None,
     iNoPrint=True, i_DEM_cache=True, i_thalweg_cache=True
 ):
@@ -127,11 +128,10 @@ def find_thalweg_tile(
     # find DEM tiles for all thalwegs' points
     print(f'finding DEM tiles for each thalweg ...')
     x_cpp, y_cpp = lonlat2cpp(xyz[:, 0], xyz[:, 1])
-    estimated_range = 1000  # meters
-    xt_right = x_cpp + estimated_range * np.cos(perp)
-    yt_right = y_cpp + estimated_range * np.sin(perp)
-    xt_left = x_cpp + estimated_range * np.cos(perp + np.pi)
-    yt_left = y_cpp + estimated_range * np.sin(perp + np.pi)
+    xt_right = x_cpp + thalweg_buffer * np.cos(perp)
+    yt_right = y_cpp + thalweg_buffer * np.sin(perp)
+    xt_left = x_cpp + thalweg_buffer * np.cos(perp + np.pi)
+    yt_left = y_cpp + thalweg_buffer * np.sin(perp + np.pi)
     # find thalweg itself and two search boundaries (one on each side)
     thalwegs2dems = [find_parent_box(xyz[:,:2], dem_dict[k]['boxes']) for k in dem_dict.keys()]
     thalwegs_right2dems = [find_parent_box(np.array(cpp2lonlat(xt_right, yt_right)).T, dem_dict[k]['boxes']) for k in dem_dict.keys()]

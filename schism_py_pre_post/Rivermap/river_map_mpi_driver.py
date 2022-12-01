@@ -24,7 +24,16 @@ def my_mpi_idx(N, size, rank):
     my_idx[rank*n_per_rank:min((rank+1)*n_per_rank, N)] = True
     return my_idx
 
-if __name__ == "__main__":
+def river_map_mpi_driver(
+    dems_json_file = './dems.json',  # files for all DEM tiles
+    thalweg_shp_fname='',
+    output_dir = './',
+    thalweg_buffer = 1000,
+    cache_folder = '/sciclone/schism10/feiye/Cache/',
+    i_DEM_cache = True,
+    i_thalweg_cache = True,
+    i_grouping_cache = True
+):
     '''
     Driver for parallel execution of make_river_map.py.
 
@@ -35,40 +44,23 @@ if __name__ == "__main__":
 
     One core can be responsible for one or more thalweg groups,
     which are fed to make_river_map.py one at a time
+
+    Summary of the input parameters:
+    thalweg_buffer: unit in meters. This is the search range on either side of the thalweg.
+                    Because banks will be searched within this range,
+                    its value is needed now to associate DEM tiles with each thalweg
+    cache_folder: Used to store temporary variables, so that the next run with similar inputs can be executed faster
+    i_DEM_cache : Whether or not read DEM info from cache.
+                  The cache file saves box info of all DEM tiles.
+                  Reading from original tiles can be slow, so the default option is True
+    i_thalweg_cache: Whether or not read thalweg info from cache.
+                     The cache file saves coordinates, index, curvature, and direction at all thalweg points
+                     This is usually fast even without cache.
+    i_grouping_cache: Whether or not read grouping info from cache,
+                      which is useful when the same DEMs and thalweg_shp_fname are used.
+                      A cache file named "dems_json_file + thalweg_shp_fname_grouping.cache" will be saved regardless of the option value.
+                      This is usually fast even without cache.
     '''
-
-    # ------------------------- input section ---------------------------
-    # files and dirs
-    dems_json_file = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Rivermap/dems.json'  # files for all DEM tiles
-
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/la_test.shp'
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/test_tiles1.shp'
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
-    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/cudem_3_single_ll.shp'
-    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_LA2.shp'
-
-    output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/' + \
-        f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'
-
-    # parameters
-    thalweg_buffer = 1000  # meters. This is the search range on either side of the thalweg.
-                            # Because banks will be searched within this range,
-                            # its value is needed now to associate DEM tiles with each thalweg
-    cache_folder = '/sciclone/schism10/feiye/Cache/'
-    i_DEM_cache = True  # Whether or not read DEM info from cache.
-                        # The cache file saves box info of all DEM tiles.
-                        # Reading from original tiles can be slow, so the default option is True
-    i_thalweg_cache = True  # Whether or not read thalweg info from cache.
-                             # The cache file saves coordinates, index, curvature, and direction at all thalweg points
-                             # This is usually fast even without cache
-    i_grouping_cache = True # Whether or not read grouping info from cache,
-                              # which is useful when the same DEMs and thalweg_shp_fname are used.
-                              # A cache file named "dems_json_file + thalweg_shp_fname_grouping.cache"
-                              # will be saved regardless of the option value.
-                             # This is usually fast even without cache
-    # ------------------------- end input section ---------------------------
-
     if rank == 0: print(f'A total of {size} core(s) used.')
     comm.barrier()
 
@@ -93,6 +85,7 @@ if __name__ == "__main__":
                 find_thalweg_tile(
                     dems_json_file=dems_json_file,
                     thalweg_shp_fname=thalweg_shp_fname,
+                    thalweg_buffer = 1000,
                     iNoPrint=bool(rank), # only rank 0 prints to screen
                     cache_folder=cache_folder,
                     i_DEM_cache=i_DEM_cache, i_thalweg_cache=i_thalweg_cache
@@ -160,3 +153,43 @@ if __name__ == "__main__":
         os.system(f'cat {" ".join(xyz_files)} > {output_dir}/intersection_res.xyz')
 
         print(f'Total run time: {time.time()-time_all_groups_start} seconds.')
+
+if __name__ == "__main__":
+
+    # ------------------------- sample input ---------------------------
+    # files and dirs
+    dems_json_file = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Rivermap/dems.json'  # files for all DEM tiles
+
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/la_test.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/test_tiles1.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/NWM_cleaned_ll_redist7m.shp'
+    thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/cudem_3_single_ll.shp'
+    # thalweg_shp_fname='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Shp/CUDEM_LA2.shp'
+
+    output_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/' + \
+        f'{os.path.basename(thalweg_shp_fname).split(".")[0]}_{size}cores/'
+
+    # parameters
+    thalweg_buffer = 1000  # meters. This is the search range on either side of the thalweg.
+                            # Because banks will be searched within this range,
+                            # its value is needed now to associate DEM tiles with each thalweg
+    cache_folder = '/sciclone/schism10/feiye/Cache/'
+    i_DEM_cache = True  # Whether or not read DEM info from cache.
+                        # The cache file saves box info of all DEM tiles.
+                        # Reading from original tiles can be slow, so the default option is True
+    i_thalweg_cache = True  # Whether or not read thalweg info from cache.
+                             # The cache file saves coordinates, index, curvature, and direction at all thalweg points
+                             # This is usually fast even without cache
+    i_grouping_cache = True # Whether or not read grouping info from cache,
+                              # which is useful when the same DEMs and thalweg_shp_fname are used.
+                              # A cache file named "dems_json_file + thalweg_shp_fname_grouping.cache"
+                              # will be saved regardless of the option value.
+                             # This is usually fast even without cache
+    # ------------------------- end input section ---------------------------
+    
+    river_map_mpi_driver(
+        dems_json_file=dems_json_file,
+        thalweg_shp_fname=thalweg_shp_fname,
+        output_dir=output_dir,
+    )

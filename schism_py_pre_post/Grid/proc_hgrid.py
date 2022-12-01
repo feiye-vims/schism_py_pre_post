@@ -3,12 +3,15 @@ from pylib import schism_grid, sms2grd, grd2sms
 import os
 import numpy as np
 from schism_py_pre_post.Grid.Bpfile import Bpfile
-from schism_py_pre_post.Grid.SMS import lonlat2cpp, cpp2lonlat
+from schism_py_pre_post.Grid.Hgrid_ported import read_schism_hgrid_cached
+from schism_py_pre_post.Grid.SMS import SMS_MAP, lonlat2cpp, cpp2lonlat
 from schism_py_pre_post.Shared_modules.set_levee_profile import set_levee_profile
 from schism_py_pre_post.Shared_modules.set_additional_dp import set_additional_dp_v11_91
 import pathlib
 import copy
 import pickle
+
+from sqlalchemy import over
 
 # %%  
 def find_large_small_dp():
@@ -31,7 +34,6 @@ def quality_check_hgrid(gd, epsg=4326, outdir='./'):
     Check several types of grid issues that may crash the model:
     '''
 
-    gd.compute_ctr()
     if epsg != 26918:
         gd.proj(prj0=f'epsg:{epsg}', prj1='epsg:26918')
 
@@ -42,21 +44,38 @@ def quality_check_hgrid(gd, epsg=4326, outdir='./'):
     if bad_quad_bp.n_nodes > 0:
         new_gr3_name = f'hgrid_split_quads_{epsg}.gr3'
         gd.split_quads(angle_min=60,angle_max=120,fname=f'{outdir}/{new_gr3_name}')
-        print(f'bad quads splitted and the updated hgrid is saved as {new_gr3_name}')
+        gd = schism_grid(f'{outdir}/{new_gr3_name}')
+        print(f'{bad_quad_bp.n_nodes} bad quads splitted and the updated hgrid is saved as {new_gr3_name}')
 
-    # small elements
-    # Print smallest elements to screen and save as a bp file; values < 1 m2 may indicate gridding errors
-    gd.compute_area()
+    # small and skew elements
+    gd.compute_all()
     sorted_area = np.sort(gd.area)
     sorted_idx = np.argsort(gd.area)
-    print(np.c_[sorted_area[:20], sorted_idx[:20], gd.xctr[sorted_idx[:20]], gd.yctr[sorted_idx[:20]]])
-    small_element_bp = Bpfile(xyz_array=np.c_[gd.xctr[sorted_idx[:20]], gd.yctr[sorted_idx[:20]], 0*gd.yctr[sorted_idx[:20]]])
-    small_element_bp.writer(f'{outdir}/small_element.bp')
+
+    small_ele = sorted_area < 5.0
+    print(f'\n{sum(small_ele)} small (< 5.0 m2) elements:')
+    print(np.c_[sorted_area[small_ele], sorted_idx[small_ele]+1, gd.xctr[sorted_idx[small_ele]], gd.yctr[sorted_idx[small_ele]]])
+    if sum(small_ele) > 0:
+        Bpfile(xyz_array=np.c_[gd.xctr[sorted_idx[small_ele]], gd.yctr[sorted_idx[small_ele]], sorted_idx[small_ele]+1]).writer(f'{outdir}/small_ele.bp')
 
     # skew elements
-    gd.check_skew_elems(angle_min=1) 
+    bp_name = f'{outdir}/skew_ele.bp'
+    skew_ele = gd.check_skew_elems(angle_min=0.5, fmt=1, fname=bp_name) 
+    SMS_MAP(detached_nodes=np.c_[gd.xctr[skew_ele], gd.yctr[skew_ele], gd.yctr[skew_ele]*0]).writer(f'{outdir}/skew_ele.map')
 
-    return gd
+    small_ele = np.argwhere(gd.area < 5.0).reshape(-1, )
+    SMS_MAP(detached_nodes=np.c_[gd.xctr[small_ele], gd.yctr[small_ele], gd.yctr[small_ele]*0]).writer(f'{outdir}/small_ele.map')
+
+    invalid = np.unique(np.array([*skew_ele, *small_ele]))
+    if len(invalid) > 0:
+        invalid_elnode = gd.elnode[invalid].reshape(-1, 1)
+        invalid_elnode = np.unique(invalid_elnode)
+        invalid_elnode = invalid_elnode[invalid_elnode>=0]
+        invalid_neighbors = np.unique(gd.ine[invalid_elnode].reshape(-1, 1))
+        invalid_neighbors = invalid_neighbors[invalid_neighbors>=0]
+        
+        SMS_MAP(detached_nodes=np.c_[gd.xctr[invalid_neighbors], gd.yctr[invalid_neighbors], gd.yctr[invalid_neighbors]*0]).writer(f'{outdir}/invalid_element_relax.map')
+        return gd
 
 def pre_proc_hgrid(hgrid_name=''):
 
@@ -85,7 +104,7 @@ def pre_proc_hgrid(hgrid_name=''):
     # time.sleep(10000000)
     pass
 
-def post_proc_hgrid(hgrid_name=''):
+def tweak_depths(hgrid_name=''):
 
     dirname = os.path.dirname(hgrid_name)
     file_basename = os.path.basename(hgrid_name)
@@ -100,38 +119,63 @@ def post_proc_hgrid(hgrid_name=''):
     print('loading additional tweaks on levee heights')
     gd = set_additional_dp_v11_91(gd_ll=gd, gd_dem=gd_DEM_loaded, wdir=dirname, levee_info_dir=f'{dirname}/Levee_info/Additional_Polygons/')
 
-    print('outputing hgrid_final.ll')
-    gd.save(f'{dirname}/hgrid_final.ll')
+    print('outputing hgrid.ll')
+    gd.save(f'{dirname}/hgrid.ll')
+
+def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None):
+    if gd is None:
+        gd = read_schism_hgrid_cached(hgrid_name, overwrite_cache=True)
+    else:
+        hgrid_name = gd.source_file
+
     gd.lon, gd.lat = gd.x, gd.y
+
+    dirname = os.path.dirname(hgrid_name)
+    file_basename = os.path.basename(hgrid_name)
+    file_extension = pathlib.Path(hgrid_name).suffix
+
+    if os.popen(f'grep "open" {dirname}/hgrid.ll').read() == '':
+        os.system(f'cat {dirname}/bnd >> {dirname}/hgrid.ll')
 
     print('outputing hgrid.cpp')
     gd_cpp = copy.deepcopy(gd)
     gd_cpp.x, gd_cpp.y = lonlat2cpp(lon=gd.x, lat=gd.y, lon0=-77.07, lat0=24.0)
     gd_cpp.save(f'{dirname}/hgrid.cpp.gr3')
     os.system(f'mv {dirname}/hgrid.cpp.gr3 {dirname}/hgrid.cpp')
+    if os.popen(f'grep "open" {dirname}/hgrid.cpp').read() == '':
+        os.system(f'cat {dirname}/bnd >> {dirname}/hgrid.cpp')
     gd.cpp_x, gd.cpp_y = gd_cpp.x, gd_cpp.y
 
-    print('outputing hgrid.utm.gr3')
+    print('outputing hgrid in UTM')
     gd.proj(prj0='epsg:4326', prj1='epsg:26918')
     gd.write_hgrid(f'{dirname}/hgrid.utm.26918.gr3')
     gd.utm_x, gd.utm_y = gd.x, gd.y
-    # os.chdir(dirname)
-    # os.system('ln -s hgrid.utm.26918 hgrid.utm.26918.gr3')
+    if os.popen(f'grep "open" {dirname}/hgrid.utm.26918.gr3').read() == '':
+        os.system(f'cat {dirname}/bnd >> {dirname}/hgrid.utm.26918.gr3')
+    print('outputing *.2dm')
+    grd2sms(gd, f'{dirname}/hgrid.utm.2dm')
+
+    print('outputing hgrid.102008.gr3')
+    gd.x, gd.y = gd.lon, gd.lat
+    gd.proj(prj0='epsg:4326', prj1='esri:102008')
+    gd.write_hgrid(f'{dirname}/hgrid.102008.gr3')
+    gd.x_102008, gd.y_102008 = gd.x, gd.y
+    if os.popen(f'grep "open" {dirname}/hgrid.102008.gr3').read() == '':
+        os.system(f'cat {dirname}/bnd >> {dirname}/hgrid.102008.gr3')
 
     print('saving *.pkl, which has x, y of all needed projections')
-    with open(f'{dirname}/hgrid.pkl', 'wb') as file:
+    with open(f'{dirname}/hgrids.pkl', 'wb') as file:
         pickle.dump(gd, file)
 
-    with open(f'{dirname}/hgrid.pkl', 'rb') as file:
+    with open(f'{dirname}/hgrids.pkl', 'rb') as file:
        gd_test = pickle.load(file)
-
-    print('outputing *.2dm')
-    grd2sms(gd, f'{dirname}/{file_basename}.utm.2dm')
+    print('finish generating hgrids in different projections/formats')
     pass
 
 if __name__ == "__main__":
-    # pre_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.2/Grid/hgrid.utm.fixed.gr3')
-    post_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.2/Grid/hgrid.ll.new')
+    # pre_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/v14.35_relaxed2.2dm')
+    # tweak_depths('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/hgrid.ll.new')
+    gen_hgrid_formats('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23l/Hgrid/hgrid.ll')
     
     '''
     gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23p11/hgrid.ll'
