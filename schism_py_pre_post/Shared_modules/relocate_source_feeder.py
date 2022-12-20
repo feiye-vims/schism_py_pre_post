@@ -37,13 +37,14 @@ if __name__ == "__main__":
     np.savetxt(f'{old_ss_dir}/sources.xy', old_sources_coor)
 
     # Read feeder channel info
-    outdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/'
-    with open(f'{outdir}/feeder.pkl', 'rb') as file:
+    with open(f'/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/feeder.pkl', 'rb') as file:
         [feeder_l2g, feeder_points, feeder_heads, feeder_bases] = pickle.load(file)
 
     # get new hgrid (with feeders)
-    new_gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/hgrid.ll', overwrite_cache=False)
+    new_gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid/hgrid.ll', overwrite_cache=False)
     new_gd.compute_ctr()
+
+    outdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/SourceSink_relocate/'
 
     # find matching source point at feeders' base points
     mandatory_sources_coor = np.array([

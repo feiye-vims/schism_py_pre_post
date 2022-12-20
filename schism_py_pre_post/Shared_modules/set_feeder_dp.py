@@ -1,3 +1,4 @@
+from email.mime import base
 from schism_py_pre_post.Grid.SourceSinkIn import source_sink, SourceSinkIn
 from schism_py_pre_post.Grid.SMS import lonlat2cpp
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
@@ -18,20 +19,21 @@ def dist(points_group_A, points_group_B):
     points_B = np.squeeze(points_group_B.view(np.complex128))
     return np.absolute(points_A-points_B)
 
-if __name__ == "__main__":
+def set_feeder_dp(feeder_info_dir='', new_grid_dir=''):
     # Read feeder channel info
-    input_dir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/'
-    with open(f'{input_dir}/feeder.pkl', 'rb') as file:
+    with open(f'{feeder_info_dir}/feeder.pkl', 'rb') as file:
         [feeder_l2g, feeder_points, feeder_heads, feeder_bases] = pickle.load(file)
 
     # get old hgrid (without feeders)
     old_gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/no_feeder/hgrid.ll', overwrite_cache=False)
 
     # get new hgrid (with feeders)
-    gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/hgrid.ll', overwrite_cache=False)
+    gd = read_schism_hgrid_cached(f'{new_grid_dir}/hgrid.ll', overwrite_cache=False)
 
     # pair feeder channel points to grid points
     f2g, _ = nearest_neighbour(feeder_points, np.c_[gd.x, gd.y])
+    # pair feeder channel bases to grid points
+    f2g_base, _ = nearest_neighbour(feeder_bases[:, :2], np.c_[gd.x, gd.y])
 
     # find outside grid points
     feeder_in_grid = old_gd.inside_grid(feeder_points).astype(bool)
@@ -41,9 +43,20 @@ if __name__ == "__main__":
         gd_points_in_feeder_in_grid = feeder_in_grid[id]
         gd_points_in_external_feeder = gd_points_in_feeder[~gd_points_in_feeder_in_grid]
 
-        gd.dp[gd_points_in_external_feeder] = np.min(gd.dp[gd_points_in_feeder])
+        # Option 1, use min depth (highest z) 
+        # gd.dp[gd_points_in_external_feeder] = np.min(gd.dp[gd_points_in_feeder])
+
+        # Option 2, use average depth of feeder bases (near the interface between land boundary and feeder channel)
+        base_point_in_grid = f2g_base[i]
+        gd.dp[gd_points_in_external_feeder] = gd.dp[base_point_in_grid]
     
-    gd.save(f'{input_dir}/hgrid_feeder_dp_set.ll')
-    pass
+    return gd
 
-
+if __name__ == "__main__":
+    new_grid_dir='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/hgrid.ll'
+    gd = set_feeder_dp(
+        feeder_info_dir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/',
+        new_grid_dir=new_grid_dir
+    )
+    os.system(f'mv {new_grid_dir}/hgrid.ll {new_grid_dir}/hgrid.ll_before_feeder_dp')
+    gd.save(f'{new_grid_dir}/hgrid.ll')

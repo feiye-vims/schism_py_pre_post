@@ -7,6 +7,7 @@ from schism_py_pre_post.Grid.Hgrid_ported import read_schism_hgrid_cached
 from schism_py_pre_post.Grid.SMS import SMS_MAP, lonlat2cpp, cpp2lonlat
 from schism_py_pre_post.Shared_modules.set_levee_profile import set_levee_profile
 from schism_py_pre_post.Shared_modules.set_additional_dp import set_additional_dp_v11_91
+from schism_py_pre_post.Shared_modules.set_feeder_dp import set_feeder_dp
 import pathlib
 import copy
 import pickle
@@ -29,20 +30,21 @@ def find_large_small_dp():
         np.savetxt(file, np.c_[gd.x[sorted_idx[valid[:n]]], gd.y[sorted_idx[valid[:n]]], sorted_dp[valid[:n]], sorted_idx[valid[:n]]])
 
 
-def quality_check_hgrid(gd, epsg=4326, outdir='./'):
+def quality_check_hgrid(gd, prj='epsg:4326', prj_m='esri:102008', outdir='./'):
     '''
     Check several types of grid issues that may crash the model:
+    If input grid is lon/lat, reproject it so that the projected unit is meter
     '''
 
-    if epsg != 26918:
-        gd.proj(prj0=f'epsg:{epsg}', prj1='epsg:26918')
+    if prj == 'epsg:4326':
+        gd.proj(prj0=prj, prj1=prj_m)
 
     # bad quads
     bp_name = f'{outdir}/bad_quad.bp'
     gd.check_quads(angle_min=60,angle_max=120,fname=bp_name)
     bad_quad_bp = Bpfile(filename=bp_name)
     if bad_quad_bp.n_nodes > 0:
-        new_gr3_name = f'hgrid_split_quads_{epsg}.gr3'
+        new_gr3_name = f"hgrid_split_quads_{prj.replace(':', '_')}.gr3"
         gd.split_quads(angle_min=60,angle_max=120,fname=f'{outdir}/{new_gr3_name}')
         gd = schism_grid(f'{outdir}/{new_gr3_name}')
         print(f'{bad_quad_bp.n_nodes} bad quads splitted and the updated hgrid is saved as {new_gr3_name}')
@@ -75,25 +77,28 @@ def quality_check_hgrid(gd, epsg=4326, outdir='./'):
         invalid_neighbors = invalid_neighbors[invalid_neighbors>=0]
         
         SMS_MAP(detached_nodes=np.c_[gd.xctr[invalid_neighbors], gd.yctr[invalid_neighbors], gd.yctr[invalid_neighbors]*0]).writer(f'{outdir}/invalid_element_relax.map')
-        return gd
 
-def pre_proc_hgrid(hgrid_name=''):
+    return gd
+
+def pre_proc_hgrid(hgrid_name='', prj='esri:102008'):
 
     dirname = os.path.dirname(hgrid_name)
     file_basename = os.path.basename(hgrid_name)
     file_extension = pathlib.Path(hgrid_name).suffix
 
+    prj_name = prj.replace(':', '_')
+
     if file_extension == '.2dm':
         gd = sms2grd(hgrid_name)
-        gd.write_hgrid(f'{dirname}/hgrid.utm.26918')
+        gd.write_hgrid(f'{dirname}/hgrid.{prj_name}')
     elif file_extension == '.gr3' or file_extension == '.ll':
         gd = schism_grid(hgrid_name)
     else:
         raise Exception('Extension unknown')
 
-    quality_check_hgrid(gd, epsg=26918, outdir=dirname)
+    gd = quality_check_hgrid(gd, prj=prj, outdir=dirname)
 
-    gd.proj(prj0='epsg:26918', prj1='epsg:4326')
+    gd.proj(prj0=prj, prj1='epsg:4326')
     gd.save(f'{dirname}/hgrid.ll')
 
     # load bathymetry
@@ -110,8 +115,12 @@ def tweak_depths(hgrid_name=''):
     file_basename = os.path.basename(hgrid_name)
     file_extension = pathlib.Path(hgrid_name).suffix
 
+    gd_ll_original = schism_grid(f'{dirname}/hgrid.ll')
+    
+
     os.system(f'mv {hgrid_name} {dirname}/hgrid.ll')
     gd = schism_grid(f'{dirname}/hgrid.ll')
+    gd.x, gd.y = gd_ll_original.x, gd_ll_original.y
     gd_DEM_loaded = copy.deepcopy(gd)
 
     print('loading levee heights from National Levee Database')
@@ -120,6 +129,14 @@ def tweak_depths(hgrid_name=''):
     gd = set_additional_dp_v11_91(gd_ll=gd, gd_dem=gd_DEM_loaded, wdir=dirname, levee_info_dir=f'{dirname}/Levee_info/Additional_Polygons/')
 
     print('outputing hgrid.ll')
+    gd.save(f'{dirname}/hgrid.ll')
+
+    # set feeder dp
+    gd = set_feeder_dp(
+        feeder_info_dir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/',
+        new_grid_dir=dirname
+    )
+    os.system(f'mv {dirname}/hgrid.ll {dirname}/hgrid.ll_before_feeder_dp')
     gd.save(f'{dirname}/hgrid.ll')
 
 def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None):
@@ -173,9 +190,13 @@ def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None):
     pass
 
 if __name__ == "__main__":
-    # pre_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/v14.35_relaxed2.2dm')
-    # tweak_depths('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/hgrid.ll.new')
-    gen_hgrid_formats('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23l/Hgrid/hgrid.ll')
+    # Step 1: check grid quality.
+    # Small/skew elements are output as invalid_element_relax.map
+    # Relax them in SMS (to be written as script, refer to grid_spring.f90)
+    # pre_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/v14.40.2dm')
+
+    tweak_depths('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/hgrid.ll.new')
+    gen_hgrid_formats('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/hgrid.ll')
     
     '''
     gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23p11/hgrid.ll'

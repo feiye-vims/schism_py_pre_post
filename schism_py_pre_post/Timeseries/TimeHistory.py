@@ -53,7 +53,7 @@ class TimeHistory():
         else:
             self.df = read_csv(file_name, delim_whitespace=True,  index_col=False, header=None)
         if columns is not None:
-            self.df.columns = columns
+            self.df.columns = [str(x) for x in columns]
 
         self.df.rename(columns={0: 'datetime'}, inplace=True)
         self.df_propagate()  # populate vars from dataframe
