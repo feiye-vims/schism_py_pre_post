@@ -190,18 +190,23 @@ def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None):
     pass
 
 if __name__ == "__main__":
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ/'
     # Step 1: check grid quality.
     # Small/skew elements are output as invalid_element_relax.map
     # Relax them in SMS (to be written as script, refer to grid_spring.f90)
-    # pre_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/v14.40.2dm')
+    # pre_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.42/v14.42_relax2.2dm')
+    pre_proc_hgrid(f'{wdir}/final.2dm')
 
-    tweak_depths('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/hgrid.ll.new')
-    gen_hgrid_formats('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/hgrid.ll')
+    # Step 1.5
+    # load DEM using pload
+
+    tweak_depths(f'{wdir}/Bathy_loading/hgrid.ll.new')  # renamed to hgrid.ll after this step
+    gen_hgrid_formats(f'{wdir}/Bathy_loading/hgrid.ll')  # put bnd in the wdir before this step
     
     '''
     gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23p11/hgrid.ll'
     gd_cache_fname = os.path.splitext(gd_fname)[0] + '.pkl'
-    if os.path.exists(gd_cache_fname):
+    if os.path.exists(gd_cache_fname)final
         gd = schism_grid(gd_cache_fname)
     else:
         gd = schism_grid(gd_fname)

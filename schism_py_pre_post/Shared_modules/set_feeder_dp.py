@@ -46,7 +46,7 @@ def set_feeder_dp(feeder_info_dir='', new_grid_dir=''):
         # Option 1, use min depth (highest z) 
         # gd.dp[gd_points_in_external_feeder] = np.min(gd.dp[gd_points_in_feeder])
 
-        # Option 2, use average depth of feeder bases (near the interface between land boundary and feeder channel)
+        # Option 2, use the depth of feeder bases (near the interface between land boundary and feeder channel)
         base_point_in_grid = f2g_base[i]
         gd.dp[gd_points_in_external_feeder] = gd.dp[base_point_in_grid]
     
