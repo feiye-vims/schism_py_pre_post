@@ -1,10 +1,11 @@
-# %%
++1# %%
 from pylib import schism_grid, sms2grd, grd2sms
 import os
 import numpy as np
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 from schism_py_pre_post.Grid.Hgrid_ported import read_schism_hgrid_cached
 from schism_py_pre_post.Grid.SMS import SMS_MAP, lonlat2cpp, cpp2lonlat
+from schism_py_pre_post.Shared_modules.set_levee_height import set_constant_levee_height
 from schism_py_pre_post.Shared_modules.set_levee_profile import set_levee_profile
 from schism_py_pre_post.Shared_modules.set_additional_dp import set_additional_dp_v11_91
 from schism_py_pre_post.Shared_modules.set_feeder_dp import set_feeder_dp
@@ -123,10 +124,14 @@ def tweak_depths(hgrid_name=''):
     gd.x, gd.y = gd_ll_original.x, gd_ll_original.y
     gd_DEM_loaded = copy.deepcopy(gd)
 
+    print('set default levee heights (-9 m)')
+    gd = set_constant_levee_height(gd=gd, wdir=dirname)
+
     print('loading levee heights from National Levee Database')
-    gd = set_levee_profile(hgrid=gd, wdir=dirname, levee_info_dir=f'{dirname}/Levee_info/')
+    gd = set_levee_profile(gd=gd, wdir=dirname)
+
     print('loading additional tweaks on levee heights')
-    gd = set_additional_dp_v11_91(gd_ll=gd, gd_dem=gd_DEM_loaded, wdir=dirname, levee_info_dir=f'{dirname}/Levee_info/Additional_Polygons/')
+    gd = set_additional_dp_v11_91(gd_ll=gd, gd_dem=gd_DEM_loaded, wdir=dirname)
 
     print('outputing hgrid.ll')
     gd.save(f'{dirname}/hgrid.ll')
@@ -136,6 +141,7 @@ def tweak_depths(hgrid_name=''):
         feeder_info_dir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/',
         new_grid_dir=dirname
     )
+
     os.system(f'mv {dirname}/hgrid.ll {dirname}/hgrid.ll_before_feeder_dp')
     gd.save(f'{dirname}/hgrid.ll')
 
@@ -190,19 +196,25 @@ def gen_hgrid_formats(hgrid_name='', gd:schism_grid=None):
     pass
 
 if __name__ == "__main__":
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ/'
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ/Test_levee_heights/'
     # Step 1: check grid quality.
     # Small/skew elements are output as invalid_element_relax.map
     # Relax them in SMS (to be written as script, refer to grid_spring.f90)
     # pre_proc_hgrid('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.42/v14.42_relax2.2dm')
-    pre_proc_hgrid(f'{wdir}/final.2dm')
+    # pre_proc_hgrid(f'{wdir}/final.2dm')
 
     # Step 1.5
     # load DEM using pload
 
-    tweak_depths(f'{wdir}/Bathy_loading/hgrid.ll.new')  # renamed to hgrid.ll after this step
-    gen_hgrid_formats(f'{wdir}/Bathy_loading/hgrid.ll')  # put bnd in the wdir before this step
+    # Step 2
+    tweak_depths(f'{wdir}/hgrid.ll.new')  # renamed to hgrid.ll after this step
+
+    # Step 3
+    gen_hgrid_formats(f'{wdir}/hgrid.ll')  # put bnd in the wdir before this step
+    pass
     
+    
+
     '''
     gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23p11/hgrid.ll'
     gd_cache_fname = os.path.splitext(gd_fname)[0] + '.pkl'
@@ -211,7 +223,6 @@ if __name__ == "__main__":
     else:
         gd = schism_grid(gd_fname)
         gd.save(gd_cache_fname)
-    
     quality_check_hgrid(gd)
     '''
     pass

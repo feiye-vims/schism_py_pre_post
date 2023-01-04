@@ -183,8 +183,11 @@ def merge_maps(mapfile_glob_str, merged_fname):
 
 class SMS_ARC():
     '''class for manipulating arcs in SMS maps''' 
-    def __init__(self, points=None, node_idx=[0, -1], src_prj='cpp', dst_prj='epsg:4326'):
+    def __init__(self, points=None, node_idx=[0, -1], src_prj=None, dst_prj='epsg:4326'):
         # self.isDummy = (len(points) == 0)
+
+        if src_prj is None:
+            raise Exception('source projection not specified when initializing SMS_ARC')
 
         if src_prj == 'cpp' and dst_prj == 'epsg:4326':
             points[:, 0], points[: ,1] = cpp2lonlat(points[:, 0], points[: ,1])

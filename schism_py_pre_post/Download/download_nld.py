@@ -28,10 +28,11 @@ def nld2map(nld_fname=None):
     # arc_hat_list = []
     xyz = np.zeros((0, 3), dtype=float)
     for arc in data['features']:
-        my_arc = SMS_ARC(points=np.array(arc['geometry']['coordinates']))
+        points = np.array(arc['geometry']['coordinates'])
+        my_arc = SMS_ARC(points=points, src_prj='epsg:4326')
         arc_list.append(my_arc)
 
-        xyz = np.r_[xyz, my_arc.points]
+        xyz = np.r_[xyz, my_arc.points[:, :3]]
 
     return SMS_MAP(arcs=arc_list), xyz
 

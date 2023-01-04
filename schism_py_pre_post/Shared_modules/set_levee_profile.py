@@ -6,7 +6,15 @@ from schism_py_pre_post.Download.download_nld import nld2map
 import os
 
 
-def set_levee_profile(hgrid=None, wdir='./', levee_info_dir='./Levee_info/'):
+def set_levee_profile(gd=None, wdir='./'):
+
+    # Check levee info existence
+    levee_info_dir = f'{wdir}/Levee_info/'
+    if not os.path.exists(levee_info_dir):
+        levee_tar_file = os.path.dirname(Datafiles.__file__)  + "/Levee_info.tar"
+        my_tar = tarfile.open(levee_tar_file)
+        my_tar.extractall(wdir)
+        my_tar.close()
 
     levee_names = ['LA_levees', 'FL_levees']
     levee_name_str = "_".join(levee_names)
@@ -19,31 +27,29 @@ def set_levee_profile(hgrid=None, wdir='./', levee_info_dir='./Levee_info/'):
     levee_x = levee_xyz[:, 0]
     levee_y = levee_xyz[:, 1]
     levee_height = levee_xyz[:, 2]
-    levee_height[levee_height < 1] = 27
-    levee_height *= 0.3048
+    levee_height[levee_height < 1] = 27  # raise very low levees to 9 meters
+    levee_height *= 0.3048  # convert to meters
     # plt.plot(np.sort(levee_height))
     # plt.show()
 
-    if hgrid is None:
+    if gd is None:
         gd = schism_grid(f'{wdir}/hgrid.ll')  # ; gd.save(f'{wdir}/hgrid.pkl')
-    else:
-        gd = hgrid
 
     gd.lon = gd.x
     gd.lat = gd.y
-    gd.proj(prj0='epsg:4326', prj1='epsg:26918')  # this overwrites gd.x, gd.y
+    gd.proj(prj0='epsg:4326', prj1='esri:102008')  # this overwrites gd.x, gd.y
 
     # find levee center line points in hgrid, use UTM to avoid truncation error
     shapefile_names = [
-        f"{levee_info_dir}/Polygons/la_levee_center_line_buffer_13m.shp",
-        f"{levee_info_dir}/Polygons/fl_levees_buffer_10m.shp",
+        f"{levee_info_dir}/Polygons/la_levee_center_line_buffer_102008.shp",
+        f"{levee_info_dir}/Polygons/fl_levees_buffer_10m_102008.shp",
     ]
     ilevee = np.zeros(gd.dp.shape)
     for shapefile_name in shapefile_names:
         sf = shapefile.Reader(shapefile_name)
         shapes = sf.shapes()
         for i, shp in enumerate(shapes):
-            print(f'shp {i} of {len(shapes)}')
+            print(f'shp {i+1} of {len(shapes)}')
             poly_xy = np.array(shp.points).T
             ilevee += inside_polygon(np.c_[gd.x, gd.y], poly_xy[0], poly_xy[1])  # 1: true; 0: false
     ilevee = ilevee.astype('bool')
@@ -75,8 +81,8 @@ if __name__ == "__main__":
     Outputs to wdir: levee-loaded hgrid.ll
     '''
 
-    wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/v14.2/Grid/'
-    gd = set_levee_profile(hgrid=None, wdir=wdir, levee_info_dir='./Levee_info/')
-    gd.write_hgrid(f'{wdir}/hgrid_additional_levee_loaded_ll.gr3')
+    wdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ/Test_levee_heights/'
+    gd = set_levee_profile(gd=None, wdir=wdir)
+    gd.write_hgrid(f'{wdir}/hgrid_levee_profile_loaded_ll.gr3')
 
     pass
