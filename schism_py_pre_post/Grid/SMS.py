@@ -473,18 +473,31 @@ def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=Non
         # using geopandas, which seems more efficient than pyshp
         shapefile = gpd.read_file(fname)
         npts = 0
-        shape_pts_l2g = []
-
-        xyz = np.empty((0, 2), dtype=float)
+        nvalid_shps = 0
         for i in range(shapefile.shape[0]):
             try:
                 shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
             except:
                 print(f"warning: shape {i+1} of {shapefile.shape[0]} is invalid")
                 continue
-            xyz = np.r_[xyz, np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T]
-            shape_pts_l2g.append(np.array(np.arange(npts, npts+shp_points)))
             npts += shp_points
+            nvalid_shps += 1
+
+        xyz = np.zeros((npts, 2), dtype=float)
+        shape_pts_l2g =[None] * nvalid_shps
+        ptr = 0; ptr_shp = 0
+        for i in range(shapefile.shape[0]):
+            try:
+                shp_points = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).shape[1]
+            except:
+                print(f"warning: shape {i+1} of {shapefile.shape[0]} is invalid")
+                continue
+
+            xyz[ptr:ptr+shp_points] = np.array(shapefile.iloc[i, :]['geometry'].coords.xy).T
+            shape_pts_l2g[ptr_shp] = np.array(np.arange(ptr, ptr+shp_points))
+            ptr += shp_points; ptr_shp += 1;
+        if ptr != npts or ptr_shp != nvalid_shps:
+            raise Exception("number of shapes/points does not match")
 
         curv = np.empty((npts, ), dtype=float)
         perp = np.empty((npts, ), dtype=float)
@@ -513,7 +526,7 @@ def get_all_points_from_shp(fname, iNoPrint=True, iCache=False, cache_folder=Non
         #     curv[shape_pts_l2g[i]] = curvature(xyz[shape_pts_l2g[i], :])
         #     perp[shape_pts_l2g[i]] = get_perpendicular_angle(xyz[shape_pts_l2g[i], :2])
 
-        if not iNoPrint: print(f'Number of shapes read: {len(shapes)}')
+        # if not iNoPrint: print(f'Number of shapes read: {len(shapes)}')
 
         with open(cache_name, 'wb') as file:
             tmp_dict = {'xyz': xyz, 'shape_pts_l2g': shape_pts_l2g, 'curv': curv, 'perp': perp}

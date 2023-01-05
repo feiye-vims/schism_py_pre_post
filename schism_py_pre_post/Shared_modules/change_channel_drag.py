@@ -15,8 +15,8 @@ def dist(points_group_A, points_group_B):
     return np.absolute(points_A-points_B)
 
 if __name__ == "__main__":
-    # Read channel_centerline info
-    center_lines = SMS_MAP(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned_32cores/total_centerlines.map')
+    # Read channel_arcs info
+    center_lines = SMS_MAP(filename='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/Outputs/CUDEM_merged_thalwegs_1e6_single_fix_simple_sms_cleaned_32cores/total_arcs.map')
     xyz, l2g = center_lines.get_xyz()
 
     # get old hgrid (without feeders)
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         pass
 
     # get new hgrid (with feeders)
-    feeder_gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/hgrid_feeder_dp_set.ll', overwrite_cache=False)
+    feeder_gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v6/Inputs/V6_mesh_from_JZ/Test_levee_heights/hgrid.ll', overwrite_cache=False)
 
     ingrid = feeder_gd.inside_grid(xyz[:, :2]).astype(bool)
     centerline_xyz = np.r_[xyz[ingrid, :2], feeder_centerline_xyz]

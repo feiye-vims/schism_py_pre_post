@@ -212,17 +212,3 @@ if __name__ == "__main__":
     # Step 3
     gen_hgrid_formats(f'{wdir}/hgrid.ll')  # put bnd in the wdir before this step
     pass
-    
-    
-
-    '''
-    gd_fname = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23p11/hgrid.ll'
-    gd_cache_fname = os.path.splitext(gd_fname)[0] + '.pkl'
-    if os.path.exists(gd_cache_fname)final
-        gd = schism_grid(gd_cache_fname)
-    else:
-        gd = schism_grid(gd_fname)
-        gd.save(gd_cache_fname)
-    quality_check_hgrid(gd)
-    '''
-    pass
