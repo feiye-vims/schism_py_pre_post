@@ -1,4 +1,9 @@
 #%%
+import xarray as xr
+
+
+
+#%%
 from pylib import schism_grid
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
@@ -12,3 +17,4 @@ pass
 gd.plot(fmt=1, clim=[0.5, 2.8], cmap='jet')
 plt.show()
 # %%
+

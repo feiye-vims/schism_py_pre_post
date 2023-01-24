@@ -2,7 +2,7 @@ from email.mime import base
 from schism_py_pre_post.Grid.SourceSinkIn import source_sink, SourceSinkIn
 from schism_py_pre_post.Grid.SMS import lonlat2cpp
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
-from schism_py_pre_post.Grid.Hgrid_ported import read_schism_hgrid_cached
+from schism_py_pre_post.Grid.Hgrid_extended import read_schism_hgrid_cached
 import os
 import numpy as np
 from scipy import spatial

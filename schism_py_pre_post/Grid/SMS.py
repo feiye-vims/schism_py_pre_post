@@ -289,7 +289,7 @@ class SMS_MAP():
 
                 strs = re.split(' +', line.strip())
                 if strs[0] == 'COV_WKT':
-                    if "GCS_WGS_1984" in line:
+                    if "WGS_1984" in line:
                         self.epsg = 4326
                     else:
                         raiseExceptions('unkown epsg')

@@ -20,10 +20,12 @@ class Bpfile():
             self.ncol = cols
             self.reader(filename, cols)
 
-        self.make_dataframe()
-
-        print(str(self.n_nodes) + "\n")
-        print(str(self.nodes[0][0]) + " " + str(self.nodes[0][1]) + "\n")
+        if self.n_nodes == 0:
+            print("number of bp points: " + str(self.n_nodes) + "\n")
+        else:
+            self.make_dataframe()
+            print("number of bp points: " + str(self.n_nodes) + "\n")
+            print(str(self.nodes[0][0]) + " " + str(self.nodes[0][1]) + "\n")
 
     def reader(self, file_name, cols):
         """ Read existing *.reg """
