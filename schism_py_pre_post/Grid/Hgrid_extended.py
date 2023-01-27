@@ -1,12 +1,10 @@
-from logging import raiseExceptions
 from pylib import schism_grid, sms2grd
 import os
 import pickle
 import pathlib
 import numpy as np
-from pyrsistent import get_in
-from sympy import re
 from scipy import spatial
+from copy import deepcopy
 
 
 def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_dir=False):
@@ -46,7 +44,7 @@ def get_inp(gd, ntiers=1, return_grid=False):
     if ntiers == 0:
         inp = np.array(range(gd.np))
     elif ntiers >=3:
-        raiseExceptions('ntier>=3 is discouraged due to large memory use.')
+        raise Exception('ntier>=3 is discouraged due to large memory use.')
     else:
 
         large_int = gd.np + 100
@@ -90,7 +88,7 @@ def get_inp(gd, ntiers=1, return_grid=False):
 
 def propogate_nd(gd, nd_ids, ntiers=1):
     if ntiers < 1:
-        raiseExceptions('no need to propogate')
+        raise Exception('no need to propogate')
     else:
         i_nd = np.zeros((gd.np,), dtype=bool)
         inp = get_inp(gd)
@@ -116,4 +114,34 @@ def get_bnd_nd_cached(gd, cache_file='./bnd_xy.pkl'):
         bnd_nd = spatial.cKDTree(np.c_[bnd_x, bnd_y]).query(gd.x, gd.y)[1]
     
     return bnd_nd
+
+def hgrid_basic(gd):
+    basic_attributes = ['source_file', 'ne', 'np', 'x', 'y', 'dp', 'i34', 'elnode', 'ns']
+    gd_attributes = deepcopy(gd.__dict__)
+    for attribute in gd_attributes:
+        if attribute not in basic_attributes:
+            delattr(gd, attribute)
+    return gd
+
+def compute_ie_area(gd, ie):
+    fp=gd.elnode[ie,-1]<0;
+    x1=gd.x[gd.elnode[ie,0]]; y1=gd.y[gd.elnode[ie,0]];
+    x2=gd.x[gd.elnode[ie,1]]; y2=gd.y[gd.elnode[ie,1]];
+    x3=gd.x[gd.elnode[ie,2]]; y3=gd.y[gd.elnode[ie,2]];
+    x4=gd.x[gd.elnode[ie,3]]; y4=gd.y[gd.elnode[ie,3]]; x4[fp]=x1[fp]; y4[fp]=y1[fp]
+    area=((x2-x1)*(y3-y1)-(x3-x1)*(y2-y1)+(x3-x1)*(y4-y1)-(x4-x1)*(y3-y1))/2
+    return area
+
+def find_nearest_nd(gd, pts):
+    _, nd_ids = spatial.cKDTree(np.c_[gd.x, gd.y]).query(pts[:, :2])
+    return nd_ids 
+
+
+if __name__ == "__main__":
+    gd = schism_grid('/sciclone/schism10/feiye/From_Nabi/Grid/02/hgrid.gr3')
+    gd.compute_all()
+    gd = hgrid_basic(gd)
+
+    gd = sms2grd('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/Relax_test4/Relax_test4.2dm')
+    gd.split_quads()
     
