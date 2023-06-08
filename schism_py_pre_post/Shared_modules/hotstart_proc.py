@@ -345,6 +345,21 @@ class Hotstart():
     def writer(self, fname):
         self.attrs = ['dimname','dims']
         WriteNC(fname, self, fmt=0)
+    
+    def plot(self, var, plot_layer=-1, out_dir='./'):
+        self.grid.hgrid.compute_all()
+        if var == 'trel':
+            plt.scatter(self.grid.hgrid.xctr, self.grid.hgrid.yctr, s=5, c=self.tr_el.val[:, plot_layer, 0], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/temprature.png', dpi=700)
+
+            plt.scatter(self.grid.hgrid.xctr, self.grid.hgrid.yctr, s=5, c=self.tr_el.val[:, plot_layer, 1], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/salinity.png', dpi=700)
+        elif var == 'trnd':
+            plt.scatter(self.grid.hgrid.x, self.grid.hgrid.y, s=5, c=self.tr_nd.val[:, plot_layer, 0], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/temprature.png', dpi=700)
+
+            plt.scatter(self.grid.hgrid.x, self.grid.hgrid.y, s=5, c=self.tr_nd.val[:, plot_layer, 1], cmap='jet', vmin=0, vmax=33)
+            plt.savefig(f'{out_dir}/salinity.png', dpi=700)
 
     def replace_vars(self, var_dict=[], shapefile_name=None):
         '''
@@ -550,16 +565,16 @@ if __name__ == "__main__":
     # fg_hot.writer(f'{fg_hot.source_dir}/hotstart.nc')
 
     # Sample 3: interpolating one hotstart.nc to another
-    # hot_background = Hotstart(
-    #     grid_info='/sciclone/data10/feiye/vims20/work/ChesBay/RUN200p3/',  # contains hgrid.gr3 and vgrid.in
-    #     hot_file='/sciclone/data10/feiye/vims20/work/ChesBay/INPUTS/110y/new_hotstart.nc'
-    # )  # create a Hotstart instance with existing values
-    # my_hot = Hotstart(
-    #     grid_info='/sciclone/data10/feiye/vims20/work/ChesBay/RUN200p3/',
-    #     ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
-    # )  # create a Hotstart instance with empty values
-    # my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=True, i_vert_interp=True)
-    # my_hot.writer(f'{my_hot.source_dir}/interp_hotstart.nc')
+    hot_background = Hotstart(
+        grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hotstart_interp/old/',  # contains hgrid.gr3 and vgrid.in
+        hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hotstart_interp/old/hotstart.nc'
+    )  # create a Hotstart instance with existing values
+    my_hot = Hotstart(
+        grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hotstart_interp/',
+        ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
+    )  # create a Hotstart instance with empty values
+    my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
+    my_hot.writer(f'{my_hot.source_dir}/interp_hotstart.nc')
     
     
     # Sample 4: visualize hotstart

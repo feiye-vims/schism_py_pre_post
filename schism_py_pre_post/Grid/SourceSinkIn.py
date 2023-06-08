@@ -79,12 +79,12 @@ class Prop(SourceSinkIn):  # temporary, to be backward compatible with some olde
 
 class source_sink():
     """class for handling all source/sink inputs"""
-    def __init__(self, source_dir=None, start_time_str='2000-01-01 00:00:00', timedeltas=[0.0, 86400.0*365],
+    def __init__(self, source_dir=None, start_time_str='2000-01-01 00:00:00', timedeltas=[0.0, 86400.0*365*10],
                  source_eles=[], sink_eles=[], vsource_data=None, vsink_data=None):
 
         dummy_source_sink = TimeHistory(
             file_name=None, start_time_str='2000-01-01 00:00:00',
-            data_array=np.c_[np.array(timedeltas), np.array(timedeltas)*0.0], columns=['datetime', '1']
+            data_array=np.c_[np.array(timedeltas), np.array(timedeltas)*0.0], columns=['1']
         )
 
         if source_dir is None:
@@ -100,21 +100,21 @@ class source_sink():
             if nsources > 0:
                 self.vsource = TimeHistory(file_name=None, start_time_str=start_time_str,
                                            data_array=np.c_[np.array(timedeltas), vsource_data],
-                                           columns=['datetime']+source_eles)
+                                           columns=source_eles)
                 self.msource = TimeHistory(file_name=None, start_time_str=start_time_str,
                                            data_array=np.c_[np.array(timedeltas), -9999*np.ones([nt, nsources]), np.zeros([nt, nsources])],
-                                           columns=['datetime']+source_eles+source_eles)
+                                           columns=source_eles+source_eles)
             else:
                 source_eles = [1]  # one dummy source at Ele 1 with 0 m3/s
                 self.vsource = copy.deepcopy(dummy_source_sink)
                 self.msource = TimeHistory(file_name=None, start_time_str=start_time_str,
                                            data_array=np.c_[np.array(timedeltas), -9999*np.ones([nt, 1]), np.zeros([nt, 1])],
-                                           columns=['datetime', '1', '1'])
+                                           columns=['1', '1'])
 
             if nsinks > 0:
                 self.vsink = TimeHistory(file_name=None, start_time_str=start_time_str,
                                          data_array=np.c_[np.array(timedeltas), vsink_data],
-                                         columns=['datetime']+sink_eles)
+                                         columns=sink_eles)
             else:
                 sink_eles = [1]  # one dummy sink at Ele 1 with 0 m3/s
                 self.vsink = copy.deepcopy(dummy_source_sink)
@@ -127,21 +127,21 @@ class source_sink():
 
             if self.source_sink_in.np_group[0] > 0:
                 print('reading vsource\n')
-                self.vsource = TimeHistory(f"{source_dir}/vsource.th", start_time_str=start_time_str, columns=['datetime']+self.source_sink_in.ip_group[0].tolist())
+                self.vsource = TimeHistory(f"{source_dir}/vsource.th", start_time_str=start_time_str, columns=self.source_sink_in.ip_group[0].tolist())
                 print('reading msource\n')
-                self.msource = TimeHistory(f"{source_dir}/msource.th", start_time_str=start_time_str, columns=['datetime']+self.source_sink_in.ip_group[0].tolist()+self.source_sink_in.ip_group[0].tolist())
+                self.msource = TimeHistory(f"{source_dir}/msource.th", start_time_str=start_time_str, columns=self.source_sink_in.ip_group[0].tolist()+self.source_sink_in.ip_group[0].tolist())
                 source_eles = self.source_sink_in.ip_group[0]
             else:
                 self.vsource = copy.deepcopy(dummy_source_sink)
                 self.msource = TimeHistory(file_name=None, start_time_str=start_time_str,
                                            data_array=np.c_[np.array(timedeltas), -9999*np.ones([nt, 1]), np.zeros([nt, 1])],
-                                           columns=['datetime', '1', '1'])
+                                           columns=['1', '1'])
                 source_eles = [1]
 
 
             if self.source_sink_in.np_group[1] > 0:
                 print('reading vsink\n')
-                self.vsink = TimeHistory(f"{source_dir}/vsink.th", start_time_str=start_time_str, columns=['datetime']+self.source_sink_in.ip_group[1].tolist())
+                self.vsink = TimeHistory(f"{source_dir}/vsink.th", start_time_str=start_time_str, columns=self.source_sink_in.ip_group[1].tolist())
                 self.vsink.df.columns = self.vsink.df.columns.map(str)
                 sink_eles = self.source_sink_in.ip_group[1]
             else:  # dummy vsink
@@ -213,9 +213,9 @@ class source_sink():
 
         A.msource = TimeHistory(file_name=None,
                                 data_array=np.c_[np.array([0.0, 86400*365*100]),
-                                                    -9999*np.ones([2, len(A.vsource.df.columns)-1]),
-                                                    np.zeros([2, len(A.vsource.df.columns)-1])],
-                                columns=['datetime']+A.vsource.df.columns[1:].tolist()+A.vsource.df.columns[1:].tolist())
+                                                 -9999*np.ones([2, len(A.vsource.df.columns)-1]),
+                                                 np.zeros([2, len(A.vsource.df.columns)-1])],
+                                columns=A.vsource.df.columns[1:].tolist()+A.vsource.df.columns[1:].tolist())
         A.update_vars()
 
         return A
@@ -258,6 +258,19 @@ class source_sink():
         vi=zdata(); vi.dimname=('one',); vi.val=self.vsink.delta_t; C.time_step_vsink=vi
 
         WriteNC(f'{dirname}/source.nc', C)
+    
+    def toPropFile(self, ne):
+        """write source_sink.in to *.prop file"""
+        prop = np.zeros((ne, ), dtype=int)
+
+        if self.source_sink_in.np_group[0] > 0:
+            prop[self.source_sink_in.ip_group[0] - 1] = self.vsource.get_time_average()
+            np.savetxt(self.source_dir + 'source.prop', np.c_[np.array(range(ne))+1, prop], fmt='%d %d')
+
+        if self.source_sink_in.np_group[1] > 0:
+            prop[self.source_sink_in.ip_group[0] - 1] = self.vink.get_time_average()
+            np.savetxt(self.source_dir + 'sink.prop', np.c_[np.array(np.range(ne))+1, prop*1000], fmt='%d %d')
+            pass
 
 
 if __name__ == "__main__":

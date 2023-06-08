@@ -1,4 +1,4 @@
-from pylib import schism_grid
+from schism_py_pre_post.Grid.Hgrid_extended import read_schism_hgrid_cached
 import netCDF4
 from datetime import datetime, timedelta
 import numpy as np
@@ -17,19 +17,23 @@ print(f'process {rank} of {size}\n')
 
     
 def my_mpi_idx(N, size, rank):
-    if N > size:
-        n_per_rank, _ = divmod(N, size)
-        n_per_rank = n_per_rank + 1
-        return slice(rank*n_per_rank, min((rank+1)*n_per_rank, N))
-    else:
-        if rank+1 > N:
-            return slice
+    '''
+    Distribute N tasks to {size} ranks.
+    The return value is a bool vector of the shape (N, ),
+    with True indices indicating tasks for the current rank.
+    '''
+    my_idx = np.zeros((N, ), dtype=bool)
+    n_per_rank, _ = divmod(N, size)
+    n_per_rank = n_per_rank + 1
+    my_idx[rank*n_per_rank:min((rank+1)*n_per_rank, N)] = True
+    return my_idx
 
 def plot_schism2D_parallel(
     rundir='./',
     model_start_time = datetime.strptime('2014-12-01 00:00:00', "%Y-%m-%d %H:%M:%S"),
     var_str=None, stacks=[1, 2, 3],
-    caxis = [10, 35], output_dir='./'
+    caxis = [10, 35], output_dir='./',
+    iOverWrite=False
 ):
     """
     function for plotting 2D variables of the schism outputs;
@@ -45,13 +49,7 @@ def plot_schism2D_parallel(
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    grd_name = f'{rundir}/hgrid.gr3'
-    alt_grd_name = os.path.splitext(grd_name)[0] + '.pkl'
-    if os.path.exists(alt_grd_name):
-        gd = schism_grid(alt_grd_name)
-    else:
-        gd = schism_grid(grd_name)
-        gd.save(alt_grd_name)
+    gd = read_schism_hgrid_cached(f'{rundir}/hgrid.gr3')
 
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{var_str}_{stack}.nc'
@@ -65,9 +63,9 @@ def plot_schism2D_parallel(
             title_str = f"Surface {var_str} {this_time.strftime('%Y-%m-%d %H:%M:%S')}"
             savefilename = f'{output_dir}/{title_str.replace(" ", "_")}.png'
 
-            # if os.path.exists(savefilename):
-            #     print(f'Core {rank} skipping: {savefilename}\n')
-            #     continue  # skip existing figures
+            if not iOverWrite and os.path.exists(savefilename):
+                print(f'Core {rank} skipping: {savefilename}\n')
+                continue  # skip existing figures
 
             print(f'Core {rank} plotting time: {title_str} from {fname}\n\n')
             gd.dp = var[j, :, -1].filled(fill_value=-99999)
@@ -81,19 +79,27 @@ def plot_schism2D_parallel(
             plt.close()
 
         my_nc.close()
-        del var, my_nc, model_start_time, this_time_dts
+        del var, my_nc
         gc.collect()
 
     print(f'Core {rank} finishing ...\n\n\n')
     comm.Barrier()
 
 if __name__ == "__main__":
-    rundir = '/sciclone/schism10/feiye/STOFS3D-v4/RUN23m/'
-    model_start_time = datetime.strptime('2014-12-01', "%Y-%m-%d")
+    # sample forecast
+    # rundir = '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/20230501/'
+    # model_start_time = datetime.strptime('2023-04-30', "%Y-%m-%d")
+    # var_str = 'salinity'
+    # stacks = np.arange(20220701, 20220702)
+    # caxis = [10, 35]
+    # output_dir = '/sciclone/schism10/feiye/STOFS3D-v4/fcst_run/outputs/'
+
+    rundir = '/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O13u6/'
+    model_start_time = datetime.strptime('2018-12-01', "%Y-%m-%d")
     var_str = 'temperature'
-    stacks = np.arange(0, 397)
-    caxis = [10, 35]
-    output_dir = '/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23m/Plots/'
+    stacks = np.arange(250, 360)
+    caxis = [0, 35]
+    output_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O13u6/'
 
     plot_schism2D_parallel(rundir, model_start_time, var_str, stacks, caxis, output_dir)
 

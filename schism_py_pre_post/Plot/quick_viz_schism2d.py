@@ -1,5 +1,6 @@
 # %%
-from pylib import schism_grid, read_schism_vgrid
+from schism_py_pre_post.Grid.Hgrid_extended import read_schism_hgrid_cached
+from pylib import read_schism_vgrid
 import os
 import numpy as np
 import netCDF4
@@ -10,16 +11,11 @@ set_matplotlib_formats('svg')
 
 
 # %%
-gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23o/hgrid.gr3'
-gd_cache_fname = os.path.splitext(gd_fname)[0] + '.pkl'
-if os.path.exists(gd_cache_fname):
-    gd = schism_grid(gd_cache_fname)
-else:
-    gd = schism_grid(gd_fname)
-    gd.save(gd_cache_fname)
+gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13u6/hgrid.gr3'
+gd = read_schism_hgrid_cached(gd_fname)
 
 # %%
-vg_fname = '/sciclone/schism10/feiye/STOFS3D-v4/RUN23o/vgrid.in'
+vg_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13u6/vgrid.in'
 vg_cache_fname = os.path.splitext(vg_fname)[0] + '.pkl'
 if os.path.exists(vg_cache_fname):
     with open(vg_cache_fname, 'rb') as handle:
@@ -32,13 +28,14 @@ else:
 
 # %%
 var_name = "temperature"
+fname = f'/sciclone/home/feiye/Sync/{var_name}_228.nc'
+
 it = -1
 isurf = True
-caxis = [0, 35]; xlim = [-77, -75]; ylim = [37, 40]
+caxis = [0, 35]
+xlim = None  # [-77, -75]
+ylim = None  # [37, 40]
 plt.figure(figsize=(7, 7))
-
-fname = f'/sciclone/schism10/feiye/STOFS3D-v4/RUN23p10/outputs/{var_name}_144.nc'
-# fname = f'/sciclone/scr10/lcui01/ICOGS3D/outputs_RUN23p1/{var_name}_141.nc'
 
 my_nc = netCDF4.Dataset(fname)
 var = my_nc.variables[var_name]
@@ -50,6 +47,8 @@ else:
     value = value[np.arange(gd.np), vg.kbp]
 
 gd.plot_grid(fmt=1, value=value, clim=caxis, levels=31, ticks=np.arange(caxis[0], caxis[1], 2), cmap='jet', xlim=xlim, ylim=ylim)
+plt.gca().set_aspect('equal', 'box')
+plt.savefig(f'{fname}.png', dpi=400)
 plt.show()
 my_nc.close()
 

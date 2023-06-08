@@ -7,6 +7,7 @@ import numpy
 import mplcursors
 import copy
 from numbers import Integral, Real
+import os
 
 
 def running_mean1(X, N):
@@ -51,9 +52,22 @@ class TimeHistory():
         if file_name is None:
             self.df = pd.DataFrame(data_array)
         else:
-            self.df = read_csv(file_name, delim_whitespace=True,  index_col=False, header=None)
-        if columns is not None:
-            self.df.columns = [str(x) for x in columns]
+            self.df = read_csv(file_name, delim_whitespace=True, index_col=False, header=None)
+
+        if type(columns) is str:  # from a file
+            if os.path.exists(columns):
+                pass
+        elif type(columns) is list:  # from a user-specified list
+            if len(columns) == self.df.shape[1]:
+                self.df.columns = [str(x) for x in columns]
+            elif len(columns) == self.df.shape[1]-1:
+                self.df.columns = [str(x) for x in ['datetime'] + columns]
+            else:
+                raise Exception('number of columns does not match')
+        elif columns is None:
+            self.df.columns = ['datetime'] + [str(x) for x in range(1, self.df.shape[1])]  # first col is time
+        else:
+            raise Exception('unknown columns type')
 
         self.df.rename(columns={0: 'datetime'}, inplace=True)
         self.df_propagate()  # populate vars from dataframe
@@ -101,7 +115,7 @@ class TimeHistory():
 
         return [data_rm]
 
-    def get_time_average(self, station_idx, start_time_str=None, end_time_str=None):
+    def get_time_average(self, station_idx=[], start_time_str=None, end_time_str=None):
         if station_idx == []:
             valid_idx = range(0, self.n_station)
         else:

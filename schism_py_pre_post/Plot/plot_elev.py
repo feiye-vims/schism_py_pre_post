@@ -275,12 +275,12 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
 def plot_operation():
     os.system("rm stat*.txt *.png")
     # time
-    plot_start_day_str = '2023-01-26 00:00:00'
-    plot_end_day_str = '2023-01-26 23:00:00'
+    plot_start_day_str = '2023-02-04 00:00:00'
+    plot_end_day_str = '2023-03-12 23:00:00'
 
-    forecast_end_day_str = '2023-01-26 00:00:00'  # corresponding to folder name
-    fcst_folder = '/sciclone/schism10/feiye/STOFS3D-v4/fcst/'  # '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/'
-    remote_dir = '/sciclone/schism10/feiye/STOFS3D-v4/fcst/'  # '$cdir/webdata/html/yinglong/feiye/ICOGS/STOFS-3D_fcst/2023_01-26/'
+    forecast_end_day_str = '2023-03-12 00:00:00'  # corresponding to folder name
+    fcst_folder = '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/'  # '/sciclone/schism10/feiye/STOFS3D-v4/fcst/'
+    remote_dir = '$cdir/webdata/html/yinglong/feiye/ICOGS/STOFS-3D_fcst/2023_02_04/'  # '/sciclone/schism10/feiye/STOFS3D-v4/fcst/'
 
     # station presets>>
     # stations, ICOGS v2 and v3>

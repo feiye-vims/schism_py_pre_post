@@ -31,7 +31,7 @@ def GetCBP(stations=None, sample_time=None, varname='SALINITY'):
     sample_time = pd.to_datetime(sample_time, format='%Y-%m-%d', errors='coerce')
     var_id = var_dict[varname]
 
-    search_window = [sample_time-datetime.timedelta(days=50),
+    search_window = [sample_time-datetime.timedelta(days=360),
                      sample_time+datetime.timedelta(days=50)]
     search_window = [x.strftime(format='%m-%d-%Y') for x in search_window]
 

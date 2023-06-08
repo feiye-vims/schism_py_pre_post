@@ -39,7 +39,7 @@ def nld2map(nld_fname=None):
 if __name__ == "__main__":
     # Specify levee ids
     wdir = '/sciclone/schism10/feiye/STOFS3D-v4/Inputs/I23/Grids/'
-    levee_name = 'TX_levees'
+    levee_name = 'LA_levees'
     df = pd.read_csv(f'{wdir}/{levee_name}_info.csv')
     system_ids = df['System_ID'].to_numpy().astype(int).tolist()  # system_ids = [4405000525, 1605995181, 5905000001]
 
