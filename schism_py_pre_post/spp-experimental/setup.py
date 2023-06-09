@@ -9,8 +9,7 @@ with open('requirements.txt', 'r') as f:
     description='An experimental package of "Python tools for pre/post-processing SCHISM models"',
     license='MIT',
     packages=[
-      'spp-experimental',
-      'spp-experimental.spp-essentials',
+      'spp-essentials',
     ],
     package_data={},
     install_requires=requirements,
