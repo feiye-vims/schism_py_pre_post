@@ -6,7 +6,7 @@ with open('requirements.txt', 'r') as f:
   setup(
     name='spp-experimental',
     version='0.0.1',
-    description='An sub package of the experimental package of "Python tools for pre/post-processing SCHISM models"',
+    description='An experimental package of "Python tools for pre/post-processing SCHISM models"',
     license='MIT',
     packages=[
       'spp-experimental',
