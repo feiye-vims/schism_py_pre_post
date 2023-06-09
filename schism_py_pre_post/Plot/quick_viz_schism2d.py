@@ -28,7 +28,7 @@ else:
 
 # %%
 var_name = "temperature"
-fname = f'/sciclone/home/feiye/Sync/{var_name}_228.nc'
+fname = f'/sciclone/home/feiye/Sync/{var_name}_275.nc'
 
 it = -1
 isurf = True
