@@ -11,7 +11,7 @@ with open('requirements.txt', 'r') as f:
     license='MIT',
     packages=[
       'spp-experimental',
-      'spp-experimental.essentials',
+      'spp-experimental.spp-essentials',
     ],
     package_data={},
     install_requires=requirements,
