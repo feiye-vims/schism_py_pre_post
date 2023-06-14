@@ -28,9 +28,9 @@ def viz_source(w_dir, start_time_str, i_show_plot=0, scale=1e3, i_nc=False):
 
     for i in range(0, 2):  # 1st: source; 2nd: sink
         if os.path.exists(w_dir + source_sink_fname[i]):
-            my_ele_id = SourceSinkIn(w_dir + '/source_sink.in', 2).ip_group[i]
+            my_ele_idx = SourceSinkIn(w_dir + '/source_sink.in', 2).ip_group[i] - 1
             my_hgrid.compute_ctr()
-            my_ele_xyz = np.c_[my_hgrid.xctr[my_ele_id], my_hgrid.yctr[my_ele_id], my_hgrid.dpe[my_ele_id]]
+            my_ele_xyz = np.c_[my_hgrid.xctr[my_ele_idx], my_hgrid.yctr[my_ele_idx], my_hgrid.dpe[my_ele_idx]]
 
             # my_ele_th = TimeHistory(
             #     w_dir + source_sink_fname[i], start_time_str, -9999)
@@ -44,7 +44,7 @@ def viz_source(w_dir, start_time_str, i_show_plot=0, scale=1e3, i_nc=False):
 
             fig = None
             if i_show_plot == -1:
-                np.savetxt(f'{w_dir}/test{i+1}.xyz', my_ele_xyz)
+                np.savetxt(f'{w_dir}/{source_sink_fname[i]}.xyz', my_ele_xyz)
             else:
                 if scale > 0:
                     fig = plt.scatter(my_ele_xyz[:, 0], my_ele_xyz[:, 1],
@@ -81,11 +81,11 @@ if __name__ == "__main__":
     '''
     ------viz source------
     '''
-    run_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6_shadow_fcst/Relocate_SourceSink3/relocated_source_sink/'
+    w_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6_shadow_fcst/Relocate_SourceSink3/relocated_source_sink/'
 
     # ss = source_sink(run_dir)
     # ss.toPropFile(ne=5654161)
 
-    [max_val, avg_source_sink, fig] = viz_source(run_dir, '2022-05-01 00:00:00', i_show_plot=1, scale=1.e3)
+    [max_val, avg_source_sink, fig] = viz_source(w_dir, '2022-05-01 00:00:00', i_show_plot=-1, scale=1.e3)
 
     pass

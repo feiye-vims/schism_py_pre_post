@@ -4,12 +4,11 @@ with open('requirements.txt', 'r') as f:
   requirements = f.read().splitlines()
 
   setup(
-    name='spp_experimental',
+    name='spp_essentials',
     version='0.0.1',
-    description='An experimental package of "Python tools for pre/post-processing SCHISM models"',
+    description='The essentials of spp that require minimum dependencies',
     license='MIT',
-    packages=[
-    ],
+    packages=['spp_essentials'],
     package_data={},
     install_requires=requirements,
   )

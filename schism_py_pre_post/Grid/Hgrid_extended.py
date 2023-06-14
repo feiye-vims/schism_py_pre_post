@@ -1,4 +1,7 @@
-from pylib import schism_grid, sms2grd
+try:
+    from pylib import schism_grid, sms2grd, read_schism_vgrid
+except ImportError:
+    from pylib_essentials.schism_file import schism_grid, sms2grd, read_schism_vgrid
 import os
 import pickle
 import pathlib
@@ -16,7 +19,6 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
         dirname = os.path.dirname(gd_filename)
         file_basename = os.path.basename(gd_filename)
     file_extension = pathlib.Path(gd_filename).suffix
-
 
     if overwrite_cache or not os.path.exists(gd_cache_fname):
         if file_extension in ['.ll', '.gr3']:
@@ -40,8 +42,15 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
 
 
 def read_schism_vgrid_cached(vg_filename, overwrite_cache=False):
-    pass
-
+    vg_cache_fname = os.path.splitext(vg_filename)[0] + '.pkl'
+    if (not overwrite_cache) and (os.path.exists(vg_cache_fname)):
+        with open(vg_cache_fname, 'rb') as handle:
+            vg = pickle.load(handle)
+    else:
+        vg = read_schism_vgrid(vg_filename)
+        with open(vg_cache_fname, 'wb') as handle:
+            pickle.dump(vg, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return vg
 
 def get_inp(gd, ntiers=1, return_grid=False):
     '''

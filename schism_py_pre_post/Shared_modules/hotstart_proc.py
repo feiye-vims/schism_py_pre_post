@@ -345,7 +345,7 @@ class Hotstart():
     def writer(self, fname):
         self.attrs = ['dimname','dims']
         WriteNC(fname, self, fmt=0)
-    
+
     def plot(self, var, plot_layer=-1, out_dir='./'):
         self.grid.hgrid.compute_all()
         if var == 'trel':
@@ -575,8 +575,7 @@ if __name__ == "__main__":
     )  # create a Hotstart instance with empty values
     my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
     my_hot.writer(f'{my_hot.source_dir}/interp_hotstart.nc')
-    
-    
+
     # Sample 4: visualize hotstart
     my_hot = Hotstart(
         grid_info='/sciclone/schism10/lcui01/schism20/ICOGS/Tests/MR/RUN01/',  # contains hgrid.gr3 and vgrid.in

@@ -1,34 +1,22 @@
-# %%
-from schism_py_pre_post.Grid.Hgrid_extended import read_schism_hgrid_cached
-from pylib import read_schism_vgrid
-import os
+try:
+    from schism_py_pre_post.Grid.Hgrid_extended import read_schism_hgrid_cached, read_schism_vgrid_cached
+except ImportError:
+    from spp_essentials.Hgrid_extended import read_schism_hgrid_cached, read_schism_vgrid_cached
 import numpy as np
 import netCDF4
 import matplotlib.pyplot as plt
-import pickle
 from IPython.display import set_matplotlib_formats
 set_matplotlib_formats('svg')
 
 
-# %%
 gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13u6/hgrid.gr3'
-gd = read_schism_hgrid_cached(gd_fname)
+gd = read_schism_hgrid_cached(gd_fname, overwrite_cache=False)
 
-# %%
 vg_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13u6/vgrid.in'
-vg_cache_fname = os.path.splitext(vg_fname)[0] + '.pkl'
-if os.path.exists(vg_cache_fname):
-    with open(vg_cache_fname, 'rb') as handle:
-        vg = pickle.load(handle)
-else:
-    vg = read_schism_vgrid(vg_fname)
-    with open(vg_cache_fname, 'wb') as handle:
-        pickle.dump(vg, handle, protocol=pickle.HIGHEST_PROTOCOL)
+gd = read_schism_hgrid_cached(gd_fname, overwrite_cache=False)
 
-
-# %%
 var_name = "temperature"
-fname = f'/sciclone/home/feiye/Sync/{var_name}_275.nc'
+fname = f'/sciclone/home/feiye/Sync/{var_name}_246.nc'
 
 it = -1
 isurf = True
@@ -52,5 +40,4 @@ plt.savefig(f'{fname}.png', dpi=400)
 plt.show()
 my_nc.close()
 
-# %%
 pass
