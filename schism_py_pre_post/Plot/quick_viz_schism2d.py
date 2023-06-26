@@ -9,14 +9,15 @@ from IPython.display import set_matplotlib_formats
 set_matplotlib_formats('svg')
 
 
-gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13u6/hgrid.gr3'
+gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I15/hgrid.gr3'
 gd = read_schism_hgrid_cached(gd_fname, overwrite_cache=False)
 
-vg_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13u6/vgrid.in'
-gd = read_schism_hgrid_cached(gd_fname, overwrite_cache=False)
+vg_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I15/vgrid.in'
+vg = read_schism_vgrid_cached(vg_fname, overwrite_cache=False)
 
-var_name = "temperature"
-fname = f'/sciclone/home/feiye/Sync/{var_name}_246.nc'
+var_name = "salinity"
+fname = f'/sciclone/home/feiye/Sync/{var_name}_321.nc'
+# fname = '/sciclone/scr10/lcui01/ICOGS3D/outputs_RUN13u6/temperature_90.nc'
 
 it = -1
 isurf = True

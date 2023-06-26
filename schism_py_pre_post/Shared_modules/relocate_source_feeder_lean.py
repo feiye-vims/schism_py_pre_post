@@ -82,9 +82,9 @@ def relocate_sources(old_ss_dir=None, outdir=None, relocate_map = None):
 
 if __name__ == "__main__":
     #--------------------------- inputs -------------------------
-    old_ss_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6_shadow_fcst/Relocate_SourceSink2/original_source_sink/'
-    outdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6_shadow_fcst/Relocate_SourceSink2/relocated_source_sink/'
-    relocate_map = np.loadtxt(f'{outdir}/relocate_map.txt', dtype=int)
+    old_ss_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I15/SourceSink_relocate/Original_SS'
+    outdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I15/SourceSink_relocate/'
+    relocate_map = np.loadtxt(f'/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6_shadow_fcst/Relocate_SourceSink3/relocated_source_sink/relocate_map.txt', dtype=int)
 
     relocate_sources(
         old_ss_dir=old_ss_dir,

@@ -59,15 +59,14 @@ def viz_source(w_dir, start_time_str, i_show_plot=0, scale=1e3, i_nc=False):
                 avg_source_sink.append(my_ele_xyz)
                 my_ele_xyz = None
 
-    # pickle.dump(fig, open(w_dir + 'source_sink.pickle', 'wb'))
-
     if i_show_plot >= 0:
         plt.axis('equal')
         if i_show_plot == 1:
             plt.show()
         plt.savefig('1.png', dpi=600)
-
-    return [max_val, avg_source_sink, fig]
+        return [max_val, avg_source_sink, fig]
+    else:
+        return [max_val, avg_source_sink, None]
 
 
 if __name__ == "__main__":
@@ -81,7 +80,7 @@ if __name__ == "__main__":
     '''
     ------viz source------
     '''
-    w_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6_shadow_fcst/Relocate_SourceSink3/relocated_source_sink/'
+    w_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I15/Source_sink/Total_ss/'
 
     # ss = source_sink(run_dir)
     # ss.toPropFile(ne=5654161)

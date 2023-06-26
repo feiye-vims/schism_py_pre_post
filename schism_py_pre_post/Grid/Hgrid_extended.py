@@ -10,6 +10,22 @@ from scipy import spatial
 from copy import deepcopy
 
 
+def read_schism_hgrid_original(gd_filename, i_write_cache=True):
+    file_extension = pathlib.Path(gd_filename).suffix
+    if file_extension in ['.ll', '.gr3']:
+        gd = schism_grid(gd_filename)
+    elif file_extension == '.2dm':
+        gd = sms2grd(gd_filename)
+    if i_write_cache:
+        gd_cache_fname = gd_filename + '.pkl'
+        try:
+            with open(gd_cache_fname, 'wb') as file:
+                pickle.dump(gd, file)
+        except Exception as e:
+            print(f'{e}\nError writing cache file {gd_cache_fname}.')
+
+    return gd
+
 def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_dir=False):
 
     # gd_cache_fname = os.path.splitext(gd_filename)[0] + '.pkl'
@@ -20,17 +36,15 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
         file_basename = os.path.basename(gd_filename)
     file_extension = pathlib.Path(gd_filename).suffix
 
-    if overwrite_cache or not os.path.exists(gd_cache_fname):
-        if file_extension in ['.ll', '.gr3']:
-            gd = schism_grid(gd_filename)
-        elif file_extension == '.2dm':
-            gd = sms2grd(gd_filename)
-
-        with open(gd_cache_fname, 'wb') as file:
-            pickle.dump(gd, file)
-    else:
-        with open(gd_cache_fname, 'rb') as file:
-            gd = pickle.load(file)
+    if overwrite_cache:  # read original file directly
+        gd = read_schism_hgrid_original(gd_filename, i_write_cache=True)
+    else:  # try to read from cache
+        try:
+            with open(gd_cache_fname, 'rb') as file:
+                gd = pickle.load(file)
+        except Exception as e:
+            print(f'{e}\nError reading cache file {gd_cache_fname}.\nReading from original file.')
+            gd = read_schism_hgrid_original(gd_filename)
 
     if gd.source_file is None:
         gd.source_file = gd_filename
@@ -43,9 +57,16 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
 
 def read_schism_vgrid_cached(vg_filename, overwrite_cache=False):
     vg_cache_fname = os.path.splitext(vg_filename)[0] + '.pkl'
-    if (not overwrite_cache) and (os.path.exists(vg_cache_fname)):
-        with open(vg_cache_fname, 'rb') as handle:
-            vg = pickle.load(handle)
+    if not overwrite_cache:
+        try:
+            with open(vg_cache_fname, 'rb') as handle:
+                vg = pickle.load(handle)
+        except Exception as e:
+            print(f'{e}\nError reading cache file {vg_cache_fname}.\nReading from original file.')
+            # read original file
+            vg = read_schism_vgrid(vg_filename)
+            with open(vg_cache_fname, 'wb') as handle:
+                pickle.dump(vg, handle, protocol=pickle.HIGHEST_PROTOCOL)
     else:
         vg = read_schism_vgrid(vg_filename)
         with open(vg_cache_fname, 'wb') as handle:

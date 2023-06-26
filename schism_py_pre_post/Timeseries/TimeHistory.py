@@ -4,7 +4,7 @@ from pandas import read_csv, to_datetime
 import pandas as pd
 from matplotlib import pyplot
 import numpy
-import mplcursors
+# import mplcursors
 import copy
 from numbers import Integral, Real
 import os
@@ -232,7 +232,7 @@ class TimeHistory():
                 fig, open(self.source_file + '_' + str(idx) + '_' + title_str + '.pickle', 'wb')
             )
 
-        mplcursors.cursor(fig)
+        # mplcursors.cursor(fig)
         if i_plot == 1:
             pyplot.show()
         pyplot.close(fig)
@@ -301,7 +301,7 @@ class TimeHistory():
                 fout.write(str(sub_time[i]) + " " +
                            ' '.join(map(str, sub_data[i, :])) +
                            "\n")
-        
+
         return TimeHistory(file_name=subset_filename, start_time_str=new_start_time_str, mask_val=self.mask_val, sec_per_time_unit=self.sec_per_time_unit,
                            data_array=None, columns=None)
 
