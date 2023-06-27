@@ -1,7 +1,7 @@
 try:
-    from pylib import schism_grid, sms2grd, read_schism_vgrid
-except ImportError:
     from pylib_essentials.schism_file import schism_grid, sms2grd, read_schism_vgrid
+except ImportError:
+    from pylib import schism_grid, sms2grd, read_schism_vgrid
 import os
 import pickle
 import pathlib

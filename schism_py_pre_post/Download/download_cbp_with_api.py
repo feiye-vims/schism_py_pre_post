@@ -68,7 +68,7 @@ def GetCBP(stations=None, sample_time=None, varname='SALINITY'):
     return cbp_dict
 
 
-def get_cbp_obs_for_stofs3d(outdir=None, sample_time='2015-09-18'):
+def get_cbp_obs_for_stofs3d(outdir=None, sample_time='2015-09-18', varname=['sal']):
     '''
     Download from usgs using climata via api
     - List of param ids:
@@ -77,7 +77,13 @@ def get_cbp_obs_for_stofs3d(outdir=None, sample_time='2015-09-18'):
       8-18-2016/8-18-2021/0,1/2,4,6/12,13,15,35,36,2,3,7,33,34,23,24/Station/1150/83,123
     '''
 
-    for var, cbp_var in zip(['sal', 'tem'], ['SALINITY', 'WTEMP']):
+    var_dict = {
+        'sal': 'SALINITY',
+        'tem': 'WTEMP',
+    }
+
+    for var in varname:
+        cbp_var = var_dict[var]
         my_obs = GetCBP(sample_time=sample_time, varname=cbp_var)
         out = open(f'{outdir}/mean_{var}_xyz_{sample_time}', 'a')
         for station in my_obs:

@@ -11,8 +11,8 @@ from pathlib import Path
 
 
 # input section
-hotstart_date_str = '2021-05-01'
-wdir = '/sciclone/schism10/feiye/STOFS3D-v5/Inputs/I24a/Hot/'
+hotstart_date_str = '2023-06-01'
+wdir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I_20230601_new/Hotstart/'
 griddir = wdir
 output_obs_dir = f'{wdir}/Obs/'
 hycom_TS_file = f'{wdir}/TS_1.nc'
@@ -28,7 +28,7 @@ for shp in city_shapefile_names:
     os.system(f'cp {mydir}/Datafiles/{shp_basename}.* {wdir}')
 
 # download coastal obs from usgs
-get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
+# get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
 
 # download coastal obs from CBP
 get_cbp_obs_for_stofs3d(outdir=output_obs_dir, sample_time=hotstart_date_str)
