@@ -4,7 +4,11 @@ import os
 from scipy import interpolate
 import pandas as pd
 import copy
-from pylib import zdata, WriteNC, schism_grid
+try:
+    from pylib import zdata, WriteNC, schism_grid
+except ImportError:
+    from pylib_utils.utility_functions import zdata, WriteNC
+    from pylib_essentials.schism_file import schism_grid
 
 
 def BinA(A, B):

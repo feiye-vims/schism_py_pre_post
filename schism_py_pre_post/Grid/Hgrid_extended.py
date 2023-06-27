@@ -29,6 +29,7 @@ def read_schism_hgrid_original(gd_filename, i_write_cache=True):
 def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_dir=False):
 
     # gd_cache_fname = os.path.splitext(gd_filename)[0] + '.pkl'
+    gd_original_cache = os.path.realpath(gd_filename) + '.pkl'
     gd_cache_fname = gd_filename + '.pkl'
 
     if return_source_dir:
@@ -36,15 +37,22 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
         file_basename = os.path.basename(gd_filename)
     file_extension = pathlib.Path(gd_filename).suffix
 
-    if overwrite_cache:  # read original file directly
-        gd = read_schism_hgrid_original(gd_filename, i_write_cache=True)
-    else:  # try to read from cache
+    if os.path.exists(gd_original_cache):  # try reading the original cache first
         try:
-            with open(gd_cache_fname, 'rb') as file:
+            with open(gd_original_cache, 'rb') as file:
                 gd = pickle.load(file)
         except Exception as e:
-            print(f'{e}\nError reading cache file {gd_cache_fname}.\nReading from original file.')
-            gd = read_schism_hgrid_original(gd_filename)
+            print(f'{e}\nError reading cache file {gd_original_cache}.\n')
+    else:  # read and write file/cache at the current dir
+        if overwrite_cache:  # read original file directly
+            gd = read_schism_hgrid_original(gd_filename, i_write_cache=True)
+        else:  # try to read from cache
+            try:
+                with open(gd_cache_fname, 'rb') as file:
+                    gd = pickle.load(file)
+            except Exception as e:
+                print(f'{e}\nError reading cache file {gd_cache_fname}.\nReading from original file.')
+                gd = read_schism_hgrid_original(gd_filename)
 
     if gd.source_file is None:
         gd.source_file = gd_filename
