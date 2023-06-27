@@ -28,7 +28,7 @@ for shp in city_shapefile_names:
     os.system(f'cp {mydir}/Datafiles/{shp_basename}.* {wdir}')
 
 # download coastal obs from usgs
-# get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
+get_usgs_obs_for_stofs3d(outdir=output_obs_dir, start_date_str=hotstart_date_str)
 
 # download coastal obs from CBP
 get_cbp_obs_for_stofs3d(outdir=output_obs_dir, sample_time=hotstart_date_str)
