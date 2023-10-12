@@ -28,8 +28,9 @@ def read_schism_hgrid_original(gd_filename, i_write_cache=True):
 
 def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_dir=False):
 
-    # gd_cache_fname = os.path.splitext(gd_filename)[0] + '.pkl'
-    gd_original_cache = os.path.realpath(gd_filename) + '.pkl'
+    gd_filename = os.path.abspath(gd_filename)
+    gd_original_fname = os.path.realpath(gd_filename)
+    gd_original_cache = gd_original_fname + '.pkl'
     gd_cache_fname = gd_filename + '.pkl'
 
     if return_source_dir:
@@ -37,22 +38,44 @@ def read_schism_hgrid_cached(gd_filename, overwrite_cache=False, return_source_d
         file_basename = os.path.basename(gd_filename)
     file_extension = pathlib.Path(gd_filename).suffix
 
-    if os.path.exists(gd_original_cache):  # try reading the original cache first
-        try:
-            with open(gd_original_cache, 'rb') as file:
-                gd = pickle.load(file)
-        except Exception as e:
-            print(f'{e}\nError reading cache file {gd_original_cache}.\n')
-    else:  # read and write file/cache at the current dir
-        if overwrite_cache:  # read original file directly
-            gd = read_schism_hgrid_original(gd_filename, i_write_cache=True)
-        else:  # try to read from cache
+    gd = None
+    cache_success = False
+    if not overwrite_cache:  # no need to update cache, try reading from cache
+        for cache_name in [gd_original_cache, gd_cache_fname]:
+            # try the original file location first then the current dir
             try:
-                with open(gd_cache_fname, 'rb') as file:
+                with open(cache_name, 'rb') as file:
+                    print(f'Try reading from cache: {cache_name}.')
                     gd = pickle.load(file)
             except Exception as e:
-                print(f'{e}\nError reading cache file {gd_cache_fname}.\nReading from original file.')
-                gd = read_schism_hgrid_original(gd_filename)
+                print(f'{e}\nError reading from original cache: {cache_name}.')
+            finally:
+                if gd is not None:
+                    cache_success = True
+                    break
+
+    if not cache_success or overwrite_cache:  # read from file and update cache
+        for cache_fname, filename in zip([gd_original_cache, gd_cache_fname], [gd_original_fname, gd_filename]):
+            try:
+                print(f'Try reading from {filename}.')
+                gd = read_schism_hgrid_original(filename, i_write_cache=True)
+                gd.source_file = filename
+            except Exception as e:
+                print(f'{e}\nError reading from original file: {filename}.')
+            finally:
+                if gd is not None:
+                    break
+
+        if gd is None:
+            raise Exception(f'Error reading {filename}.')
+
+        # write to cache
+        for cache_fname in [gd_original_cache, gd_cache_fname]:
+            try:
+                with open(cache_fname, 'wb') as file:
+                    pickle.dump(gd, file)
+            except Exception as e:
+                print(f'{e}\nError writing cache file {cache_fname}.')  
 
     if gd.source_file is None:
         gd.source_file = gd_filename

@@ -80,7 +80,7 @@ if __name__ == "__main__":
     '''
     ------viz source------
     '''
-    w_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I99/Source_sink/'
+    w_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I_20230601_new/Source_sink/'
 
     # ss = source_sink(run_dir)
     # ss.toPropFile(ne=5654161)

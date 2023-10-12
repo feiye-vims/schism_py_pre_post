@@ -564,6 +564,16 @@ if __name__ == "__main__":
     # # Note: do fg_hot.trnd_propogate() before writing if trnd is changed; it propogates trnd values to trnd0 and tr_el
     # fg_hot.writer(f'{fg_hot.source_dir}/hotstart.nc')
 
+    # Sample 2.4 tweaking a single variable directly
+    # my_hot = Hotstart(
+    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Runs/RUN16e/',
+    #     hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I16e/Hot/hotstart_it=51840.nc'
+    # )
+    # my_hot.tr_el.val[:, :, 0] -= 1.0
+    # my_hot.tr_nd.val[:, :, 0] -= 1.0
+    # my_hot.tr_nd0.val[:, :, 0] -= 1.0
+    # my_hot.writer(f'{my_hot.source_dir}/hotstart_no_T_adjust_it=51480.nc')
+
     # Sample 3: interpolating one hotstart.nc to another
     # hot_background = Hotstart(
     #     grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hotstart_interp/old/',  # contains hgrid.gr3 and vgrid.in
@@ -579,9 +589,10 @@ if __name__ == "__main__":
     # Sample 4: visualize hotstart
     my_hot = Hotstart(
         grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I_20230601_new/Hotstart/',  # contains hgrid.gr3 and vgrid.in
-        hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I_20230601_new/Hotstart/hotstart.nc'
+        hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I16/Hot/hotstart_it=56448.nc'
     )
     vertical_layer = -1; tracer = 0;
-    my_hot.grid.hgrid.plot(value=my_hot.tr_nd.val[:, vertical_layer, tracer], fmt=1)
+    my_hot.grid.hgrid.plot(value=my_hot.tr_nd.val[:, vertical_layer, tracer], fmt=1, clim=(0, 33), cmap='jet')
+    plt.savefig(f'{my_hot.source_dir}/tr_nd_16.png')
     plt.show()
     pass

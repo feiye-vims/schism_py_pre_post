@@ -1,4 +1,4 @@
-from schism_py_pre_post.Plot.plot_elev import plot_elev, get_hindcast_elev, get_obs_elev
+from schism_py_pre_post.Plot.plot_elev import plot_elev, get_hindcast_elev, get_obs_elev, datum_shift
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 import pandas as pd
 import json
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
     region = "Full_domain"  # "Landfall_region", "Full_domain", "Manual"
     var_str = 'MAE'
-    nday_moving_average = 0
+    nday_moving_average = 5
 
     with open(main_dict) as d:
         hurricane_dict = json.load(d)
@@ -213,6 +213,7 @@ if __name__ == "__main__":
                 elev_out_file=elev_out_file,
                 station_in_subset=station_subset,
             )
+            mod = datum_shift(mod, datum_shift_file='/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
 
             # get obs
             [obs, datums, st_info] = get_obs_elev(
@@ -241,6 +242,7 @@ if __name__ == "__main__":
                         elev_out_file=other_dict[hurricane]['elev_out_file'],
                         station_in_subset=other_subset
                     )
+                    other_mod = datum_shift(other_mod, datum_shift_file='/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
                     other_stat, _ = plot_elev(obs, other_mod, plot_start_day_str, plot_end_day_str,
                                               stations_groups[group_name],
                                               datums, st_info, None, iplot=False, nday_moving_average=nday_moving_average,
@@ -274,7 +276,11 @@ if __name__ == "__main__":
 
         # upload to ccrm drive:
         print(f"scp *stats*txt *png {cdir}/")
+
+        # pause for key press
+        input("Press Enter to continue...")
         os.system(f"scp *stats*txt *png {cdir}/")
         os.system(f"rm *stats*txt *png")
+        
+        pass
             
-

@@ -1,12 +1,36 @@
-from pylib import harmonic_analysis
+from pylib import harmonic_analysis, schism_grid
 import numpy as np
+from pylib_essentials.schism_file import read_schism_hgrid_cached
+from shapely.geometry import Polygon
+import geopandas as gpd
+from pathlib import Path
 
-elev = np.loadtxt('/sciclone/data10/feiye/vims20/work/ChesBay/RUN200p/elev.dat.more.york2_moved')
-amps = []
-for i in range(1, len(elev[0])):
-    ha = harmonic_analysis(elev[:, i], 1/24, tidal_names=['M2'])
-    amps.append(ha.amplitude[1])
+filename = Path('/sciclone/schism10/Hgrid_projects/DEMs/hgrid.dem_id.2dm')
+hg = read_schism_hgrid_cached(filename)
+nodes = np.c_[hg.x, hg.y, hg.dp]
+nodes = np.r_[nodes, np.c_[np.nan, np.nan, np.nan]]  # add a dummy node to accomodate for -1 in elnode
 
+# replace -2 with -1
+hg.elnode[hg.elnode == -2] = -1
+
+elnode_dp = nodes[:, 2][hg.elnode]
+for n in [3, 4]:  # triangle and quad
+    idx = np.argwhere(hg.i34 == n).flatten()
+    valid = np.all(elnode_dp[idx, 1:n] == elnode_dp[idx, :n-1], axis=1)  # check if all nodes have the same z
+    elnode_dp[idx[~valid], :] = -999  # set invalid elements to -999, because the DEM interpolation is node based
+dpe = elnode_dp[:, 0].astype(int)
+
+polygons = []
+for i, [i34, elnode] in enumerate(zip(hg.i34, hg.elnode)):
+    elnode = elnode[:i34]
+    element_coords = nodes[elnode, :2]
+    polygons.append(Polygon(element_coords))
+
+gdf = gpd.GeoDataFrame({'geometry': polygons, 'z': dpe})
+gdf = gdf.dissolve(by='z')
+gdf.to_file(filename.with_suffix('.shp'))
+
+# Convert coordinates to Polygons
 # %%
 import pygrib
 import copy

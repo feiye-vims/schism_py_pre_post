@@ -35,22 +35,31 @@
         "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v6/RUN13c/",
         "box": {"W": -80.5, "E": -76, "S": 32.5, "N": 36} 
     },
+    "Year2023": {
+        "name": "Year2023",
+        "plot_start_day_str": "2023-08-01 00:00:00",
+        "plot_end_day_str": "2023-08-15 00:00:00",
+        "model_start_day_str": "2023-06-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O17a/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN17a/",
+        "box": {"W": -100, "E": -60, "S": 8, "N": 48}
+    },
     "Year2018": {
         "name": "Year2018",
-        "plot_start_day_str": "2017-12-03 00:00:00",
-        "plot_end_day_str": "2017-12-20 00:00:00",
+        "plot_start_day_str": "2018-01-01 00:00:00",
+        "plot_end_day_str": "2018-11-30 00:00:00",
         "model_start_day_str": "2017-12-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O13u6/staout_1",
-        "cdir": "/webdata/html/yinglong/feiye/STOFS3D-v6/RUN13u6/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O16h/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN16h/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
     "Year2015": {
         "name": "Year2015",
         "plot_start_day_str": "2015-01-01 00:00:00",
-        "plot_end_day_str": "2016-01-01 00:00:00",
+        "plot_end_day_str": "2015-12-31 00:00:00",
         "model_start_day_str": "2014-12-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/ICOGS/RUN06g/PostP/staout_1",
-        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/ICOGS/RUN06g/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O24c/outputs//staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN24c/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
     "All":{

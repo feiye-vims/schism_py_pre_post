@@ -63,22 +63,31 @@
         "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/OPre4/staout_1",
         "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/Pre4/"
     },
+    "Year2023": {
+        "name": "Year2023",
+        "plot_start_day_str": "2023-08-01 00:00:00",
+        "plot_end_day_str": "2023-08-15 00:00:00",
+        "model_start_day_str": "2023-06-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O17/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN17/",
+        "box": {"W": -100, "E": -60, "S": 8, "N": 48}
+    },
     "Year2018": {
         "name": "Year2018",
-        "plot_start_day_str": "2017-12-03 00:00:00",
-        "plot_end_day_str": "2017-12-20 00:00:00",
+        "plot_start_day_str": "2018-01-01 00:00:00",
+        "plot_end_day_str": "2018-11-30 00:00:00",
         "model_start_day_str": "2017-12-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O13v1/staout_1",
-        "cdir": "/webdata/html/yinglong/feiye/STOFS3D-v6/RUN13v1/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O16e/outputs//staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN16e/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
     "Year2015": {
         "name": "Year2015",
-        "plot_start_day_str": "2015-04-01 00:00:00",
-        "plot_end_day_str": "2016-01-01 00:00:00",
+        "plot_start_day_str": "2015-01-01 00:00:00",
+        "plot_end_day_str": "2015-12-31 00:00:00",
         "model_start_day_str": "2014-12-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v4/Outputs/O23i/staout_1",
-        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/RUN23i/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O24/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN24/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
     "All":{

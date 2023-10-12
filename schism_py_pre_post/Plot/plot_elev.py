@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import noaa_coops as noaa
+from searvey.coops import COOPS_Query, COOPS_Station
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 from schism_py_pre_post.Shared_modules.test_modules import HYCOM
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
@@ -73,6 +74,23 @@ def get_hindcast_elev(model_start_day_str, noaa_stations=None, station_in_file=N
     model_df.columns = st_id
     return model_df
 
+def datum_shift(original_df, datum_shift_file=None):
+    # read datum_shift
+    datum_shifts_df = pd.read_csv(datum_shift_file)
+    datum_shifts_df['ID'] = datum_shifts_df['ID'].astype(str)
+
+    # set shift on each station
+    mod_shift = np.zeros((len(original_df.columns),), dtype=float)
+    for i, station_id in enumerate(original_df.columns):
+        if station_id in datum_shifts_df['ID'].values:
+            mod_shift[i] = datum_shifts_df[datum_shifts_df['ID'] == station_id]['shift'].values[0]
+    
+    # expand shift to the same shape as mod
+    mod_shift = np.tile(mod_shift, (original_df.shape[0], 1))
+    # Apply shift. The shift is from NAVD to geoid, so we need to subtract it from mod (geoid to NAVD)
+    shifted_df = original_df - mod_shift
+
+    return shifted_df
 
 def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None, station_in_file=None, i_nowcast=False):
     '''
@@ -106,8 +124,11 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
 
     return model_df
 
-
-def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_datum='NAVD', cache_folder='/sciclone/schism10/feiye/Cache/'):
+def get_obs_elev(
+    retrieve_method='noaa_coops',  # 'searvey' or 'noaa_coops'
+    plot_start_day_str=None, plot_end_day_str=None, noaa_stations=None,
+    default_datum='NAVD', cache_folder='/sciclone/schism10/feiye/Cache/'
+):
 
     noaa_df_list = []
     datum_list = []
@@ -122,16 +143,39 @@ def get_obs_elev(plot_start_day_str, plot_end_day_str, noaa_stations, default_da
                 print(f'Existing obs data read from {cache_filename}')
         else:
             try:
-                station_data = noaa.Station(st)
+                if retrieve_method == 'noaa_coops':
+                    station_data = noaa.Station(st)
+                elif retrieve_method == 'searvey': # searvey, convert into the same format as noaa_coops
+                    station_data = COOPS_Station(int(st))
+                    lon_lat = np.squeeze(np.array(station_data.location.coords))
+                    setattr(station_data, 'lat_lon', {'lat': lon_lat[-1], 'lon': lon_lat[0]})
+                else:
+                    raise Exception(f'retrieve_method {retrieve_method} not supported')
             except:  # JSONDecodeError
                 raise Exception("Got JSONDecodeError, possible unstable network from COOPS server")
 
             try:
-                this_noaa_df = station_data.get_data(
-                    begin_date=plot_start_day_str.replace("-", "")[:-3],
-                    end_date=plot_end_day_str.replace("-", "")[:-3],
-                    product="water_level", datum=default_datum, units="metric", time_zone="gmt", interval='h'
-                )
+                if retrieve_method == 'noaa_coops':
+                    this_noaa_df = station_data.get_data(
+                        begin_date=plot_start_day_str.replace("-", "")[:-3],
+                        end_date=plot_end_day_str.replace("-", "")[:-3],
+                        product="water_level", datum=default_datum, units="metric", time_zone="gmt", interval='h'
+                    )
+                elif retrieve_method == 'searvey':
+                    this_noaa_df = COOPS_Query(
+                        station=st, start_date=plot_start_day_str, end_date=plot_end_day_str,
+                        datum=default_datum, product='water_level',
+                        units='metric', time_zone='gmt', interval='h'
+                    ).data
+                    # convert into the same format as noaa_coops
+                    this_noaa_df.reset_index(inplace=True)
+                    this_noaa_df = this_noaa_df.rename(index='date_time')
+                    substitute_col = {'t': 'date_time', 'v': 'water_level', 's': 'sigma', 'f': 'flags', 'q': 'QC'}
+                    this_noaa_df = this_noaa_df.rename(columns=substitute_col)
+                    this_noaa_df.set_index('date_time', inplace=True)
+                else:
+                    raise Exception(f'retrieve_method {retrieve_method} not supported')
+
                 this_datum = default_datum
             except Exception:
                 try:
@@ -275,16 +319,16 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
 def plot_operation():
     os.system("rm stat*.txt *.png")
     # time
-    plot_start_day_str = '2023-02-04 00:00:00'
-    plot_end_day_str = '2023-03-12 23:00:00'
+    plot_start_day_str = '2023-08-20 00:00:00'
+    plot_end_day_str = '2023-08-28 23:00:00'
 
-    forecast_end_day_str = '2023-03-12 00:00:00'  # corresponding to folder name
+    forecast_end_day_str = '2023-08-28 00:00:00'  # corresponding to folder name
     fcst_folder = '/sciclone/schism10/hyu05/NOAA_NWM/oper_3D/fcst/'  # '/sciclone/schism10/feiye/STOFS3D-v4/fcst/'
-    remote_dir = '$cdir/webdata/html/yinglong/feiye/ICOGS/STOFS-3D_fcst/2023_02_04/'  # '/sciclone/schism10/feiye/STOFS3D-v4/fcst/'
+    # remote_dir = '$cdir/webdata/html/yinglong/feiye/ICOGS/STOFS-3D_fcst/2023_02_04/'
+    remote_dir = '/sciclone/schism10/feiye/STOFS3D-v6/fcst/PostProcessing'
 
     # station presets>>
-    # stations, ICOGS v2 and v3>
-    station_bp_file = '/sciclone/schism10/feiye/Coastal_Act/RUN11e/station.in'
+    station_bp_file = '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/station.in'
     noaa_stations_all = Bpfile(station_bp_file, cols=5).st_id
     noaa_stations_groups = {
         'Florida': noaa_stations_all[:10],
@@ -308,6 +352,7 @@ def plot_operation():
         'GoMX_inland': 'NAVD',
         'Puerto_Rico': 'MSL'
     }
+
 
     # # test>
     # noaa_stations_groups = {
@@ -360,6 +405,21 @@ def plot_operation():
             station_in_file=station_bp_file,
             i_nowcast=False
         )
+
+        # datum_shift
+        datum_shifts_df = pd.read_csv('/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
+        datum_shifts_df['ID'] = datum_shifts_df['ID'].astype(str)
+
+        # add shift
+        mod_shift = np.zeros((len(mod.columns),), dtype=float)
+        for i, station_id in enumerate(mod.columns):
+            if station_id in datum_shifts_df['ID'].values:
+                mod_shift[i] = datum_shifts_df[datum_shifts_df['ID'] == station_id]['shift'].values[0]
+        
+        # expand shift to the same shape as mod
+        mod_shift = np.tile(mod_shift, (mod.shape[0], 1))
+        # Apply shift. The shift is from NAVD to geoid, so we need to subtract it from mod (geoid to NAVD)
+        mod = mod - mod_shift
 
         # get obs
         [obs, datums, st_info] = get_obs_elev(

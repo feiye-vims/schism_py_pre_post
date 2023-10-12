@@ -83,7 +83,7 @@ class Prop(SourceSinkIn):  # temporary, to be backward compatible with some olde
 
 class source_sink():
     """class for handling all source/sink inputs"""
-    def __init__(self, source_dir=None, start_time_str='2000-01-01 00:00:00', timedeltas=[0.0, 86400.0*365*10],
+    def __init__(self, source_dir=None, start_time_str='2000-01-01 00:00:00', timedeltas=[0.0, 86400.0*365*100],
                  source_eles=[], sink_eles=[], vsource_data=None, vsink_data=None):
 
         dummy_source_sink = TimeHistory(
