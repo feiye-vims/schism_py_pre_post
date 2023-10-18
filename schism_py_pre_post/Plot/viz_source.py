@@ -80,11 +80,11 @@ if __name__ == "__main__":
     '''
     ------viz source------
     '''
-    w_dir = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I_20230601_new/Source_sink/'
+    w_dir = '/sciclone/scr10/feiye/original/Source_sink/'
 
     # ss = source_sink(run_dir)
     # ss.toPropFile(ne=5654161)
 
-    [max_val, avg_source_sink, fig] = viz_source(w_dir, '2022-05-01 00:00:00', i_show_plot=-1, scale=1.e3)
+    [max_val, avg_source_sink, fig] = viz_source(w_dir, '2022-05-01 00:00:00', i_show_plot=1, scale=1.e3)
 
     pass
