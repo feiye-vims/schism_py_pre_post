@@ -36,10 +36,10 @@ def GetCBP(stations=None, sample_time=None, varname='SALINITY'):
     search_window = [x.strftime(format='%m-%d-%Y') for x in search_window]
 
     # get station dictionary
-    stations_info = pd.read_json('http://data.chesapeakebay.net/api.json/Station', dtype=str)
+    stations_info = pd.read_json('http://datahub.chesapeakebay.net/api.json/Station', dtype=str)
     station_ids = [stations_info.loc[stations_info['StationName'] == station]['StationId'].values[0]
                    for station in stations]
-    url = 'http://data.chesapeakebay.net/api.JSON/WaterQuality/WaterQuality/' + \
+    url = 'http://datahub.chesapeakebay.net/api.JSON/WaterQuality/WaterQuality/' + \
           search_window[0] + '/' + search_window[1] + \
           '/0,1/2,4,6/12,13,15,35,36,2,3,7,33,34,23,24/' + \
           'Station/' + ','.join(station_ids) + f'/{var_id}'
@@ -73,7 +73,7 @@ def get_cbp_obs_for_stofs3d(outdir=None, sample_time='2015-09-18', varname=['sal
     Download from usgs using climata via api
     - List of param ids:
     - sample api url:
-      http://data.chesapeakebay.net/api.JSON/WaterQuality/WaterQuality/
+      http://datahub.chesapeakebay.net/api.JSON/WaterQuality/WaterQuality/
       8-18-2016/8-18-2021/0,1/2,4,6/12,13,15,35,36,2,3,7,33,34,23,24/Station/1150/83,123
     '''
 

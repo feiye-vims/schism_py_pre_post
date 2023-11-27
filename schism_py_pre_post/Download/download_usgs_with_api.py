@@ -245,10 +245,20 @@ def convert_to_ObsData(total_data:list, cache_fname=''):
 
 if __name__ == "__main__":
 
+    # Sample 0: download a list of stations if you know their ids
+    total_data = download_stations(
+        param_id=usgs_var_dict['gauge height']['id'],
+        station_ids=['02323592','02324170'],
+        datelist=pd.date_range(start='2023-08-28', end='2023-09-02')
+    )
+    plt.plot(total_data[0].df['date'], total_data[0].df['value'])
+    plt.plot(total_data[1].df['date'], total_data[1].df['value'])
+
+    '''
     # Sample 1: Download discharge data for all stations in selected states
     # ------------------------- inputs --------------------------- 
-    states = ['NJ', 'CT', 'NY']
-    download_var = 'gauge height'  # check the dictionary at the beginning of this script
+    states = ['VA'] # ['NJ', 'CT', 'NY']
+    download_var = 'temperature'  # check the dictionary at the beginning of this script
     outdir = '/sciclone/schism10/feiye/Test/'
     cache_fname = f"{outdir}/{'_'.join(states)}.pkl"
     start_date_str = '2023-01-01'
@@ -281,7 +291,6 @@ if __name__ == "__main__":
     convert_to_ObsData(total_data=total_data, cache_fname=cache_fname)
     pass
 
-    '''
     # Sample 2: STOFS3D
     get_usgs_obs_for_stofs3d(vars=['gauge height'], outdir='/sciclone/schism10/feiye/STOFS3D-v4/Data/', start_date_str='2021-03-01', end_date_str='2021-03-20')
 

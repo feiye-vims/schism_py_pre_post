@@ -183,7 +183,21 @@ if __name__ == "__main__":
     nwm_data_dir = '/sciclone/schism10/whuang07/schism20/NWM_v2.1/'
     # usgs_data_fname = ''
     usgs_data_fname = '/sciclone/schism10/feiye/Test/NJ_CT_NY.pkl'
-    output_dir = '/sciclone/schism10/feiye/ICOGS/RUN06k/USGS_NWM/'
+    output_dir = '/sciclone/schism10/feiye/ICOGS/RUN06k/USGS_NWM3/'
+
+    # my_obs = ObsData(usgs_data_fname, from_raw_data=False)  # testing pickle
+    # with open(f'{run_dir}/ele_fid_dict') as json_file:
+    #     mysrc_nwm_fid = json.load(json_file)
+    
+    # with open(f'/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/Scripts/RUN24/NWM/sources.json') as json_file:
+    #     mysrc_nwm_fid = json.load(json_file)    
+    # n = 0
+    # for key, value in mysrc_nwm_fid.items():
+    #     if len(value) > 1:
+    #         n += 1
+
+    #     mysrc_nwm_fid[key] = int(value[0])
+    
 
     # -----------------------------------------------------------------------------------
     # ------Read NWM shapefile------
@@ -307,16 +321,19 @@ if __name__ == "__main__":
     # -----------------------------------------------------------------------------------
     # plot
     # -----------------------------------------------------------------------------------
+    linestyle1 = ['-b', '-r', '-g', '-c', '-m', '-y', '-k']
+    linestyle2 = ['--b', '--r', '--g', '--c', '--m', '--y', '--k']
     for i, my_source in enumerate(my_sources):
 
         if len(my_source.usgs_st) == 0:  # no usgs to correct nwm
             print(f'warning: source {i}_{my_source.hgrid_ie} does not have nearby usgs obs')
             continue
 
+        plt.figure()
+
         # original vsource
         df = my_sources[i].df[start_time_str:end_time_str]  # .resample("D").mean()
         nrec = len(df.index)
-        plt.plot(df.index, df['Data'], label="original vsource")
 
         # NWM, USGS, adjustment
         # list usgs stations and nwm segs associated with my_source
@@ -352,15 +369,17 @@ if __name__ == "__main__":
             ]
         ).T
         this_vsource_nwm_array = nwm_df[mysrc_nwm_fid].to_numpy()
+
+        plt.plot(df.index, df['Data'], '-k', label="original vsource")
         for k, id in enumerate(mysrc_usgs_id):
-            plt.plot(df.index, this_vs_usgs_array[:, k], label=f'usgs {id}')
-            plt.plot(df.index, this_vsource_nwm_array[:, k], label=f'NWM near usgs {id}')
+            plt.plot(df.index, this_vs_usgs_array[:, k], linestyle1[k], label=f'usgs {id}')
+            plt.plot(df.index, this_vsource_nwm_array[:, k], linestyle2[k], label=f'NWM near usgs {id}')
 
         # take the diff (including all relavant usgs-nwm pairs found)
         diff_usgs_nwm = this_vs_usgs_array - this_vsource_nwm_array
         # use maximum to prevent negative sources
         adjusted_source = np.maximum(df['Data'].to_numpy() + np.sum(diff_usgs_nwm, axis=1), 0.0)
-        plt.plot(df.index, adjusted_source, label="vsource adjusted by USGS-NWM-diff")
+        plt.plot(df.index, adjusted_source, '--k', label="vsource adjusted by USGS-NWM-diff")
 
         plt.legend()
         # plt.show()
@@ -373,3 +392,5 @@ if __name__ == "__main__":
 
     my_th.df_propagate()
     my_th.writer(f'{output_dir}/adjusted_vsource.th')
+
+   

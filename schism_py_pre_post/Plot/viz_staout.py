@@ -5,20 +5,23 @@ from pathlib import Path
 
 runs = [
     '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R00a',
-    '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R00b',
+    '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R01',
+    #'/sciclone/schism10/feiye/STOFS3D-v7/Runs/R02',
 ]
-line_styles = ['-', '--']
+line_styles = ['-', '--', '.-', '-.', ':', '-.', '--']
 line_colors = ['r', 'b', 'g', 'k', 'c', 'm', 'y']
+
+fig, ax = plt.subplots()
 
 for i, [run, line_style] in enumerate(zip(runs, line_styles)):
     fname = f'{run}/outputs/staout_1'
     station_in = f'{run}/station.in'
     stations = Bpfile(station_in, cols=5)
     ts = TimeHistory.from_file(fname, columns=stations.st_id, start_time_str="2018-08-01 00:00:00")
-    if i == 0:
-        ax = ts.df.iloc[:,::4].plot(color=line_colors, style=line_style, label=Path(run).stem)
-    else:
-        ts.df.iloc[:,::4].plot(color=line_colors, style=line_style, ax=ax, label=Path(run).stem)
+    ts.df.iloc[:,:].plot(color=line_colors, style=line_style, ax=ax, label=Path(run).stem)
 
-pass
+def onpick2(event):
+    print('onpick2 line:', event.pickx, event.picky)
+fig.canvas.mpl_connect('pick_event', onpick2)
+
 plt.show()
