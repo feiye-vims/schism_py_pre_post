@@ -3,3 +3,7 @@ Python tools for pre-/post-processing SCHISM runs
 
 Installation:
 pip install git+https://github.com/feiye-vims/schism_py_pre_post.git
+
+Upgrade:
+pip install --upgrade git+https://github.com/feiye-vims/schism_py_pre_post.git
+
