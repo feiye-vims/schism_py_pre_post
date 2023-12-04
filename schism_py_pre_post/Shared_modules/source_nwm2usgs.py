@@ -162,7 +162,7 @@ def find_usgs_along_nwm(iupstream=True, starting_seg_id=None, vsource=None, tota
     if (total_seg_length > 30e3):  # 30 km
         return
 
-    if nwm_shp.loc[starting_seg_id].gages != '':  # gage found
+    if nwm_shp.loc[starting_seg_id].gages is not None and nwm_shp.loc[starting_seg_id].gages != '':  # gage found
         st = usgs_st(st_id=nwm_shp.loc[starting_seg_id].gages, nearby_nwm_fid=starting_seg_id)
         vsource.usgs_st.append(st)
         return
@@ -428,7 +428,7 @@ def source_nwm2usgs(
 
 
 if __name__ == "__main__":
-    # sample usage
+    # sample usage (the final product is "adjusted_vsource.th" in the output_dir):
     source_nwm2usgs(
         start_time_str="2017-12-01 00:00:00",
         f_shapefile="/sciclone/schism10/feiye/schism20/REPO/NWM/Shapefiles/ecgc/ecgc.shp",
