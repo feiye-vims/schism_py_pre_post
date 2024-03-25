@@ -6,6 +6,7 @@ import numpy as np
 import os
 from mpl_toolkits.basemap import Basemap  # mamba install basemap
 import matplotlib.pyplot as plt
+from glob import glob
 
 
 def pacific_stations(station_bp_file=None):
@@ -27,6 +28,34 @@ def pacific_stations(station_bp_file=None):
         'West_Coast_1': 'NAVD',
         'West_Coast_2': 'NAVD',
         'West_Coast_3': 'NAVD',
+    }
+    return [stations_groups, default_datums]
+
+sample_stations = {'Sample': ['8720030', '8423898', '8419317', '8410140']}
+sample_datum = {'Sample': 'NAVD'}
+
+
+def ecgc_stations_subset(station_bp_file=None):
+    # --------------define stations----------------------
+    # stations, ICOGS v2 and v3, coastal act
+    if station_bp_file is None:
+        station_bp_file = '/sciclone/schism10/feiye/Coastal_Act/Station_in/15a_station.in'
+
+    noaa_stations_all = Bpfile(station_bp_file, cols=5).st_id
+
+    stations_groups = {
+        'Florida': noaa_stations_all[:10], 'GoME': noaa_stations_all[29:39],
+        # 'Atlantic': noaa_stations_all[10:29], 'Atlantic_inland1': noaa_stations_all[80:100], 'Atlantic_inland2': noaa_stations_all[100:120],
+        'GoMX_inland': noaa_stations_all[120:150], 'GoMX_east': noaa_stations_all[60:80], 'GoMX_west': noaa_stations_all[41:60],
+        'Puerto_Rico': noaa_stations_all[150:164] + noaa_stations_all[39:41]  # last 2 are bermuda
+    }
+    default_datums = {
+        'Florida': 'NAVD',
+        'Atlantic': 'NAVD',
+        'GoME': 'NAVD', 'GoMX_west': 'NAVD',
+        'GoMX_east': 'NAVD', 'Atlantic_inland1': 'NAVD',
+        'Atlantic_inland2': 'NAVD', 'GoMX_inland': 'NAVD',
+        'Puerto_Rico': 'MSL'
     }
     return [stations_groups, default_datums]
 
@@ -118,44 +147,65 @@ def stats_scatter(stats=None, stats_file=None, var_str=None,
     plt.close('all')
 
 def write_stat(stats, fname):
-    rearranged_cols = ['station_lon', 'station_lat', 'station_id', 'RMSE', 'MAE',
-                    'Bias', 'CC', 'ubRMSE', 'Max_Obs', 'Max_Mod', 'station_name']
+    rearranged_cols = ['station_name', 'station_id', 'station_lon', 'station_lat', 'RMSE', 'MAE',
+                    'Bias', 'CC', 'ubRMSE', 'Max_Obs', 'Max_Mod']
     stats = stats[rearranged_cols]
-    stats.loc['mean'] = stats.iloc[:, :-1].mean()
-    stats.at['mean', 'station_id'] = 'all'
-    stats.at['mean', 'station_name'] = 'all'
+    means = stats.iloc[:, 2:].mean(axis=0)
+    new_row = pd.Series(['Mean'] * len(stats.columns), index=stats.columns)
+    new_row[2:] = means.values
+    stats = pd.concat([pd.DataFrame([new_row]), stats], ignore_index=True)
 
-    stats.to_csv(fname, encoding='utf-8', index=False, na_rep='-9999')
+    # stats.to_csv(fname, encoding='utf-8', index=False, na_rep='-9999', float_format='%.4f')
+    pd.options.display.float_format = '{:,.4f}'.format
+    formatted_string = stats.to_string(index=False)
+    with open(fname, 'w') as f:
+        f.write(formatted_string)
 
+    return stats.iloc[:1, :].to_string(index=False).split('\n')  # return the first row (var names) and second row (values)
 
 if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    hurricanes = ['Year2018']
-    main_dict = '/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
+    hurricanes = ['Carro']
 
-    region = "Full_domain"  # "Landfall_region", "Full_domain", "Manual"
-    var_str = 'MAE'
-    nday_moving_average = 5
+    region = "FromDict"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
 
+    # neglect stations, only for stats
+    # neglect_stations =['8551910', '8548989', '8545240', '8539094', '8720226', '8652857', '8447435', '8575512', '8738043', '8729108']
+    # neglect_stations = [
+    #     '8720030',  # 
+    #     '8767816',  # Lake Charles
+    #     '8423898', '8419317', '8410140'  # GoME
+    # ]
+    neglect_stations = []
+
+    var_str = 'MAE'  # for the scatter plot
+    nday_moving_average = 0  # 2-day moving average
+
+    main_dict = '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
     with open(main_dict) as d:
         hurricane_dict = json.load(d)
     station_bp_file = hurricane_dict['All']['station_bp_file']
-    station_subset = range(164)
+    with open(station_bp_file) as f:
+        f.readline()
+        n_station = int(f.readline().split()[0])
+    station_subset = range(n_station)
 
-    other_dicts_files = ['/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
+    other_dicts_files = []  # ['/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
     other_line_styles = ['g']
-    other_shifts = [0]
-    other_subsets = [range(164)]
+    other_subsets = [range(n_station)]
+    other_shifts = [-0.0]  # uniform shift for all stations and for each of the other runs
 
     datum = ''  # '' (use predefined ones in ecgc_stations), 'NAVD', 'MSL'
     outfilename_suffix = 'Mostly_NAVD'  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
 
-    with open('/sciclone/data10/feiye/schism_py_pre_post_hard_copy/schism_py_pre_post/Plot/coastal_act_stats_plot_symbols.json') as d:
+    with open('/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/coastal_act_stats_plot_symbols.json') as d:
         plot_symbol_dict = json.load(d)
 
     cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
+
+    subplots_shape = [10, None]  # n per col
     # --end inputs-------------------------------------------------------------------------------
 
     for hurricane in hurricanes:
@@ -170,9 +220,17 @@ if __name__ == "__main__":
             box = hurricane_dict['All']['box']
             stations_groups, default_datums = ecgc_stations(station_bp_file)
             # stations_groups, default_datums = pacific_stations(station_bp_file)
-        elif region == "Manual":
+        elif region == "FromDict":
             stations_groups = hurricane_dict[hurricane]['stations_group']
             default_datums = hurricane_dict[hurricane]['default_datums']
+            try:
+                station_subset = hurricane_dict[hurricane]['station_subset']
+            except KeyError:
+                print('No station_subset in the dict, assuming all stations in station.in are used')
+            
+        elif region == "Sample":
+            stations_groups = sample_stations
+            default_datums = sample_datum
         else:
             box = hurricane_dict[hurricane]['box']
             stations_groups, default_datums = subset_stations_in_box(box, station_bp_file, group_name=region, default_datum=datum)
@@ -200,8 +258,14 @@ if __name__ == "__main__":
 
         final_datums = []
         stats = pd.DataFrame()
-        for i_group, group_name in enumerate(stations_groups):
+        group_stats = ''
+        other_group_stats = ['' for _ in other_runids]
+        for iter_groups, [group_name, stations] in enumerate(stations_groups.items()):
+
             filename_base = f'{hurricane}_{group_name}_{default_datums[group_name]}'
+
+            # stations = [station for station in stations if station not in neglect_stations]
+
             # if group_name != 'Puerto_Rico':
             #     continue
             print(f'\n\n\n processing {group_name} for {hurricane}')
@@ -219,19 +283,21 @@ if __name__ == "__main__":
             [obs, datums, st_info] = get_obs_elev(
                 plot_start_day_str=plot_start_day_str,
                 plot_end_day_str=plot_end_day_str,
-                noaa_stations=stations_groups[group_name],
+                noaa_stations=stations,
                 default_datum=default_datums[group_name],
                 cache_folder=cache_folder
             )
             final_datums += datums
 
             # plot time series
-            stat, fig_ax = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str,
-                                     stations_groups[group_name],
-                                     datums, st_info, 'ts_' + filename_base, iplot=False, subplots_shape=(None, None),
+            stat, fig_ax = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str, stations,
+                                     datums, st_info, 'ts_' + filename_base, iplot=False, subplots_shape=subplots_shape,
                                      nday_moving_average=nday_moving_average, label_strs=['obs', runid])
-            stats = stats.append(stat)
-            write_stat(stat, f'stats_{runid}_{group_name}.txt')
+            stats = pd.concat([stats, stat], axis=0, ignore_index=True)
+            mean_stats_string = write_stat(stat, f'stats_{runid}_{group_name}.txt')
+            if iter_groups == 0:  # add header before the first group
+                group_stats += ''.ljust(27) + mean_stats_string[0] + "\n"
+            group_stats += f'{group_name.ljust(25)}: {mean_stats_string[1]}\n'
 
             if len(other_dicts) > 0:
                 for i, [other_runid, other_dict, other_line_style, other_shift, other_subset] in enumerate(zip(other_runids, other_dicts, other_line_styles, other_shifts, other_subsets)):
@@ -245,19 +311,33 @@ if __name__ == "__main__":
                     other_mod = datum_shift(other_mod, datum_shift_file='/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
                     other_stat, _ = plot_elev(obs, other_mod, plot_start_day_str, plot_end_day_str,
                                               stations_groups[group_name],
-                                              datums, st_info, None, iplot=False, nday_moving_average=nday_moving_average,
+                                              datums, st_info, None, iplot=False, nday_moving_average=nday_moving_average, subplots_shape=subplots_shape,
                                               fig_ax=fig_ax, line_styles=[None, other_line_style], shift=other_shift, label_strs=['obs', other_runid])
-                    other_runs_stats[i] = other_runs_stats[i].append(other_stat)
-                    write_stat(other_stat, f'stats_{other_runid}_{group_name}.txt')
+                    other_runs_stats[i] = pd.concat([other_runs_stats[i], other_stat], axis=0, ignore_index=True)
+
+                    mean_stats_string = write_stat(other_stat, f'stats_{other_runid}_{group_name}.txt')
+                    if iter_groups == 0:  # add header before the first group
+                        other_group_stats[i] +=  ''.ljust(25) + mean_stats_string[0] + "\n"
+                    other_group_stats[i] += f'{group_name.ljust(25)}: {mean_stats_string[1]}\n'
+
                     fig_ax[0].savefig(f'compare_ts_{filename_base}.png')
 
         # ---------------------------------------------------------------------------------
         filename_base = f'{hurricane}_{region}_{outfilename_suffix}'
         stats_scatter(stats=stats, var_str=var_str, region=region, plot_symbol_dict=plot_symbol_dict, filename=filename_base)
 
-        write_stat(stats, f'stats_{runid}_{filename_base}.txt')
-        for other_runid, other_run_stats in zip(other_runids, other_runs_stats):
-            write_stat(other_run_stats, f'stats_{other_runid}_{filename_base}.txt')
+        # mask neglected stations
+        mask = ~stats['station_id'].isin(neglect_stations)
+
+        mean_stats_string = write_stat(stats[mask], f'stats_{runid}_{filename_base}.txt')
+        group_stats += "Overall".ljust(25) + ":" + mean_stats_string[1]
+        for i, [other_runid, other_run_stats] in enumerate(zip(other_runids, other_runs_stats)):
+            mean_stats_string = write_stat(other_run_stats[mask], f'stats_{other_runid}_{filename_base}.txt')
+            other_group_stats[i] += "Overall".ljust(25) + ":" + mean_stats_string[1]
+
+        for  this_run_id, stats_string in zip([runid] + other_runids, [group_stats] + other_group_stats):
+            with open(f'mean_stats_{this_run_id}_{filename_base}.txt', 'w') as f:
+                f.write(stats_string)
         
         overall_stats_datum_info_texts = [
             f"Stations with NAVD datum: {sum(np.array(final_datums)=='NAVD')}",
@@ -274,11 +354,10 @@ if __name__ == "__main__":
         
         # ---------------------------------------------------------------------------------
 
-        # upload to ccrm drive:
-        print(f"scp *stats*txt *png {cdir}/")
-
         # pause for key press
         input("Press Enter to continue...")
+
+        # upload to ccrm drive:
         os.system(f"scp *stats*txt *png {cdir}/")
         os.system(f"rm *stats*txt *png")
         

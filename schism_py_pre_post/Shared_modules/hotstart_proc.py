@@ -575,24 +575,24 @@ if __name__ == "__main__":
     # my_hot.writer(f'{my_hot.source_dir}/hotstart_no_T_adjust_it=51480.nc')
 
     # Sample 3: interpolating one hotstart.nc to another
-    # hot_background = Hotstart(
-    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hotstart_interp/old/',  # contains hgrid.gr3 and vgrid.in
-    #     hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hotstart_interp/old/hotstart.nc'
-    # )  # create a Hotstart instance with existing values
-    # my_hot = Hotstart(
-    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I13v/Hotstart_interp/',
-    #     ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
-    # )  # create a Hotstart instance with empty values
-    # my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
-    # my_hot.writer(f'{my_hot.source_dir}/interp_hotstart.nc')
+    hot_background = Hotstart(
+        grid_info='/sciclone/scr10/feiye/v6_hotstart/',  # contains hgrid.gr3 and vgrid.in
+        hot_file='/sciclone/scr10/feiye/v6_hotstart/hotstart_it=3456.nc'
+    )  # create a Hotstart instance with existing values
+    my_hot = Hotstart(
+        grid_info='/sciclone/scr10/feiye/v7_hotstart/',
+        ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
+    )  # create a Hotstart instance with empty values
+    my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
+    my_hot.writer(f'{my_hot.source_dir}/hotstart_it=3456.nc')
 
     # Sample 4: visualize hotstart
-    my_hot = Hotstart(
-        grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I_20230601_new/Hotstart/',  # contains hgrid.gr3 and vgrid.in
-        hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I16/Hot/hotstart_it=56448.nc'
-    )
-    vertical_layer = -1; tracer = 0;
-    my_hot.grid.hgrid.plot(value=my_hot.tr_nd.val[:, vertical_layer, tracer], fmt=1, clim=(0, 33), cmap='jet')
-    plt.savefig(f'{my_hot.source_dir}/tr_nd_16.png')
-    plt.show()
+    # my_hot = Hotstart(
+    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I_20230601_new/Hotstart/',  # contains hgrid.gr3 and vgrid.in
+    #     hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I16/Hot/hotstart_it=56448.nc'
+    # )
+    # vertical_layer = -1; tracer = 0;
+    # my_hot.grid.hgrid.plot(value=my_hot.tr_nd.val[:, vertical_layer, tracer], fmt=1, clim=(0, 33), cmap='jet')
+    # plt.savefig(f'{my_hot.source_dir}/tr_nd_16.png')
+    # plt.show()
     pass

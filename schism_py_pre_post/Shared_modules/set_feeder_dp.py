@@ -8,6 +8,7 @@ import numpy as np
 from scipy import spatial
 import pickle
 import copy
+from pylib_essentials.schism_file import sms2grd
 
 
 def nearest_neighbour(points_a, points_b):
@@ -19,24 +20,18 @@ def dist(points_group_A, points_group_B):
     points_B = np.squeeze(points_group_B.view(np.complex128))
     return np.absolute(points_A-points_B)
 
-def set_feeder_dp(feeder_info_dir='', new_grid_dir=''):
+def set_feeder_dp(feeder_info_dir='', hgrid_obj=None, hgrid_obj_no_feeder=None):
     # Read feeder channel info
     with open(f'{feeder_info_dir}/feeder.pkl', 'rb') as file:
         [feeder_l2g, feeder_points, feeder_heads, feeder_bases] = pickle.load(file)
 
-    # get old hgrid (without feeders)
-    old_gd = read_schism_hgrid_cached('/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/no_feeder/hgrid.ll', overwrite_cache=False)
-
-    # get new hgrid (with feeders)
-    gd = read_schism_hgrid_cached(f'{new_grid_dir}/hgrid.ll', overwrite_cache=False)
-
     # pair feeder channel points to grid points
-    f2g, _ = nearest_neighbour(feeder_points, np.c_[gd.x, gd.y])
+    f2g, _ = nearest_neighbour(feeder_points, np.c_[hgrid_obj.x, hgrid_obj.y])
     # pair feeder channel bases to grid points
-    f2g_base, _ = nearest_neighbour(feeder_bases[:, :2], np.c_[gd.x, gd.y])
+    f2g_base, _ = nearest_neighbour(feeder_bases[:, :2], np.c_[hgrid_obj.x, hgrid_obj.y])
 
     # find outside grid points
-    feeder_in_grid = old_gd.inside_grid(feeder_points).astype(bool)
+    feeder_in_grid = hgrid_obj_no_feeder.inside_grid(feeder_points).astype(bool)
 
     for i, id in enumerate(feeder_l2g):
         gd_points_in_feeder = f2g[id]
@@ -44,19 +39,32 @@ def set_feeder_dp(feeder_info_dir='', new_grid_dir=''):
         gd_points_in_external_feeder = gd_points_in_feeder[~gd_points_in_feeder_in_grid]
 
         # Option 1, use min depth (highest z) 
-        # gd.dp[gd_points_in_external_feeder] = np.min(gd.dp[gd_points_in_feeder])
+        # hgrid_obj.dp[gd_points_in_external_feeder] = np.min(hgrid_obj.dp[gd_points_in_feeder])
 
         # Option 2, use the depth of feeder bases (near the interface between land boundary and feeder channel)
         base_point_in_grid = f2g_base[i]
-        gd.dp[gd_points_in_external_feeder] = gd.dp[base_point_in_grid]
+        hgrid_obj.dp[gd_points_in_external_feeder] = hgrid_obj.dp[base_point_in_grid]
     
-    return gd
+    return hgrid_obj
 
 if __name__ == "__main__":
-    new_grid_dir='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I23m/Hgrid_pre_proc/hgrid.ll'
+    # sample usage
+    wdir ='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I10/SetFeederDp/'
+
+    # the current grid
+    gd0 = read_schism_hgrid_cached(f'{wdir}/hgrid.before_feeder_dp.ll', overwrite_cache=False)
+    # gd.save(f'{wdir}/hgrid.copy.ll', fmt=1)
+
+    # a grid without feeder is needed to identify which feeder points are outside and should be deepened
+    # Only the boundary matters, the interior of the grid doesn't matter,
+    # so if you don't have a grid without feeders, you can just generate a simplified grid with the lbnd_ocean map
+    gd_no_feeder = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v19.3/no_feeders.2dm')
+    gd_no_feeder.proj(prj0='esri:102008', prj1='epsg:4326')
+
     gd = set_feeder_dp(
-        feeder_info_dir='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/v14/Parallel/SMS_proj/feeder/',
-        new_grid_dir=new_grid_dir
+        feeder_info_dir='/sciclone/schism10/Hgrid_projects/STOFS3D-v7/v19.2/Feeder/',
+        hgrid_obj=gd0, hgrid_obj_no_feeder=gd_no_feeder
     )
-    os.system(f'mv {new_grid_dir}/hgrid.ll {new_grid_dir}/hgrid.ll_before_feeder_dp')
-    gd.save(f'{new_grid_dir}/hgrid.ll')
+    dp_diff = gd.dp - gd0.dp
+    print(f'min deepening: {min(dp_diff)}; max deepening: {max(dp_diff)} \n')
+    gd.save(f'{wdir}/hgrid.ll', fmt=1)

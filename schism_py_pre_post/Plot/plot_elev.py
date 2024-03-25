@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import noaa_coops as noaa
+import noaa_coops
 from searvey.coops import COOPS_Query, COOPS_Station
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 from schism_py_pre_post.Shared_modules.test_modules import HYCOM
@@ -8,12 +8,14 @@ import pandas as pd
 from datetime import timedelta
 from datetime import datetime
 from schism_py_pre_post.Shared_modules.obs_mod_comp import obs_mod_comp
+from get_elev import get_timeseries_from_station_json
 import numpy as np
 from scipy.interpolate import griddata  # , interp2d
 import math
 import os
 import glob
 import pickle
+import json
 
 
 def get_hycom_elev(noaa_stations=None, station_in_file=None, hycom_file=None):
@@ -60,18 +62,22 @@ def get_hycom_elev(noaa_stations=None, station_in_file=None, hycom_file=None):
 
 def get_hindcast_elev(model_start_day_str, noaa_stations=None, station_in_file=None, elev_out_file=None, sec_per_time_unit=1, station_in_subset=None):
     '''
-    if noaa_stations = None, then read stations from station.in
+    Get model time series at noaa_stations,
+    either from specified ids or from station_in_file
     '''
-    st_id = Bpfile(station_in_file, cols=5).make_dataframe().columns
+    if noaa_stations is not None:
+        pass
+    else:
+        st_id = Bpfile(station_in_file, cols=5).make_dataframe().columns
 
-    my_th = TimeHistory(elev_out_file, model_start_day_str, -9999, sec_per_time_unit=sec_per_time_unit)
+        my_th = TimeHistory(elev_out_file, model_start_day_str, -9999, sec_per_time_unit=sec_per_time_unit)
 
-    if station_in_subset is not None:
-        my_th = my_th.export_subset(station_idx=station_in_subset)
-    
-    model_df = my_th.df.set_index('datetime')
+        if station_in_subset is not None:
+            my_th = my_th.export_subset(station_idx=station_in_subset)
+        
+        model_df = my_th.df.set_index('datetime')
 
-    model_df.columns = st_id
+        model_df.columns = st_id
     return model_df
 
 def datum_shift(original_df, datum_shift_file=None):
@@ -137,14 +143,20 @@ def get_obs_elev(
         print(f'Processing Station {i+1} of {len(noaa_stations)}: {st}')
 
         cache_filename = f"{cache_folder}/COOPS_{plot_start_day_str.replace(' ','_')}_{plot_end_day_str.replace(' ','_')}_{st}_requested_{default_datum}.pkl"
+        cache_success = False
         if os.path.exists(cache_filename):
-            with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
-                this_noaa_df, this_datum, station_data = pickle.load(f)
-                print(f'Existing obs data read from {cache_filename}')
-        else:
+            try:
+                with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
+                    this_noaa_df, this_datum, station_data = pickle.load(f)
+                    print(f'Existing obs data read from {cache_filename}')
+                    cache_success = True
+            except:
+                print(f'Failed to read from Cache, regenerating cache')
+
+        if not cache_success:
             try:
                 if retrieve_method == 'noaa_coops':
-                    station_data = noaa.Station(st)
+                    station_data = noaa_coops.Station(st)
                 elif retrieve_method == 'searvey': # searvey, convert into the same format as noaa_coops
                     station_data = COOPS_Station(int(st))
                     lon_lat = np.squeeze(np.array(station_data.location.coords))
@@ -157,15 +169,18 @@ def get_obs_elev(
             try:
                 if retrieve_method == 'noaa_coops':
                     this_noaa_df = station_data.get_data(
-                        begin_date=plot_start_day_str.replace("-", "")[:-3],
-                        end_date=plot_end_day_str.replace("-", "")[:-3],
-                        product="water_level", datum=default_datum, units="metric", time_zone="gmt", interval='h'
+                        begin_date=plot_start_day_str.replace("-", "")[:-9],
+                        end_date=plot_end_day_str.replace("-", "")[:-9],
+                        product="hourly_height", datum=default_datum, units="metric", time_zone="gmt"
                     )
+                    this_noaa_df.reset_index(inplace=True)
+                    this_noaa_df.columns = ['date_time', 'water_level', 'sigma', 'flags']
+                    this_noaa_df = this_noaa_df.set_index('date_time')
                 elif retrieve_method == 'searvey':
                     this_noaa_df = COOPS_Query(
                         station=st, start_date=plot_start_day_str, end_date=plot_end_day_str,
-                        datum=default_datum, product='water_level',
-                        units='metric', time_zone='gmt', interval='h'
+                        datum=default_datum, product='hourly_height',
+                        units='metric', time_zone='gmt'
                     ).data
                     # convert into the same format as noaa_coops
                     this_noaa_df.reset_index(inplace=True)
@@ -182,8 +197,12 @@ def get_obs_elev(
                     this_noaa_df = station_data.get_data(
                         begin_date=plot_start_day_str.replace("-", "")[:-3],
                         end_date=plot_end_day_str.replace("-", "")[:-3],
-                        product="water_level", datum="MSL", units="metric", time_zone="gmt", interval='h'
+                        product="hourly_height", datum="MSL", units="metric", time_zone="gmt"
                     )
+                    this_noaa_df.reset_index(inplace=True)
+                    this_noaa_df.columns = ['date_time', 'water_level', 'sigma', 'flags']
+                    this_noaa_df = this_noaa_df.set_index('date_time')
+
                     this_datum = "MSL"
                 except Exception:
                     this_noaa_df = None
@@ -239,6 +258,7 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
             mod_df = mod_df_all_stations[st]
             mod_df.values[:] += shift
         else:
+            raise Exception(f'cannot find {st} in mod_df_all_stations')
             mod_df = obs_df_list[i]['water_level']
 
         if obs_df_list[i] is None:
@@ -277,7 +297,10 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
             existing_title = ax[n].get_title()
             if existing_title == '':
                 # title_str = f'{st}, {datum_str}, {station_info[n].name}\n'
-                title_str = f'{st}, {datum_str}; {station_info[n].name}\n; {my_comp.stats_str}'
+                try:
+                    title_str = f'{st}, {datum_str}; {station_info[n].name}\n; {my_comp.stats_str}'
+                except AttributeError:
+                    title_str = f"{st}, {datum_str}; {station_info[n]['site_name']}\n; {my_comp.stats_str}"
             else:
                 title_str = f'{existing_title}\n; {my_comp.stats_str}'
         ax[n].title.set_text(title_str)
@@ -299,11 +322,25 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
     if iplot:
         plt.show()
 
+    # assemble station info
+    try:
+        station_name_list = [x.name for x in station_info]
+    except AttributeError:
+        station_name_list = [x['site_name'] for x in station_info]
+    try:
+        lon_list = [x.lat_lon['lon'] for x in station_info]
+    except AttributeError:
+        lon_list = [x['longitude'] for x in station_info]
+    try:
+        lat_list = [x.lat_lon['lat'] for x in station_info]
+    except AttributeError:
+        lat_list = [x['latitude'] for x in station_info]
+
     stat_df = pd.DataFrame({
         'station_id': noaa_stations,
-        'station_name': [x.name for x in station_info],
-        'station_lon': [x.lat_lon['lon'] for x in station_info],
-        'station_lat': [x.lat_lon['lat'] for x in station_info],
+        'station_name': station_name_list,
+        'station_lon': lon_list,
+        'station_lat': lat_list,
         'RMSE': [float(x['RMSE']) for x in stats],
         'ubRMSE': [float(x['ubRMSE']) for x in stats],
         'MAE': [float(x['MAE']) for x in stats],
@@ -433,7 +470,7 @@ def plot_operation():
         tmp = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str, noaa_stations_groups[group_name], datums, st_info, group_name, iplot=False)
         stats = stats.append(tmp[0])
 
-    stats.loc['mean'] = stats.iloc[:, 4:].mean()
+    stats.loc['mean'] = stats.iloc[:, 4:].copy().mean()
     stats.at['mean', 'station_id'] = 'all'
     stats.at['mean', 'station_name'] = 'all'
     stats.to_csv('stats_STOFS_3D.txt', encoding='utf-8', index=False)
@@ -512,7 +549,7 @@ def plot_HYCOM():
                         datums, st_info, plot_name=filename, iplot=False, nday_moving_average=0)
         stats = stats.append(tmp[0])
 
-    stats.loc['mean'] = stats.iloc[:, -4:].mean()
+    stats.loc['mean'] = stats.iloc[:, -4:].copy().mean()
     stats.at['mean', 'station_id'] = 'all'
     stats.at['mean', 'station_name'] = 'all'
     stats.to_csv('stats.txt', encoding='utf-8', index=False)
@@ -522,6 +559,41 @@ def plot_HYCOM():
     os.system("scp 'stats.txt' *png $cdir/srv/www/htdocs/yinglong/feiye/ICOGS/Compare_with_HYCOM/")
 
 
+
+
+
 if __name__ == "__main__":
-    plot_operation()
-    os.system("rm stats*.txt *png")
+    # plot_operation()
+
+    case_name = 'Missi_Ida2'
+    station_json_fname = 'station.json'
+
+    with open(station_json_fname, 'r') as f:
+        dict = json.load(f)
+
+    obs, st_info, datums = get_timeseries_from_station_json(case_name, station_json_fname)
+
+    mod = TimeHistory(
+        file_name = dict[case_name]['elev_out_file'],
+        start_time_str=dict[case_name]['model_start_day_str'],
+        sec_per_time_unit=86400,
+        columns=list(dict[case_name]['stations'].keys())
+    )
+    mod.df.set_index('datetime', inplace=True)
+    # shift for mod
+    mod.df.iloc[:, :] += 0.0
+
+    # plot
+    plot_elev(
+        obs_df_list=obs,
+        mod_df_all_stations=mod.df,
+        plot_start_day_str=dict[case_name]['plot_start_day_str'],
+        plot_end_day_str=dict[case_name]['plot_end_day_str'],
+        noaa_stations=list(dict[case_name]['stations'].keys()),
+        datum_list=datums, station_info=st_info,
+        plot_name=f"ts_{case_name}_{dict[case_name]['elev_out_file'].split('.')[-1]}",  # the last string is the run id
+        iplot=False, subplots_shape=(10, None), label_strs=['obs', 'model'],
+    )
+    pass
+
+    # os.system("rm stats*.txt *png")

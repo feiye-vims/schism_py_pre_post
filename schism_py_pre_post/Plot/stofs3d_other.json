@@ -17,6 +17,17 @@
         "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v4/RUN23j/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31}
     },
+    "Ida_report": {
+        "name": "Ida",
+        "plot_start_day_str": "2021-08-01 00:00:00",
+        "plot_end_day_str": "2021-09-11 00:00:00",
+        "model_start_day_str": "2021-08-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O14/outputs//staout_1",
+        "cdir": "$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v7/R14/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "stations_group": {"group_1": ["8760922", "8760721", "8761724", "8761305", "8747437", "8761927", "8741533"]},
+        "default_datums": {"group_1": "NAVD"}
+    },
     "PreFlorence": {
         "name": "PreFlorence",
         "plot_start_day_str": "2018-08-20 00:00:00",
@@ -47,19 +58,28 @@
     "Year2018": {
         "name": "Year2018",
         "plot_start_day_str": "2018-01-01 00:00:00",
-        "plot_end_day_str": "2018-11-30 00:00:00",
+        "plot_end_day_str": "2019-01-01 00:00:00",
         "model_start_day_str": "2017-12-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O16h/outputs/staout_1",
-        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN16h/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O13/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v7/R13/",
+        "box": {"W": -100, "E": -60, "S": 8, "N": 48}
+    },
+    "Year2015v6": {
+        "name": "Year2015",
+        "plot_start_day_str": "2015-01-01 00:00:00",
+        "plot_end_day_str": "2016-01-01 00:00:00",
+        "model_start_day_str": "2014-12-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O12/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v7/R12/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
     "Year2015": {
         "name": "Year2015",
         "plot_start_day_str": "2015-01-01 00:00:00",
-        "plot_end_day_str": "2015-12-31 00:00:00",
+        "plot_end_day_str": "2016-01-01 00:00:00",
         "model_start_day_str": "2014-12-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v6/Outputs/O24c/outputs//staout_1",
-        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v6/RUN24c/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O12a/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v7/R12a/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
     "All":{

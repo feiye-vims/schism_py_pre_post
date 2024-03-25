@@ -9,14 +9,14 @@ import copy
 set_matplotlib_formats('svg')
 
 
-gd_fname = '/sciclone/schism10/feiye/Test_Project/Runs/R98a/hgrid.gr3'
+gd_fname = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I14/hgrid.gr3'
 gd = read_schism_hgrid_cached(gd_fname, overwrite_cache=False)
 
-vg_fname = '/sciclone/schism10/feiye/Test_Project/Runs/R98a/vgrid.in'
+vg_fname = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I14/vgrid.in'
 vg = read_schism_vgrid_cached(vg_fname, overwrite_cache=False)
 
 var_name = "elevation"
-fnames = [f'/sciclone/schism10/feiye/Test_Project/Runs/R99a/outputs/out2d_1.nc']
+fnames = [f'/sciclone/schism10/feiye/STOFS3D-v7/Runs/R14/outputs/out2d_29.nc']
 my_nc = xr.open_mfdataset(fnames)
 
 it = -1
@@ -40,16 +40,20 @@ else:
 disturbance = copy.deepcopy(value)
 land = gd.dp < 0.0
 disturbance[land] = value[land] + gd.dp[land]
-idx = disturbance > 10
-np.savetxt(f'{Path(fnames[0]).parent}/high_disturbance.xyz', np.vstack((gd.x[idx], gd.y[idx], disturbance[idx])).T, fmt='%.6f', delimiter=' ')
 
+# output high disturbance points
+# idx = disturbance > 10
+# np.savetxt(f'{Path(fnames[0]).parent}/high_disturbance.xyz', np.vstack((gd.x[idx], gd.y[idx], disturbance[idx])).T, fmt='%.6f', delimiter=' ')
+
+i_positive_disturbance = disturbance > 0  # i.e., abnormal inundation
+disturbance[~i_positive_disturbance] = -9999  # set negative disturbance to -9999
 gd.dp = disturbance
-grd2sms(gd, str(Path(fnames[0]).with_suffix('.disturbance.2dm')))
+grd2sms(gd, str(Path(fnames[0]).with_suffix('.positive_disturbance.2dm')))
 
 gd.dp = value
 grd2sms(gd, str(Path(fnames[0]).with_suffix(f'.{var_name}.2dm')))
 
-gd.plot_grid(fmt=1, value=value, clim=caxis, levels=31, ticks=np.arange(caxis[0], caxis[1], 2), cmap='jet', xlim=xlim, ylim=ylim)
+gd.plot_grid(fmt=1, value=disturbance, clim=caxis, levels=31, ticks=np.arange(caxis[0], caxis[1], 2), cmap='jet', xlim=xlim, ylim=ylim)
 plt.gca().set_aspect('equal', 'box')
 plt.savefig(f'{fnames[0]}.png', dpi=400)
 plt.show()

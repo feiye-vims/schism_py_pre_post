@@ -247,12 +247,41 @@ if __name__ == "__main__":
 
     # Sample 0: download a list of stations if you know their ids
     total_data = download_stations(
-        param_id=usgs_var_dict['gauge height']['id'],
-        station_ids=['02323592','02324170'],
-        datelist=pd.date_range(start='2023-08-28', end='2023-09-02')
+        param_id=usgs_var_dict['streamflow']['id'],
+        station_ids=['07374000', '07381490'],
+        datelist=pd.date_range(start='2021-07-31', end='2021-09-30')
     )
-    plt.plot(total_data[0].df['date'], total_data[0].df['value'])
-    plt.plot(total_data[1].df['date'], total_data[1].df['value'])
+    # plt.plot(total_data[0].df['date'], total_data[0].df['value'])
+    # plt.plot(total_data[1].df['date'], total_data[1].df['value'])
+
+    # make a *.th file based on the downloaded data
+    from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
+    import pytz
+    # convert time zone to UTC
+    utc_tz = pytz.timezone('UTC')
+    louisiana_tz = pytz.timezone('US/Central')
+    # check if there is any missing time
+    for i, _ in enumerate(total_data):
+        dt = np.array(total_data[i].df['date'].diff().dt.total_seconds())
+        total_data[i].df.set_index('date', inplace=True)
+        if dt[1] != dt[2]:
+            raise ValueError('Time interval is not consistent at the beginning, check the data.')
+        if (dt[1:] != dt[1]).any():
+            print('Time interval is not consistent, interpolation may be needed.')
+            # interpolate for missing time using dt[1]
+            total_data[i].df = total_data[i].df.resample(f'{dt[1]}S').interpolate()
+
+    combined_df = pd.concat([total_data[0].df, total_data[1].df], axis=1)
+    combined_df.reset_index(inplace=True)
+    combined_df['date'] = combined_df['date'].dt.tz_convert(utc_tz)
+    # truncate to a time span
+    combined_df = combined_df[(combined_df['date'] >= '2021-08-01') & (combined_df['date'] < '2021-09-29')]
+    # convert time to seconds
+    time = np.array((combined_df['date'] - combined_df['date'].iloc[0]).dt.total_seconds())
+    data = combined_df['value'].to_numpy() * usgs_var_dict['streamflow']['unit_conv']  # convert to m^3/s
+    flux_th = TimeHistory(data_array=np.c_[time, -data])  # negative means inflow for SCHISM
+    flux_th.writer('flux.th')
+    pass
 
     '''
     # Sample 1: Download discharge data for all stations in selected states
