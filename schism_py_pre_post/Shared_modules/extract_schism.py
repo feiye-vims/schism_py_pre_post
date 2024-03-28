@@ -79,19 +79,7 @@ def extract_schism(bpfiles=None, var=None, rundir=None, i_comb=None, stacks=None
     return out_filenames
 
 if __name__ == "__main__":
-
-    rundir = '/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O03e/'
-    bpname = "Missi_Ida2_moved"
-    outfilenames = extract_schism(
-        bpfiles=[f'/sciclone/schism10/feiye/ICOGS/BPfiles/{bpname}.bp'],
-        var='elevation',
-        rundir=rundir,
-        i_comb=True,
-        stacks=[1, 55],
-        i_all_level=False,
-        ver=10
-    )
-    print(f'extraction done: {outfilenames}')
+    '''Samples'''
 
     # ------------------------- time series --------------------------- 
     # rundir = '/sciclone/data10/feiye/vims20/work/ChesBay/RUN200p/'
@@ -161,3 +149,17 @@ if __name__ == "__main__":
     #     stacks=[1, 24],
     #     i_all_level=False
     # )
+
+
+    rundir = '/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O15/'
+    bpname = "Missi_Ida2_moved"
+    outfilenames = extract_schism(
+        bpfiles=[f'/sciclone/schism10/feiye/ICOGS/BPfiles/{bpname}.bp'],
+        var='elevation',
+        rundir=rundir,
+        i_comb=True,
+        stacks=[1, 55],
+        i_all_level=False,
+        ver=10
+    )
+    print(f'extraction done: {outfilenames}')

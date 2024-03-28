@@ -4,6 +4,7 @@ from searvey.coops import COOPS_Query, COOPS_Station
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 from schism_py_pre_post.Shared_modules.test_modules import HYCOM
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
+from schism_py_pre_post.Download.download_coops_elev import get_coops_water_level
 import pandas as pd
 from datetime import timedelta
 from datetime import datetime
@@ -131,7 +132,7 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
     return model_df
 
 def get_obs_elev(
-    retrieve_method='noaa_coops',  # 'searvey' or 'noaa_coops'
+    retrieve_method='native',  # 'native', 'searvey' or 'noaa_coops'
     plot_start_day_str=None, plot_end_day_str=None, noaa_stations=None,
     default_datum='NAVD', cache_folder='/sciclone/schism10/feiye/Cache/'
 ):
@@ -155,7 +156,7 @@ def get_obs_elev(
 
         if not cache_success:
             try:
-                if retrieve_method == 'noaa_coops':
+                if retrieve_method in ['native', 'noaa_coops']:
                     station_data = noaa_coops.Station(st)
                 elif retrieve_method == 'searvey': # searvey, convert into the same format as noaa_coops
                     station_data = COOPS_Station(int(st))
@@ -171,7 +172,7 @@ def get_obs_elev(
                     this_noaa_df = station_data.get_data(
                         begin_date=plot_start_day_str.replace("-", "")[:-9],
                         end_date=plot_end_day_str.replace("-", "")[:-9],
-                        product="hourly_height", datum=default_datum, units="metric", time_zone="gmt"
+                        product="water_level", datum=default_datum, units="metric", time_zone="gmt"
                     )
                     this_noaa_df.reset_index(inplace=True)
                     this_noaa_df.columns = ['date_time', 'water_level', 'sigma', 'flags']
@@ -179,7 +180,7 @@ def get_obs_elev(
                 elif retrieve_method == 'searvey':
                     this_noaa_df = COOPS_Query(
                         station=st, start_date=plot_start_day_str, end_date=plot_end_day_str,
-                        datum=default_datum, product='hourly_height',
+                        datum=default_datum, product='water_level',
                         units='metric', time_zone='gmt'
                     ).data
                     # convert into the same format as noaa_coops
@@ -188,6 +189,12 @@ def get_obs_elev(
                     substitute_col = {'t': 'date_time', 'v': 'water_level', 's': 'sigma', 'f': 'flags', 'q': 'QC'}
                     this_noaa_df = this_noaa_df.rename(columns=substitute_col)
                     this_noaa_df.set_index('date_time', inplace=True)
+                elif retrieve_method == 'native':  # native method from this package
+                    this_noaa_df = get_coops_water_level(
+                        begin_date=plot_start_day_str.replace("-", "")[:-9],
+                        end_date=plot_end_day_str.replace("-", "")[:-9],
+                        datum=default_datum, station=st
+                    )
                 else:
                     raise Exception(f'retrieve_method {retrieve_method} not supported')
 
@@ -580,8 +587,22 @@ if __name__ == "__main__":
         columns=list(dict[case_name]['stations'].keys())
     )
     mod.df.set_index('datetime', inplace=True)
+
     # shift for mod
     mod.df.iloc[:, :] += 0.0
+
+    if dict[case_name]['default_datum'] == 'NAVD':
+        pass
+    elif dict[case_name]['default_datum'] == 'xgeoid20b':
+        # datum shift for mod, from xgeoid20b to NAVD
+        from schism_py_pre_post.Utilities.util import vdatum_wrapper_pointwise, vdatum_preset
+        st_lon = np.array([x['longitude'] for x in st_info])
+        st_lat = np.array([x['latitude'] for x in st_info])
+        st_shift = vdatum_wrapper_pointwise(x=st_lon, y=st_lat, z=np.zeros_like(st_lat), conversion_para=vdatum_preset['xgeoid20b_to_navd88'])
+        for i in range(len(st_info)):
+            mod.df.iloc[:, i] += st_shift[i]  # from xgeoid20b to NAVD
+    else:
+        raise ValueError(f"Unknown default_datum: {dict['default_datum']}")
 
     # plot
     plot_elev(

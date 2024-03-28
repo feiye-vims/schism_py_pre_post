@@ -167,9 +167,9 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    hurricanes = ['Carro']
+    events = ['STOFS3D-v7_reforecast']
 
-    region = "FromDict"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
+    region = "Full_domain"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
 
     # neglect stations, only for stats
     # neglect_stations =['8551910', '8548989', '8545240', '8539094', '8720226', '8652857', '8447435', '8575512', '8738043', '8729108']
@@ -208,8 +208,8 @@ if __name__ == "__main__":
     subplots_shape = [10, None]  # n per col
     # --end inputs-------------------------------------------------------------------------------
 
-    for hurricane in hurricanes:
-        dict_item = hurricane_dict[hurricane]
+    for event in events:
+        dict_item = hurricane_dict[event]
         plot_start_day_str = dict_item['plot_start_day_str']
         plot_end_day_str = dict_item['plot_end_day_str']
         model_start_day_str = dict_item['model_start_day_str']
@@ -221,10 +221,10 @@ if __name__ == "__main__":
             stations_groups, default_datums = ecgc_stations(station_bp_file)
             # stations_groups, default_datums = pacific_stations(station_bp_file)
         elif region == "FromDict":
-            stations_groups = hurricane_dict[hurricane]['stations_group']
-            default_datums = hurricane_dict[hurricane]['default_datums']
+            stations_groups = hurricane_dict[event]['stations_group']
+            default_datums = hurricane_dict[event]['default_datums']
             try:
-                station_subset = hurricane_dict[hurricane]['station_subset']
+                station_subset = hurricane_dict[event]['station_subset']
             except KeyError:
                 print('No station_subset in the dict, assuming all stations in station.in are used')
             
@@ -232,7 +232,7 @@ if __name__ == "__main__":
             stations_groups = sample_stations
             default_datums = sample_datum
         else:
-            box = hurricane_dict[hurricane]['box']
+            box = hurricane_dict[event]['box']
             stations_groups, default_datums = subset_stations_in_box(box, station_bp_file, group_name=region, default_datum=datum)
 
         # ---------------------------------------------------------------------------------
@@ -253,7 +253,7 @@ if __name__ == "__main__":
         for other_dict_file in other_dicts_files:
             with open(other_dict_file) as d:
                 other_dicts.append(json.load(d))
-        other_runids = [os.path.basename(os.path.dirname(x[hurricane]['cdir'])) for x in other_dicts]
+        other_runids = [os.path.basename(os.path.dirname(x[event]['cdir'])) for x in other_dicts]
         # ---------------------------------------------------------------------------------
 
         final_datums = []
@@ -262,13 +262,13 @@ if __name__ == "__main__":
         other_group_stats = ['' for _ in other_runids]
         for iter_groups, [group_name, stations] in enumerate(stations_groups.items()):
 
-            filename_base = f'{hurricane}_{group_name}_{default_datums[group_name]}'
+            filename_base = f'{event}_{group_name}_{default_datums[group_name]}'
 
             # stations = [station for station in stations if station not in neglect_stations]
 
             # if group_name != 'Puerto_Rico':
             #     continue
-            print(f'\n\n\n processing {group_name} for {hurricane}')
+            print(f'\n\n\n processing {group_name} for {event}')
             # SCHISM's staout_1
             mod = get_hindcast_elev(
                 model_start_day_str=model_start_day_str,
@@ -302,10 +302,10 @@ if __name__ == "__main__":
             if len(other_dicts) > 0:
                 for i, [other_runid, other_dict, other_line_style, other_shift, other_subset] in enumerate(zip(other_runids, other_dicts, other_line_styles, other_shifts, other_subsets)):
                     other_mod = get_hindcast_elev(
-                        model_start_day_str=other_dict[hurricane]['model_start_day_str'],
+                        model_start_day_str=other_dict[event]['model_start_day_str'],
                         noaa_stations=None,
                         station_in_file=station_bp_file,
-                        elev_out_file=other_dict[hurricane]['elev_out_file'],
+                        elev_out_file=other_dict[event]['elev_out_file'],
                         station_in_subset=other_subset
                     )
                     other_mod = datum_shift(other_mod, datum_shift_file='/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
@@ -323,7 +323,7 @@ if __name__ == "__main__":
                     fig_ax[0].savefig(f'compare_ts_{filename_base}.png')
 
         # ---------------------------------------------------------------------------------
-        filename_base = f'{hurricane}_{region}_{outfilename_suffix}'
+        filename_base = f'{event}_{region}_{outfilename_suffix}'
         stats_scatter(stats=stats, var_str=var_str, region=region, plot_symbol_dict=plot_symbol_dict, filename=filename_base)
 
         # mask neglected stations

@@ -261,10 +261,16 @@ class TimeHistory():
 
     def export_subset(self, station_idx=None, time_idx=None, i_reset_time=False, subset_filename=None):
         import os
-        """extract a subset from the original *.th"""
-        """by station_idx and time_idx"""
-        """[] idx means no operation"""
-        """if i_reset_time == True, then the subset *.th starts from 0 time"""
+        """
+        extract a subset from the original *.th by station_idx and time_idx
+
+        idx=[] means no operation
+
+        time index can be obtained this way:
+            time_idx = np.argwhere(np.array(th.df['datetime'] >= datetime(2015, 8, 1, 0, 0, 0))).flatten()
+
+        if i_reset_time == True, then the subset *.th starts from 0 time
+        """
 
         if subset_filename is None:
             subset_filename = os.path.abspath(self.source_file) + '.subset'

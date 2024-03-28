@@ -48,6 +48,15 @@
         "stations": {"0": "8761955"},
         "default_datum": "NAVD"
     },
+    "STOFS3D-v7_reforecast": {
+        "name": "STOFS3D-7_reforecast",
+        "plot_start_day_str": "2024-03-12 00:00:00",
+        "plot_end_day_str": "2024-03-26 00:00:00",
+        "model_start_day_str": "2024-03-05 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O15/staout_1",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O15/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
     "Florence": {
         "name": "Florence",
         "plot_start_day_str": "2018-09-13 00:00:00",
