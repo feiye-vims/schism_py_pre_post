@@ -165,58 +165,56 @@ def get_obs_elev(
                 else:
                     raise Exception(f'retrieve_method {retrieve_method} not supported')
             except:  # JSONDecodeError
-                raise Exception("Got JSONDecodeError, possible unstable network from COOPS server")
+                raise Exception("Got JSONDecodeError, possible unstable network connecting to COOPS server")
 
-            try:
-                if retrieve_method == 'noaa_coops':
-                    this_noaa_df = station_data.get_data(
-                        begin_date=plot_start_day_str.replace("-", "")[:-9],
-                        end_date=plot_end_day_str.replace("-", "")[:-9],
-                        product="water_level", datum=default_datum, units="metric", time_zone="gmt"
-                    )
-                    this_noaa_df.reset_index(inplace=True)
-                    this_noaa_df.columns = ['date_time', 'water_level', 'sigma', 'flags']
-                    this_noaa_df = this_noaa_df.set_index('date_time')
-                elif retrieve_method == 'searvey':
-                    this_noaa_df = COOPS_Query(
-                        station=st, start_date=plot_start_day_str, end_date=plot_end_day_str,
-                        datum=default_datum, product='water_level',
-                        units='metric', time_zone='gmt'
-                    ).data
-                    # convert into the same format as noaa_coops
-                    this_noaa_df.reset_index(inplace=True)
-                    this_noaa_df = this_noaa_df.rename(index='date_time')
-                    substitute_col = {'t': 'date_time', 'v': 'water_level', 's': 'sigma', 'f': 'flags', 'q': 'QC'}
-                    this_noaa_df = this_noaa_df.rename(columns=substitute_col)
-                    this_noaa_df.set_index('date_time', inplace=True)
-                elif retrieve_method == 'native':  # native method from this package
-                    this_noaa_df = get_coops_water_level(
-                        begin_date=plot_start_day_str.replace("-", "")[:-9],
-                        end_date=plot_end_day_str.replace("-", "")[:-9],
-                        datum=default_datum, station=st
-                    )
-                else:
-                    raise Exception(f'retrieve_method {retrieve_method} not supported')
-
-                this_datum = default_datum
-            except Exception:
+            this_noaa_df = None; this_datum = None  # intialize
+            for datum in [default_datum, 'MSL']:  # fall back to MSL, which is generally available
+                print(f"Trying datum {datum}")
                 try:
-                    this_noaa_df = station_data.get_data(
-                        begin_date=plot_start_day_str.replace("-", "")[:-3],
-                        end_date=plot_end_day_str.replace("-", "")[:-3],
-                        product="hourly_height", datum="MSL", units="metric", time_zone="gmt"
-                    )
-                    this_noaa_df.reset_index(inplace=True)
-                    this_noaa_df.columns = ['date_time', 'water_level', 'sigma', 'flags']
-                    this_noaa_df = this_noaa_df.set_index('date_time')
+                    if retrieve_method == 'noaa_coops':
+                        this_noaa_df = station_data.get_data(
+                            begin_date=plot_start_day_str.replace("-", "")[:-9],
+                            end_date=plot_end_day_str.replace("-", "")[:-9],
+                            product="water_level", datum=datum, units="metric", time_zone="gmt"
+                        )
+                        this_noaa_df.reset_index(inplace=True)
+                        this_noaa_df.columns = ['date_time', 'water_level', 'sigma', 'flags']
+                        this_noaa_df = this_noaa_df.set_index('date_time')
+                    elif retrieve_method == 'searvey':
+                        this_noaa_df = COOPS_Query(
+                            station=st, start_date=plot_start_day_str, end_date=plot_end_day_str,
+                            datum=datum, product='water_level',
+                            units='metric', time_zone='gmt'
+                        ).data
+                        # convert into the same format as noaa_coops
+                        this_noaa_df.reset_index(inplace=True)
+                        this_noaa_df = this_noaa_df.rename(index='date_time')
+                        substitute_col = {'t': 'date_time', 'v': 'water_level', 's': 'sigma', 'f': 'flags', 'q': 'QC'}
+                        this_noaa_df = this_noaa_df.rename(columns=substitute_col)
+                        this_noaa_df.set_index('date_time', inplace=True)
+                    elif retrieve_method == 'native':  # native method from this package
+                        this_noaa_df = get_coops_water_level(
+                            begin_date=plot_start_day_str.replace("-", "")[:-9],
+                            end_date=plot_end_day_str.replace("-", "")[:-9],
+                            datum=datum, station=st
+                        )
+                    else:
+                        raise Exception(f'retrieve_method {retrieve_method} not supported')
+                except Exception as e:
+                    print(f"Failed to get data for {st} with datum {datum}: {e}")
+                
+                # clip data to the desired time range
+                if this_noaa_df is not None:
+                    this_noaa_df = this_noaa_df[plot_start_day_str:plot_end_day_str]
+                    if this_noaa_df.empty:
+                        print(f"Some data was found for {st} with datum {datum}, but not within the desired time range")
+                        this_noaa_df = None
 
-                    this_datum = "MSL"
-                except Exception:
-                    this_noaa_df = None
-                    this_datum = None
-
-            with open(cache_filename, 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump([this_noaa_df, this_datum, station_data], f)
+                if this_noaa_df is not None:
+                    this_datum = datum  # record actual datum retrieved
+                    with open(cache_filename, 'wb') as f:
+                        pickle.dump([this_noaa_df, this_datum, station_data], f)
+                    break  # found data, break
 
         noaa_df_list.append(this_noaa_df)
         datum_list.append(this_datum)
@@ -227,7 +225,7 @@ def get_obs_elev(
 
 def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day_str,
               noaa_stations, datum_list, station_info, plot_name, iplot=True, subplots_shape=(10, None),
-              fig_ax=None, line_styles=['r.', 'k'], shift=0, nday_moving_average=0, label_strs=[], label_rot=10):
+              fig_ax=None, line_styles=['r.', 'k'], nday_moving_average=0, label_strs=[], label_rot=10):
     '''
     Plot time series and calculate stats.
     "obs_df_list" is a list of pd.DataFrame
@@ -263,7 +261,6 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
     for i, st in enumerate(noaa_stations):
         if st in mod_df_all_stations.columns:
             mod_df = mod_df_all_stations[st]
-            mod_df.values[:] += shift
         else:
             raise Exception(f'cannot find {st} in mod_df_all_stations')
             mod_df = obs_df_list[i]['water_level']
@@ -317,6 +314,8 @@ def plot_elev(obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day
         ax[n].tick_params(labelrotation=label_rot)
         ax[n].set_ylim([np.nanmin(np.fmin(my_comp.obs_df.value, my_comp.mod_interp_df.value)) - 0.5,
                         np.nanmax(np.fmax(my_comp.obs_df.value, my_comp.mod_interp_df.value)) + 0.5])
+        # ax[n].set_ylim([1, 9])
+                       
         n = n + 1
     ax[0].legend()
     for i in range(n, n_subplot_col * n_subplot_row):
@@ -397,6 +396,9 @@ def plot_operation():
         'Puerto_Rico': 'MSL'
     }
 
+    # if mod is not in NAVD, apply datum shift
+    datum_shift_file = '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt'
+
 
     # # test>
     # noaa_stations_groups = {
@@ -450,20 +452,21 @@ def plot_operation():
             i_nowcast=False
         )
 
-        # datum_shift
-        datum_shifts_df = pd.read_csv('/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
-        datum_shifts_df['ID'] = datum_shifts_df['ID'].astype(str)
+        # datum_shift for model
+        if datum_shift_file != '' or datum_shift_file is not None:
+            datum_shifts_df = pd.read_csv(datum_shift_file)
+            datum_shifts_df['ID'] = datum_shifts_df['ID'].astype(str)
 
-        # add shift
-        mod_shift = np.zeros((len(mod.columns),), dtype=float)
-        for i, station_id in enumerate(mod.columns):
-            if station_id in datum_shifts_df['ID'].values:
-                mod_shift[i] = datum_shifts_df[datum_shifts_df['ID'] == station_id]['shift'].values[0]
-        
-        # expand shift to the same shape as mod
-        mod_shift = np.tile(mod_shift, (mod.shape[0], 1))
-        # Apply shift. The shift is from NAVD to geoid, so we need to subtract it from mod (geoid to NAVD)
-        mod = mod - mod_shift
+            # add shift
+            mod_shift = np.zeros((len(mod.columns),), dtype=float)
+            for i, station_id in enumerate(mod.columns):
+                if station_id in datum_shifts_df['ID'].values:
+                    mod_shift[i] = datum_shifts_df[datum_shifts_df['ID'] == station_id]['shift'].values[0]
+            
+            # expand shift to the same shape as mod
+            mod_shift = np.tile(mod_shift, (mod.shape[0], 1))
+            # Apply shift. The shift is from NAVD to geoid, so we need to subtract it from mod (geoid to NAVD)
+            mod = mod - mod_shift
 
         # get obs
         [obs, datums, st_info] = get_obs_elev(
@@ -572,7 +575,7 @@ def plot_HYCOM():
 if __name__ == "__main__":
     # plot_operation()
 
-    case_name = 'Missi_Ida2'
+    case_name = 'Missi_reforecast'
     station_json_fname = 'station.json'
 
     with open(station_json_fname, 'r') as f:
@@ -598,7 +601,11 @@ if __name__ == "__main__":
         from schism_py_pre_post.Utilities.util import vdatum_wrapper_pointwise, vdatum_preset
         st_lon = np.array([x['longitude'] for x in st_info])
         st_lat = np.array([x['latitude'] for x in st_info])
-        st_shift = vdatum_wrapper_pointwise(x=st_lon, y=st_lat, z=np.zeros_like(st_lat), conversion_para=vdatum_preset['xgeoid20b_to_navd88'])
+        st_shift = vdatum_wrapper_pointwise(
+            x=st_lon, y=st_lat, z=np.zeros_like(st_lat),
+            conversion_para=vdatum_preset['xgeoid20b_to_navd88'],
+            print_info='\nConverting from xgeoid20b to NAVD88:\n'
+        )
         for i in range(len(st_info)):
             mod.df.iloc[:, i] += st_shift[i]  # from xgeoid20b to NAVD
     else:
@@ -613,8 +620,11 @@ if __name__ == "__main__":
         noaa_stations=list(dict[case_name]['stations'].keys()),
         datum_list=datums, station_info=st_info,
         plot_name=f"ts_{case_name}_{dict[case_name]['elev_out_file'].split('.')[-1]}",  # the last string is the run id
-        iplot=False, subplots_shape=(10, None), label_strs=['obs', 'model'],
+        iplot=True, subplots_shape=(10, None), label_strs=['obs', 'model'],
     )
+
+    # move the plot to a designated folder
+    os.system(f"mv ts_{case_name}_{dict[case_name]['elev_out_file'].split('.')[-1]}.png {dict[case_name]['cdir']}")
     pass
 
     # os.system("rm stats*.txt *png")

@@ -1,0 +1,52 @@
+{
+    "Missi_Ida2": {
+        "name": "Missi_Ida2",
+        "plot_start_day_str": "2021-08-01 00:00:00",
+        "plot_end_day_str": "2021-09-11 00:00:00",
+        "model_start_day_str": "2021-08-01 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O17a/PostP/elevation.dat.Missi_Ida2_moved.O17a",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/Missi/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "stations": {
+            "01160": {"source": "USACE", "to_NAVD88_feet": -0.71},
+            "01220": {"source": "USACE", "to_NAVD88_feet": -0.88},
+            "01280": {"source": "USACE", "to_NAVD88_feet": -0.70},
+            "8761955": {"source": "COOPS", "to_NAVD88_feet": 0},
+            "01390": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01400": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01440": {"source": "USACE", "to_NAVD88_feet": -0.12},
+            "01480": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01515": {"source": "USACE", "to_NAVD88_feet": 0},
+            "8760721": {"source": "COOPS", "to_NAVD88_feet": 0.78},
+            "01545": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01850": {"source": "USACE", "to_NAVD88_feet": 0},
+            "8760922": {"source": "COOPS", "to_NAVD88_feet": 1.03}
+        },
+        "default_datum": "xgeoid20b"
+    },
+    "Missi_reforecast": {
+        "name": "Missi_reforecast",
+        "plot_start_day_str": "2024-03-12 00:00:00",
+        "plot_end_day_str": "2024-04-06 00:00:00",
+        "model_start_day_str": "2024-03-05 00:00:00",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O18/PostP/elevation.dat.Missi_Ida2_moved.O18",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/Missi/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "stations": {
+            "01160": {"source": "USACE", "to_NAVD88_feet": -0.71},
+            "01220": {"source": "USACE", "to_NAVD88_feet": -0.88},
+            "01280": {"source": "USACE", "to_NAVD88_feet": -0.70},
+            "8761955": {"source": "COOPS", "to_NAVD88_feet": 0},
+            "01390": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01400": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01440": {"source": "USACE", "to_NAVD88_feet": -0.12},
+            "01480": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01515": {"source": "USACE", "to_NAVD88_feet": 0},
+            "8760721": {"source": "COOPS", "to_NAVD88_feet": 0.78},
+            "01545": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01850": {"source": "USACE", "to_NAVD88_feet": 0},
+            "8760922": {"source": "COOPS", "to_NAVD88_feet": 1.03}
+        },
+        "default_datum": "xgeoid20b"
+    }
+}

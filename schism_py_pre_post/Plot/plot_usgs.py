@@ -58,7 +58,7 @@ def get_model_elev(elev_out_files, model_start_day_str, station_bp_file, sec_per
     
     return mod_run_ids, mods
 
-def plot_elev_no_stats(mods, mod_run_ids, requested_obs_data, plot_start_day_str, plot_end_day_str, output_dir='./', mod_run_colors=['b', 'g', 'k']):
+def plot_elev_no_stats(mods, mod_run_ids, requested_obs_data, plot_start_day_str, plot_end_day_str, output_dir='./', mod_run_colors=['c', 'm', 'b', 'y', 'm']):
     station_ids=mods[0].columns.values[:]  # a list of station ids
     # time_stamps = [x.replace(tzinfo=pytz.UTC) for x in mods[0].index]
 
@@ -94,6 +94,7 @@ def plot_elev_no_stats(mods, mod_run_ids, requested_obs_data, plot_start_day_str
         plt.savefig(f'Chunk_{ichunk}.png')
         plt.close(fig)
 
+    os.makedirs(output_dir, exist_ok=True)
     os.system(f'scp Chunk_* {output_dir}')
     os.system('rm Chunk_*')
 
@@ -133,13 +134,17 @@ def plot_usgs(
         output_dir=output_dir,
     )
 
+
 if __name__ == "__main__":
     plot_usgs(
-        station_bp_file='/sciclone/schism10/feiye/STOFS3D-v5/Inputs/Stations/USGS_station.bp',
-        model_start_day_str='2021-05-01 00:00:00',
+        station_bp_file='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA.bp',
+        model_start_day_str='2024-03-05 00:00:00',
         sec_per_time_unit=86400,
-        elev_out_files={'RUN02b': '/sciclone/schism10/feiye/STOFS3D-v5/Outputs/O24a/fort.18'},
-        plot_start_day_str='2021-05-17 00:00:00',
-        plot_end_day_str='2021-05-22 00:00:00',
-        output_dir='$cdir/srv/www/htdocs/yinglong/feiye/STOFS3D-v5/RUN02b/USGS/',
+        elev_out_files={
+            'R03a': '/sciclone/schism10/feiye/STOFS3D-v8/O03a/fort.18',
+            'R03a_repositioned': '/sciclone/schism10/feiye/STOFS3D-v8/O03a/elevation.USGS_station_LA_repositioned.dat'
+        },
+        plot_start_day_str='2024-03-10 00:00:00',
+        plot_end_day_str='2024-04-10 00:00:00',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/O03a',
     )

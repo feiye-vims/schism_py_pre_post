@@ -575,16 +575,16 @@ if __name__ == "__main__":
     # my_hot.writer(f'{my_hot.source_dir}/hotstart_no_T_adjust_it=51480.nc')
 
     # Sample 3: interpolating one hotstart.nc to another
-    hot_background = Hotstart(
-        grid_info='/sciclone/scr10/feiye/v6_hotstart/',  # contains hgrid.gr3 and vgrid.in
-        hot_file='/sciclone/scr10/feiye/v6_hotstart/hotstart_it=3456.nc'
-    )  # create a Hotstart instance with existing values
-    my_hot = Hotstart(
-        grid_info='/sciclone/scr10/feiye/v7_hotstart/',
-        ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
-    )  # create a Hotstart instance with empty values
-    my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
-    my_hot.writer(f'{my_hot.source_dir}/hotstart_it=3456.nc')
+    # hot_background = Hotstart(
+    #     grid_info='/sciclone/scr10/feiye/v6_hotstart/',  # contains hgrid.gr3 and vgrid.in
+    #     hot_file='/sciclone/scr10/feiye/v6_hotstart/hotstart_it=3456.nc'
+    # )  # create a Hotstart instance with existing values
+    # my_hot = Hotstart(
+    #     grid_info='/sciclone/scr10/feiye/v7_hotstart/',
+    #     ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
+    # )  # create a Hotstart instance with empty values
+    # my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
+    # my_hot.writer(f'{my_hot.source_dir}/hotstart_it=3456.nc')
 
     # Sample 4: visualize hotstart
     # my_hot = Hotstart(
@@ -595,4 +595,14 @@ if __name__ == "__main__":
     # my_hot.grid.hgrid.plot(value=my_hot.tr_nd.val[:, vertical_layer, tracer], fmt=1, clim=(0, 33), cmap='jet')
     # plt.savefig(f'{my_hot.source_dir}/tr_nd_16.png')
     # plt.show()
-    pass
+
+    # -------------------------------------end samples-------------------------------------
+
+    my_hot = Hotstart(
+        grid_info='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I15e/Hot/',
+        hot_file='/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I15e/Hot/hotstart_it=11520.nc'
+    )
+    from pylib_essentials.schism_file import cread_schism_hgrid
+    elev_ic = cread_schism_hgrid('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I15e/Hot/elev_ic.gr3')
+    my_hot.eta2.val[:] = elev_ic.dp[:]
+    my_hot.writer(f'{my_hot.source_dir}/hotstart_elev_ic.nc')

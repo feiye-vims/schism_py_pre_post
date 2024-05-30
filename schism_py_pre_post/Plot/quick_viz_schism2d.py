@@ -1,4 +1,5 @@
-from pylib_essentials.schism_file import grd2sms, read_schism_hgrid_cached, read_schism_vgrid_cached
+from pylib_experimental.schism_file import cread_schism_hgrid, read_schism_vgrid_cached
+from pylib import grd2sms, schism_grid
 import numpy as np
 import netCDF4
 import matplotlib.pyplot as plt
@@ -8,20 +9,26 @@ import xarray as xr
 import copy
 set_matplotlib_formats('svg')
 
+print('reading data ...\n')
 
-gd_fname = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I14/hgrid.gr3'
-gd = read_schism_hgrid_cached(gd_fname, overwrite_cache=False)
+gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6.1.static_inputs_snapshot20231105/hgrid.gr3'
+gd = cread_schism_hgrid(gd_fname)
 
-vg_fname = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I14/vgrid.in'
+vg_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Runs/RUN24a/vgrid.in'
 vg = read_schism_vgrid_cached(vg_fname, overwrite_cache=False)
 
-var_name = "elevation"
-fnames = [f'/sciclone/schism10/feiye/STOFS3D-v7/Runs/R14/outputs/out2d_29.nc']
+var_name = "salt_surface"
+fnames = [f'/sciclone/home/feiye/TEMP/v2.1/stofs_3d_atl.t12z.field2d_f025_036.nc']
 my_nc = xr.open_mfdataset(fnames)
+
+elements = my_nc['SCHISM_hgrid_face_nodes'].values
+elements.shape
+i3_idx = np.argwhere(gd.i34==3).flatten()
+np.array_equal(gd.elnode[i3_idx, :3], elements[i3_idx, :3]-1)
 
 it = -1
 isurf = True
-caxis = [0, 100]
+caxis = [0, 30]
 xlim = None  # [-77, -75]
 ylim = None  # [37, 40]
 plt.figure(figsize=(7, 7))
@@ -53,7 +60,7 @@ grd2sms(gd, str(Path(fnames[0]).with_suffix('.positive_disturbance.2dm')))
 gd.dp = value
 grd2sms(gd, str(Path(fnames[0]).with_suffix(f'.{var_name}.2dm')))
 
-gd.plot_grid(fmt=1, value=disturbance, clim=caxis, levels=31, ticks=np.arange(caxis[0], caxis[1], 2), cmap='jet', xlim=xlim, ylim=ylim)
+gd.plot_grid(fmt=1, value=value, clim=caxis, levels=31, ticks=np.arange(caxis[0], caxis[1], 2), cmap='jet', xlim=xlim, ylim=ylim)
 plt.gca().set_aspect('equal', 'box')
 plt.savefig(f'{fnames[0]}.png', dpi=400)
 plt.show()

@@ -1,4 +1,5 @@
-from pylib_essentials.schism_file import read_schism_hgrid_cached, grd2sms
+from pylib_experimental.schism_file import cread_schism_hgrid
+from pylib import grd2sms, schism_grid
 import netCDF4
 from datetime import datetime, timedelta
 import numpy as np
@@ -44,7 +45,7 @@ def my_mpi_idx(N, size, rank):
     if N <= size:  # trivial case: more ranks than tasks
         if rank < N:
             my_idx[rank] = True
-    
+
     else:  # cyclic distribution
         for i in range(N):
             if (i % size) == rank:
@@ -78,7 +79,7 @@ def schism2sms_parallel(
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    gd = read_schism_hgrid_cached(f'{rundir}/hgrid.gr3')
+    gd = schism_grid(f'{rundir}/hgrid.gr3')
 
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{fname_prefix}_{stack}.nc'
@@ -121,14 +122,14 @@ def schism2sms_parallel(
 def plot_schism2D_parallel(
     rundir='./',
     model_start_time = datetime.strptime('2014-12-01 00:00:00', "%Y-%m-%d %H:%M:%S"),
-    var_str=None, var_proc=None, stacks=[1, 2, 3],
+    var_str=None, var_proc=None, stacks=[1, 2, 3], time_steps=[],
     plot_params:dict={}, output_dir=None,
     iOverWrite=False
 ):
     """
     function for plotting 2D variables of the schism outputs;
     mpi can be used when plotting many time stamps
-    """ 
+    """
 
     if var_str in ['elevation']:
         fname_prefix = 'out2d'
@@ -144,9 +145,9 @@ def plot_schism2D_parallel(
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    gd = read_schism_hgrid_cached(f'{rundir}/hgrid.gr3')
+    gd = cread_schism_hgrid(f'{rundir}/hgrid.gr3')
     gd_copy = copy.deepcopy(gd)
-    
+
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{fname_prefix}_{stack}.nc'
         print(f'Core {rank} reading {fname}\n')
@@ -157,8 +158,12 @@ def plot_schism2D_parallel(
             var, var_title_str = var_proc(gd_copy, var)
 
         this_time_dts = my_nc.variables['time']
+        if time_steps == []:
+            time_steps = range(len(this_time_dts)) # all time stamps
 
         for j, this_time_dt in enumerate(this_time_dts):
+            if j not in time_steps:  # only plot selected time stamps
+                continue
             this_time = model_start_time + timedelta(seconds=this_time_dt.data.item())
             title_str = f"{var_title_str} {this_time.strftime('%Y-%m-%d %H:%M:%S')}"
             savefilename = f'{output_dir}/{title_str.replace(" ", "_")}.png'
@@ -226,7 +231,7 @@ def image_spoof(self, tile):
     url = self._image_url(tile)                # get the url of the street map API
     req = Request(url)                         # start request
     req.add_header('User-agent','Anaconda 3')  # add user agent to request
-    fh = urlopen(req) 
+    fh = urlopen(req)
     im_data = io.BytesIO(fh.read())            # get image
     fh.close()                                 # close url
     img = Image.open(im_data)                  # open image with PIL
@@ -269,34 +274,48 @@ def get_positive_disturbance(hgrid_obj, elevation):
 
     return disturbance, 'positive_disturbance'
 
+plot_param_dict = {
+    'LA': {
+        'xlim': [-92.3, -88.5], 'ylim': [28.8, 31.2], 'clim': [-2, 10],
+    },
+    'New Orleans': {
+        'xlim': [-90.19665, -89.96121], 'ylim': [29.89496, 30.05080], 'clim': [-2, 10],
+    },
+    'Outfall Canal': {
+        'xlim': [-90.10806, -90.00778], 'ylim': [29.97116, 30.03879], 'clim': [-2, 10],
+    }
+}
+
 if __name__ == "__main__":
     # sample inputs
-    rundir = '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R14b/'
-    model_start_time = datetime.strptime('2021-08-01', "%Y-%m-%d")
+    rundir = '/sciclone/schism10/feiye/STOFS3D-v8/R02d/'
+    output_dir = f'{rundir}/outputs/'
+    model_start_time = datetime.strptime('2024-03-05', "%Y-%m-%d")
     var_str = 'elevation'
     var_proc = mask_dry_elevation
-    stacks = np.arange(30, 31)
+    stacks = np.arange(1, 10)  # must cover the plot time stamps
+    time_steps = [11, 23]
     plot_params = {
-        'xlim': [-92.3, -88.5],
-        'ylim': [28.8, 31.2],
-        'clim': [0, 10],
+        'xlim': plot_param_dict['LA']['xlim'],
+        'ylim': plot_param_dict['LA']['ylim'],
+        'clim': plot_param_dict['LA']['clim'],
     }
-    output_dir = '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R14b/outputs/'
 
-    # ''' -------------------- sample outputing to *.2dm -------------------------
+    # -------------------- sample outputing to *.2dm -------------------------
     snapshots_times = (
-        # datetime.strptime('2021-08-01 01:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-05 01:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-06 01:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-08 01:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-10 01:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2021-08-20 12:00:00', "%Y-%m-%d %H:%M:%S"),
         # datetime.strptime('2021-08-29 12:00:00', "%Y-%m-%d %H:%M:%S"),
         # datetime.strptime('2021-08-30 12:00:00', "%Y-%m-%d %H:%M:%S"),
-        datetime.strptime('2021-08-31 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-09-20 12:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2021-08-31 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2021-09-05 00:00:00', "%Y-%m-%d %H:%M:%S"),
     )
-
-    schism2sms_parallel(rundir, model_start_time, var_str, var_proc, stacks, output_dir, snapshots_times, iOverWrite=True)
-    # ''' 
+    if snapshots_times:
+        schism2sms_parallel(rundir, model_start_time, var_str, var_proc, stacks, output_dir, snapshots_times, iOverWrite=True)
 
     # ----------------------------- sample generating plot -------------------------
-    plot_schism2D_parallel(rundir, model_start_time, var_str, var_proc, stacks, plot_params, output_dir, iOverWrite=True)
+    plot_schism2D_parallel(rundir, model_start_time, var_str, var_proc, stacks, time_steps, plot_params, output_dir, iOverWrite=True)
 
     pass

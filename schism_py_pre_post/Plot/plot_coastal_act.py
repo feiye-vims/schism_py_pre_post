@@ -169,6 +169,11 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     events = ['STOFS3D-v7_reforecast']
 
+    datum = ''  # '' (use predefined ones in ecgc_stations), 'NAVD', 'MSL'
+    shift = 0.0  # uniform shift for all stations
+    datum_shift_file = '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt'  # if model outputs are not in NAVD, shift them to NAVD; None if no shift
+    nday_moving_average = 0  # 2-day moving average
+
     region = "Full_domain"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
 
     # neglect stations, only for stats
@@ -178,12 +183,25 @@ if __name__ == "__main__":
     #     '8767816',  # Lake Charles
     #     '8423898', '8419317', '8410140'  # GoME
     # ]
-    neglect_stations = []
+    neglect_stations = []  # Washington DC, Lake Charles
 
     var_str = 'MAE'  # for the scatter plot
-    nday_moving_average = 0  # 2-day moving average
 
     main_dict = '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
+    other_dicts_files = []  # ['/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
+    other_shifts = []  # uniform shift for all stations and for each of the other runs
+    other_line_styles = ['g']
+
+    outfilename_suffix = 'Mostly_NAVD'  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
+
+    subplots_shape = [10, None]  # n per col
+    # --end inputs-------------------------------------------------------------------------------
+
+    with open('/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/coastal_act_stats_plot_symbols.json') as d:
+        plot_symbol_dict = json.load(d)
+
+    cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
+
     with open(main_dict) as d:
         hurricane_dict = json.load(d)
     station_bp_file = hurricane_dict['All']['station_bp_file']
@@ -191,22 +209,7 @@ if __name__ == "__main__":
         f.readline()
         n_station = int(f.readline().split()[0])
     station_subset = range(n_station)
-
-    other_dicts_files = []  # ['/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
-    other_line_styles = ['g']
     other_subsets = [range(n_station)]
-    other_shifts = [-0.0]  # uniform shift for all stations and for each of the other runs
-
-    datum = ''  # '' (use predefined ones in ecgc_stations), 'NAVD', 'MSL'
-    outfilename_suffix = 'Mostly_NAVD'  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
-
-    with open('/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/coastal_act_stats_plot_symbols.json') as d:
-        plot_symbol_dict = json.load(d)
-
-    cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
-
-    subplots_shape = [10, None]  # n per col
-    # --end inputs-------------------------------------------------------------------------------
 
     for event in events:
         dict_item = hurricane_dict[event]
@@ -277,7 +280,10 @@ if __name__ == "__main__":
                 elev_out_file=elev_out_file,
                 station_in_subset=station_subset,
             )
-            mod = datum_shift(mod, datum_shift_file='/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
+            
+            mod += shift
+            if datum_shift_file is not None:
+                mod = datum_shift(mod, datum_shift_file=datum_shift_file)
 
             # get obs
             [obs, datums, st_info] = get_obs_elev(
@@ -308,11 +314,12 @@ if __name__ == "__main__":
                         elev_out_file=other_dict[event]['elev_out_file'],
                         station_in_subset=other_subset
                     )
+                    other_mod += other_shift
                     other_mod = datum_shift(other_mod, datum_shift_file='/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
                     other_stat, _ = plot_elev(obs, other_mod, plot_start_day_str, plot_end_day_str,
                                               stations_groups[group_name],
                                               datums, st_info, None, iplot=False, nday_moving_average=nday_moving_average, subplots_shape=subplots_shape,
-                                              fig_ax=fig_ax, line_styles=[None, other_line_style], shift=other_shift, label_strs=['obs', other_runid])
+                                              fig_ax=fig_ax, line_styles=[None, other_line_style], label_strs=['obs', other_runid])
                     other_runs_stats[i] = pd.concat([other_runs_stats[i], other_stat], axis=0, ignore_index=True)
 
                     mean_stats_string = write_stat(other_stat, f'stats_{other_runid}_{group_name}.txt')

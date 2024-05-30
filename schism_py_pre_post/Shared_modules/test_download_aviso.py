@@ -1,0 +1,2 @@
+import copernicusmarine
+catalog = copernicusmarine.describe(overwrite_metadata_cache=True)

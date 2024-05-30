@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 """Replace a source"""
 import numpy
-from psycopg2 import Time
-from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
-from schism_py_pre_post.Grid.Prop import Prop
-from schism_py_pre_post.Download.download_usgs_with_api import download_single_station  # pip install climata (mannually define a class "SiteIOIV" in __init__.py)
 import pandas as pd
 import pytz
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+
+# pip install climata
+from schism_py_pre_post.Download.download_usgs_with_api import download_single_station
+from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
+from schism_py_pre_post.Grid.Prop import Prop
 
 
 vsource_file = '/sciclone/schism10/feiye/STOFS3D-v4/Shared_with_NOAA/Vsource/NOAA/vsource.th'

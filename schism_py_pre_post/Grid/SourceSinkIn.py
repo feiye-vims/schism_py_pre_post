@@ -278,8 +278,6 @@ class source_sink():
 
 
 if __name__ == "__main__":
-    ss = source_sink(source_dir='/sciclone/schism10/feiye/STOFS3D-v4/Inputs/IOper/')
-    pass
     """testing"""
     # Sample 1: initialize source_sink files from scratch
     # added = source_sink(source_dir=None, source_eles=[23, 24, 25], sink_eles=[233, 234])
@@ -295,13 +293,31 @@ if __name__ == "__main__":
     # my_source_sink = source_sink(source_dir='/sciclone/data10/feiye/vims20/work/ChesBay/RUN200i/')
     # my_source_sink.nc_writer('./')
 
-    # Sample 4: initialize source_sink files with uniform values
-    my_hgrid = schism_grid('/sciclone/data10/feiye/vims20/work/ChesBay/RUN200i/hgrid.gr3')
-    my_hgrid.compute_all()
-    land_ele_ids = np.squeeze(np.argwhere(my_hgrid.dpe<5)).tolist() 
-    my_sink = source_sink(source_dir=None, source_eles=[], sink_eles=land_ele_ids, timedeltas=[0, 86400*36500])
-    my_source_sink = source_sink(source_dir='/sciclone/data10/feiye/vims20/work/ChesBay/RUN200i/')
-    combined = my_source_sink + my_sink
-    # combined.writer('./')
-    combined.nc_writer('./')
+    # # Sample 4: initialize source_sink files with uniform values
+    # my_hgrid = schism_grid('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I15e/Source_sink/hgrid.gr3')
+    # my_hgrid.compute_all()
+    # land_ele_ids = np.squeeze(np.argwhere(my_hgrid.dpe<5)).tolist() 
+    # my_sink = source_sink(source_dir=None, source_eles=[], sink_eles=land_ele_ids, timedeltas=[0, 86400*36500])
+    # my_source_sink = source_sink(source_dir='/sciclone/data10/feiye/vims20/work/ChesBay/RUN200i/')
+    # combined = my_source_sink + my_sink
+    # # combined.writer('./')
+    # combined.nc_writer('./')
+
+    from pylib_experimental.schism_file import cread_schism_hgrid
+    hgrid_obj = cread_schism_hgrid('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I15e/Source_sink/hgrid.gr3')
+    hgrid_obj.proj(prj0='epsg:4326', prj1='esri:102008')
+
+    hgrid_obj.compute_all()
+    land_ele_idx = np.squeeze(np.argwhere(hgrid_obj.dpe<5)).tolist() 
+
+    my_ss = source_sink(source_dir=None, source_eles=land_ele_idx, sink_eles=[], timedeltas=[0, 86400*36500])
+    # compute source based on element area and precipitation rate
+    new_source = hgrid_obj.area[land_ele_idx] * 3e-6  # 3e-6 m/s (10 inches/day) * area (m2) = source in m3/s
+    tmp_df = pd.DataFrame(np.c_[np.zeros((2,1)), np.vstack([new_source]*2)], index=my_ss.vsource.df.index, columns=my_ss.vsource.df.columns)
+    tmp_df['datetime'] = my_ss.vsource.df['datetime']
+    my_ss.vsource.df = tmp_df
+    my_ss.update_vars()
+
+    my_ss.writer('/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I15e/Source_sink/')
+
     pass
