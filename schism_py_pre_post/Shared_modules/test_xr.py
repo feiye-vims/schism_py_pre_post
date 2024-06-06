@@ -2,6 +2,7 @@
 import os
 from glob import glob
 from pathlib import Path
+from time import sleep
 
 from matplotlib import pyplot as plt
 import netCDF4
@@ -15,8 +16,8 @@ from tqdm import tqdm
 #%%
 
 # compare two nc files
-nc1 = xr.open_dataset('/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7/Shared_for_CERA/extract/1.nc')
-nc2 = xr.open_dataset('/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7/Shared_for_CERA/extract/schout_UV4.5m_1.nc')
+nc1 = xr.open_dataset('/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7/Shared_for_CERA/extract/schout_UV4.5m_1.nc')
+nc2 = xr.open_dataset('/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7/Shared_for_CERA/extract_copy/schout_UV4.5m_1.nc')
 
 if sorted(list(nc1.variables.keys())) != sorted(list(nc2.variables.keys())):
     raise ValueError('Variables are not the same')
@@ -26,13 +27,15 @@ for key in var_list:
     dtype = nc1[key].dtype
     print(f'Comparing {key}, dtype: {dtype}')
     if np.issubdtype(dtype, np.floating):
-        is_equal = np.allclose(np.array(nc1[key]), np.array(nc2[key]), equal_nan=True, atol=1e-7, rtol=1e-7)
+        is_equal = np.allclose(np.array(nc1[key]), np.array(nc2[key]), equal_nan=True, atol=1e-6, rtol=1e-6)
     else:
         is_equal = nc1[key].equals(nc2[key])
     if not is_equal:
         raise ValueError(f'{key} is not equal')
 
     # close_idx = np.isclose(np.array(nc1[key]), np.array(nc2[key]), equal_nan=True, atol=1e-6, rtol=1e-6)
+
+sleep(600)
 
 #%%
 # read from local

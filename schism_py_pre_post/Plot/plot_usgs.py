@@ -142,7 +142,8 @@ if __name__ == "__main__":
         sec_per_time_unit=86400,
         elev_out_files={
             'R03a': '/sciclone/schism10/feiye/STOFS3D-v8/O03a/fort.18',
-            'R03a_repositioned': '/sciclone/schism10/feiye/STOFS3D-v8/O03a/elevation.USGS_station_LA_repositioned.dat'
+            'R03a_repositioned': '/sciclone/schism10/feiye/STOFS3D-v8/O03a/elevation.USGS_station_LA_repositioned.dat',
+            'R03b': '/sciclone/schism10/feiye/STOFS3D-v8/O03b/elevation.USGS_station_LA_repositioned.dat'
         },
         plot_start_day_str='2024-03-10 00:00:00',
         plot_end_day_str='2024-04-10 00:00:00',

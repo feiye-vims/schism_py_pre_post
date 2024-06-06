@@ -24,7 +24,7 @@ from schism_py_pre_post.Shared_modules.test_modules import HYCOM
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
 from schism_py_pre_post.Shared_modules.obs_mod_comp import obs_mod_comp
 from schism_py_pre_post.Download.download_usgs_with_api import download_stations, usgs_var_dict, chunks
-from schism_py_pre_post.Utilities.util import BinA, parse_date
+from schism_py_pre_post.Utilities.util import b_in_a, parse_date
 
 
 def get_hycom_elev(point_xy:np.ndarray, hycom_file=None):
@@ -143,7 +143,7 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
     # Since the downloader may change the station order in station.bp,
     # arrange ids in the original order and mark missing data
     downloaded_station_ids = [x.station_info['id'] for x in downloaded_data]
-    idx = BinA(A=station_ids, B=downloaded_station_ids)
+    idx = b_in_a(A=station_ids, B=downloaded_station_ids)
     requested_data = np.array([None] * len(station_ids))
     requested_data[idx] = downloaded_data
 
