@@ -167,11 +167,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    events = ['STOFS3D-v7_reforecast']
+    events = ['EX62']
 
-    datum = ''  # '' (use predefined ones in ecgc_stations), 'NAVD', 'MSL'
+    datum = 'MSL'  # '': (use predefined ones in ecgc_stations); 'NAVD'; 'MSL'
     shift = 0.0  # uniform shift for all stations
-    datum_shift_file = '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt'  # if model outputs are not in NAVD, shift them to NAVD; None if no shift
+    # if model outputs are not in NAVD, shift them to NAVD; None if no shift
+    datum_shift_file = None  # '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt'
     nday_moving_average = 0  # 2-day moving average
 
     region = "Full_domain"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
@@ -192,7 +193,7 @@ if __name__ == "__main__":
     other_shifts = []  # uniform shift for all stations and for each of the other runs
     other_line_styles = ['g']
 
-    outfilename_suffix = 'Mostly_NAVD'  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
+    outfilename_suffix = ''  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
 
     subplots_shape = [10, None]  # n per col
     # --end inputs-------------------------------------------------------------------------------
@@ -204,7 +205,7 @@ if __name__ == "__main__":
 
     with open(main_dict) as d:
         hurricane_dict = json.load(d)
-    station_bp_file = hurricane_dict['All']['station_bp_file']
+    station_bp_file = hurricane_dict[events[0]]['station_bp_file']
     with open(station_bp_file) as f:
         f.readline()
         n_station = int(f.readline().split()[0])
@@ -259,6 +260,22 @@ if __name__ == "__main__":
         other_runids = [os.path.basename(os.path.dirname(x[event]['cdir'])) for x in other_dicts]
         # ---------------------------------------------------------------------------------
 
+        # get all obs and save cache, if the connection is unstable,
+        # there will be exception, then rerun this script until all obs are retrieved
+        nvalid = 0
+        n_station = 0
+        for iter_groups, [group_name, stations] in enumerate(stations_groups.items()):
+            [obs, datums, st_info] = get_obs_elev(
+                plot_start_day_str=plot_start_day_str,
+                plot_end_day_str=plot_end_day_str,
+                noaa_stations=stations,
+                default_datum=default_datums[group_name],
+                cache_folder=cache_folder,
+            )
+            n_station += len(stations)
+            nvalid += sum([ob is not None for ob in obs])
+        print(f'{nvalid} out of {n_station} stations have valid data')
+
         final_datums = []
         stats = pd.DataFrame()
         group_stats = ''
@@ -291,7 +308,7 @@ if __name__ == "__main__":
                 plot_end_day_str=plot_end_day_str,
                 noaa_stations=stations,
                 default_datum=default_datums[group_name],
-                cache_folder=cache_folder
+                cache_folder=cache_folder,
             )
             final_datums += datums
 
@@ -342,7 +359,7 @@ if __name__ == "__main__":
             mean_stats_string = write_stat(other_run_stats[mask], f'stats_{other_runid}_{filename_base}.txt')
             other_group_stats[i] += "Overall".ljust(25) + ":" + mean_stats_string[1]
 
-        for  this_run_id, stats_string in zip([runid] + other_runids, [group_stats] + other_group_stats):
+        for this_run_id, stats_string in zip([runid] + other_runids, [group_stats] + other_group_stats):
             with open(f'mean_stats_{this_run_id}_{filename_base}.txt', 'w') as f:
                 f.write(stats_string)
         

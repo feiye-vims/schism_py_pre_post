@@ -137,12 +137,12 @@ def vdatum_wrapper_pointwise(x, y, z, conversion_para='', print_info=''):
 
     for i in tqdm(range(len(x)), desc=f"{print_info} Processing"):
         success = False
-        for _ in regions:
+        for region in regions:
             result = subprocess.run(
-                f"java -jar {vdatum_folder}/vdatum.jar"
-                "{conversion_para} -pt:{x[i]},{y[i]},{z[i]} region:{region}",
-                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-
+                f"java -jar {vdatum_folder}/vdatum.jar "
+                f"{conversion_para} -pt:{x[i]},{y[i]},{z[i]} region:{region}",
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+                # check = False: check manually below
             if result.returncode == 0:
                 z_converted[i] = float(result.stdout.decode().split()[417])
                 print(f"{print_info}Point {i+1} ({x[i]}, {y[i]}, {z[i]})"

@@ -1,15 +1,18 @@
-from pylib_experimental.schism_file import cread_schism_hgrid
-from pylib import grd2sms, schism_grid
-import netCDF4
+"""
+Plot 2D variables (or a slab/layer of 3D variables) from SCHISM outputs,
+use mpi to parallelize the plotting of multiple time stamps
+"""
+import os
+import gc
+import copy
+from mpi4py import MPI
 from datetime import datetime, timedelta
+
 import numpy as np
 import matplotlib
-from mpl_toolkits.basemap import Basemap  # mamba install basemap
+# from mpl_toolkits.basemap import Basemap  # mamba install basemap
 import matplotlib.pyplot as plt
-import copy
-import os
-from mpi4py import MPI
-import gc
+import netCDF4
 
 import cartopy
 import cartopy.geodesic as cgeo
@@ -18,6 +21,10 @@ import cartopy.io.img_tiles as cimgt
 import io
 from urllib.request import urlopen, Request
 from PIL import Image
+
+from pylib_experimental.schism_file import cread_schism_hgrid
+from pylib import grd2sms, schism_grid
+
 
 try:
     matplotlib.use('TkAgg')
@@ -76,10 +83,9 @@ def schism2sms_parallel(
     # stacks_proc = np.flip(stacks_proc)
     print(f'process {rank} handles {stacks_proc}\n')
 
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
-    gd = schism_grid(f'{rundir}/hgrid.gr3')
+    gd = cread_schism_hgrid(f'{rundir}/hgrid.gr3')
 
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{fname_prefix}_{stack}.nc'
@@ -119,18 +125,25 @@ def schism2sms_parallel(
     print(f'Core {rank} finishing ...\n\n\n')
     comm.Barrier()
 
+
 def plot_schism2D_parallel(
     rundir='./',
-    model_start_time = datetime.strptime('2014-12-01 00:00:00', "%Y-%m-%d %H:%M:%S"),
-    var_str=None, var_proc=None, stacks=[1, 2, 3], time_steps=[],
-    plot_params:dict={}, output_dir=None,
-    iOverWrite=False
+    model_start_time=datetime.strptime('2014-12-01 00:00:00', "%Y-%m-%d %H:%M:%S"),
+    var_str=None, var_proc=None, stacks=None, time_steps=None,
+    plot_params: dict = None, output_dir=None, iOverWrite=False
 ):
     """
     function for plotting 2D variables of the schism outputs;
     mpi can be used when plotting many time stamps
     """
-
+    if plot_params is None:
+        plot_params = {
+            'xlim': [-92.3, -88.5], 'ylim': [28.8, 31.2], 'clim': [-2, 10],
+        }
+    if stacks is None:
+        stacks = [1, 2]
+    if time_steps == []:
+        time_steps = None
     if var_str in ['elevation']:
         fname_prefix = 'out2d'
     else:
@@ -145,8 +158,7 @@ def plot_schism2D_parallel(
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    gd = cread_schism_hgrid(f'{rundir}/hgrid.gr3')
-    gd_copy = copy.deepcopy(gd)
+    gd = schism_grid(f'{rundir}/hgrid.gr3')
 
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{fname_prefix}_{stack}.nc'
@@ -154,12 +166,13 @@ def plot_schism2D_parallel(
         my_nc = netCDF4.Dataset(fname)
         var = np.array(my_nc.variables[var_str])
 
+        gd_copy = copy.deepcopy(gd)  # get a copy of the original grid because the copy will be modified
         if var_proc is not None:
             var, var_title_str = var_proc(gd_copy, var)
 
         this_time_dts = my_nc.variables['time']
-        if time_steps == []:
-            time_steps = range(len(this_time_dts)) # all time stamps
+        if time_steps is None:
+            time_steps = range(len(this_time_dts))  # all time stamps
 
         for j, this_time_dt in enumerate(this_time_dts):
             if j not in time_steps:  # only plot selected time stamps
@@ -253,7 +266,7 @@ def mask_dry_nodes(hgrid_obj, var, var_str, elevation, min_depth=0.01):
     return var, 'masked_' + var_str
 
 def mask_dry_elevation(hgrid_obj, elevation):
-    return mask_dry_nodes(hgrid_obj, elevation, 'elevation', elevation, min_depth=0.01)
+    return mask_dry_nodes(hgrid_obj, elevation, 'elevation', elevation, min_depth=0)
 
 def get_disturbance(hgrid_obj, elevation):
     '''elevation can have a time dimension,
@@ -288,34 +301,28 @@ plot_param_dict = {
 
 if __name__ == "__main__":
     # sample inputs
-    rundir = '/sciclone/schism10/feiye/STOFS3D-v8/R02d/'
-    output_dir = f'{rundir}/outputs/'
-    model_start_time = datetime.strptime('2024-03-05', "%Y-%m-%d")
-    var_str = 'elevation'
-    var_proc = mask_dry_elevation
-    stacks = np.arange(1, 10)  # must cover the plot time stamps
-    time_steps = [11, 23]
-    plot_params = {
-        'xlim': plot_param_dict['LA']['xlim'],
-        'ylim': plot_param_dict['LA']['ylim'],
-        'clim': plot_param_dict['LA']['clim'],
-    }
+    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v7/Runs/Rv7_Francine_update/'
+    output_dir = f'{RUNDIR}/outputs/'
+    model_start_time = datetime.strptime('2024-09-11', "%Y-%m-%d")
+    VAR_STR = 'elevation'
+    var_proc = get_positive_disturbance
+    stacks = np.arange(1, 7)  # must cover the plot time stamps
+    time_steps = []  # None (all time steps), or a list of time steps to plot
+    plot_params = plot_param_dict['LA']
 
     # -------------------- sample outputing to *.2dm -------------------------
     snapshots_times = (
-        datetime.strptime('2024-03-06 01:00:00', "%Y-%m-%d %H:%M:%S"),
-        datetime.strptime('2024-03-08 01:00:00', "%Y-%m-%d %H:%M:%S"),
-        datetime.strptime('2024-03-10 01:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-20 12:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-29 12:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-30 12:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-31 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-09-05 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-09-12 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-09-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
     )
     if snapshots_times:
-        schism2sms_parallel(rundir, model_start_time, var_str, var_proc, stacks, output_dir, snapshots_times, iOverWrite=True)
+        schism2sms_parallel(
+            RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
+            output_dir, snapshots_times, iOverWrite=True)
 
     # ----------------------------- sample generating plot -------------------------
-    plot_schism2D_parallel(rundir, model_start_time, var_str, var_proc, stacks, time_steps, plot_params, output_dir, iOverWrite=True)
+    plot_schism2D_parallel(
+        RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
+        time_steps, plot_params, output_dir, iOverWrite=True)
 
-    pass
+    print('All done!')

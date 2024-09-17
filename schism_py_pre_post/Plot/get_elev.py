@@ -7,14 +7,13 @@ which can be used for comparison and plotting.
 import os
 import glob
 import pickle
+from datetime import timedelta
+from datetime import datetime
 
-import math
 import json
 import numpy as np
 import pandas as pd
 from scipy.interpolate import griddata  # , interp2d
-from datetime import timedelta
-from datetime import datetime
 
 import noaa_coops
 from searvey.coops import COOPS_Query, COOPS_Station
@@ -22,12 +21,10 @@ from searvey.coops import COOPS_Query, COOPS_Station
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 from schism_py_pre_post.Shared_modules.test_modules import HYCOM
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
-from schism_py_pre_post.Shared_modules.obs_mod_comp import obs_mod_comp
-from schism_py_pre_post.Download.download_usgs_with_api import download_stations, usgs_var_dict, chunks
 from schism_py_pre_post.Utilities.util import b_in_a, parse_date
 
 
-def get_hycom_elev(point_xy:np.ndarray, hycom_file=None):
+def get_hycom_elev(point_xy: np.ndarray, hycom_file: str):
     '''
     Get elevation at point_xy (nx2 numpy array)
     from a HYCOM file
@@ -44,50 +41,64 @@ def get_hycom_elev(point_xy:np.ndarray, hycom_file=None):
     # f = interp2d(lon, lat, elev[0, :, :], kind='linear')
     # z_interp = f(st_lon, st_lat)
 
-    X, Y = np.meshgrid(lon, lat)
-    Z = elev.reshape(elev.shape[0], -1).T
-    x = X.ravel()
-    y = Y.ravel()
-    z = Z
-    z_interp = griddata(np.c_[x, y], z, (st_lon, st_lat), method='linear')
+    hycom_x, hycom_y = np.meshgrid(lon, lat)
+    elev = elev.reshape(elev.shape[0], -1).T
+    x = hycom_x.ravel()
+    y = hycom_y.ravel()
+    z_interp = griddata(np.c_[x, y], elev, (st_lon, st_lat), method='linear')
 
     # dealing with nan
     nan_idx = np.where(np.isnan(z_interp[:, 0]))[0]
-    idx = (Z[:, 0] > -29999)
-    x = X.ravel()[idx]
-    y = Y.ravel()[idx]
-    z = Z[idx, :]
+    idx = (elev[:, 0] > -29999)
+    x = hycom_x.ravel()[idx]
+    y = hycom_y.ravel()[idx]
+    z = elev[idx, :]
     z_interp_nearest = griddata(np.c_[x, y], z, (st_lon, st_lat), method='nearest')
     z_interp[nan_idx] = z_interp_nearest[nan_idx]
 
     # fig, ax = plt.subplots(nrows=1, ncols=1)
-    # ax.pcolormesh(X, Y, elev[300, :, :], vmin=-0.2, vmax=0.2, cmap='jet')
+    # ax.pcolormesh(hycom_x, hycom_y, elev[300, :, :], vmin=-0.2, vmax=0.2, cmap='jet')
     # ax.scatter(st_lon, st_lat, 10, z_interp[:, 300], cmap='jet', vmin=-0.2, vmax=0.2)
     # plt.show()
 
-    model_df = pd.DataFrame(data=z_interp.T, index=my_hycom.t_datetime, columns=noaa_stations)
+    model_df = pd.DataFrame(data=z_interp.T, index=my_hycom.t_datetime)
     return model_df
 
 
-def get_hindcast_elev(model_start_day_str, noaa_stations=None, station_in_file=None, elev_out_file=None, sec_per_time_unit=1, station_in_subset=None):
+def get_hindcast_elev(
+    model_start_day_str, noaa_stations=None, station_in_file=None,
+    elev_out_file=None, sec_per_time_unit=1, station_in_subset=None
+):
     '''
     Get model time series at noaa_stations,
     either from specified ids or from station_in_file
+
+    Inputs:
+    model_start_day_str: the start day of the time series, e.g., "2021-08-01 00:00:00"
+    noaa_stations: a list of station ids; if not specified, read from station_in_file
+    station_in_file: a bp file containing station information in the last column
+    elev_out_file: the model output file containing time series
+    sec_per_time_unit: the time unit in the model output file in seconds, e.g., 86400 for daily output
+    station_in_subset: a list of station indices to subset the stations in station_in_file
+
+    Output:
+    model_df: a pandas dataframe containing the time series
     '''
     if noaa_stations is not None:
-        pass
+        st_id = noaa_stations
     else:
         st_id = Bpfile(station_in_file, cols=5).make_dataframe().columns
 
-        my_th = TimeHistory(elev_out_file, model_start_day_str, -9999, sec_per_time_unit=sec_per_time_unit)
+    my_th = TimeHistory(elev_out_file, model_start_day_str, -9999, sec_per_time_unit=sec_per_time_unit)
 
-        if station_in_subset is not None:
-            my_th = my_th.export_subset(station_idx=station_in_subset)
-        
-        model_df = my_th.df.set_index('datetime')
+    if station_in_subset is not None:
+        my_th = my_th.export_subset(station_idx=station_in_subset)
 
-        model_df.columns = st_id
+    model_df = my_th.df.set_index('datetime')
+    model_df.columns = st_id
+
     return model_df
+
 
 def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None, station_in_file=None, i_nowcast=False):
     '''
@@ -121,6 +132,7 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
 
     return model_df
 
+
 def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-01', cache_ident_name='unspecified'):
     # handle cache: cache file is saved per stations specified in a bp file.
     # The download function can do batch download for all stations, so it is not straightforward to save a per-station cache
@@ -139,24 +151,43 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
 
         with open(cache_file, 'wb') as file:
             pickle.dump(downloaded_data, file)
+    
+    # convert from feet to meter
+    for data in downloaded_data:
+        data.df['value'] *= 0.3048
         
     # Since the downloader may change the station order in station.bp,
     # arrange ids in the original order and mark missing data
     downloaded_station_ids = [x.station_info['id'] for x in downloaded_data]
-    idx = b_in_a(A=station_ids, B=downloaded_station_ids)
+    idx = b_in_a(station_ids, downloaded_station_ids)
     requested_data = np.array([None] * len(station_ids))
     requested_data[idx] = downloaded_data
 
-    obs_df = []; st_info = []
-    for data in requested_data:
-        data.df.columns = ['datetime', 'water_level']
-        data.df.set_index('datetime', inplace=True)
-        obs_df.append(data.df)
-        # reformat station_info
-        station_info = {'id': data.station_info['id'], 'site_name': data.station_info['name'], 'latitude': data.station_info['lat'], 'longitude': data.station_info['lon']}
+    obs_df = []
+    st_info = []
+    for i, data in enumerate(requested_data):
+        if data is None:
+            obs_df.append(None)
+            station_info = {
+                'id': station_ids[i],
+                'site_name': 'NA',
+                'latitude': 'NA',
+                'longitude': 'NA'
+            }
+        else:
+            data.df.columns = ['datetime', 'water_level']
+            data.df.set_index('datetime', inplace=True)
+            obs_df.append(data.df)
+            # reformat station_info
+            station_info = {
+                'id': data.station_info['id'],
+                'site_name': data.station_info['name'],
+                'latitude': data.station_info['lat'],
+                'longitude': data.station_info['lon']}
         st_info.append(station_info)
 
     return obs_df, st_info
+
 
 def get_coops_elev(
     retrieve_method='noaa_coops',  # 'searvey' or 'noaa_coops'
@@ -255,6 +286,7 @@ def get_coops_elev(
 
     return [noaa_df_list, datum_list, st_info]
 
+
 def get_usace_elev(stations=[], start_time_str='2022-04-11T00:00', end_time_str='2022-04-19T23:59'):
     import xml.etree.ElementTree as ET
     import requests
@@ -340,30 +372,85 @@ def get_usace_elev(stations=[], start_time_str='2022-04-11T00:00', end_time_str=
         df_list.append(df)
         st_info_list.append(st_info)
 
-
     return df_list, st_info_list
 
-def make_bp_from_station_json(
-    bpfile='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.bp',
-    station_json='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json'
-):
 
-    _, st_info = get_timeseries_from_station_json(station_json=station_json)
+def make_bp_from_station_json(
+    station_json='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json',
+    bpfile='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.bp'
+):
+    """Make a schism bp file from a station json file."""
+
+    _, st_info, _ = get_obs_from_station_json(station_json=station_json)
     lon = [x['longitude'] for x in st_info]
     lat = [x['latitude'] for x in st_info]
     z = [0] * len(lon)
     st_id = [x['id'] for x in st_info]
-    
-    with open(bpfile, 'w') as f:
+
+    with open(bpfile, 'w', encoding='utf-8') as f:
         f.write("\n")
         f.write(str(len(lon)) + "\n")
         for i, _ in enumerate(lon):
             f.write(f"{i+1} {lon[i]} {lat[i]} {z[i]} !{st_id[i]}\n")  # "!" is a separator for station id
 
 
-def get_timeseries_from_station_json(case_name='Missi_ida', station_json='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json'):
+def subset_tidal_station_json(
+    case_name='LA_reforecast', tidal_constituents=['M2', 'K1', 'O1'],
+    station_json='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json',
+    bpfile='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned.bp'
+):
+    """Make a station json file by subsetting the tidal/non-tidal stations from an existing one."""
+    import utide
+    from pathlib import Path
+
+    station_dict = json.load(open(station_json, encoding='utf-8'))[case_name]
+
+    obs_list, st_info_list, _ = get_obs_from_station_json(case_name=case_name, station_json=station_json)
+
+    subset_indices = []
+    subset_stations = []
+    for i, [obs, st_info] in enumerate(zip(obs_list, st_info_list)):
+        if obs is not None:
+            tides = utide.solve(obs.index, obs['water_level'], lat=st_info['latitude'])
+            constituent_idx = [i for i, x in enumerate(tides['name']) if x in tidal_constituents]
+            amplitude = max(tides['A'][constituent_idx])
+            if amplitude > 0.05:
+                print(f"Station {st_info['id']} is tidal, amplitude: {amplitude}")
+            else:
+                print(f"Station {st_info['id']} is non-tidal, amplitude: {amplitude}")
+                subset_stations.append(st_info['id'])
+                subset_indices.append(i)
+        
+    # write new station json
+    new_station_dict = station_dict.copy()
+    new_station_dict['stations'] = {x: station_dict['stations'][x] for x in subset_stations}
+    with open(Path(station_json).parent / f"{case_name}_tidal.json", 'w', encoding='utf-8') as f:
+        json.dump(new_station_dict, f, indent=4)
+    
+    # write new bpfile
+    with open(bpfile, 'r', encoding='utf-8') as fin:
+        with open(Path(bpfile).parent / f"{case_name}_tidal.bp", 'w', encoding='utf-8') as fout:
+            line = fin.readline()
+            fout.write(line)
+
+            line = fin.readline()
+            nst = int(line.strip())
+            fout.write(str(len(subset_stations)) + "\n")
+
+            for i in range(nst):
+                line = fin.readline()
+                if i in subset_indices:
+                    fout.write(line)
+
+    print('Done')
+
+
+def get_obs_from_station_json(
+    case_name='Missi_ida2',
+    station_json='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json'
+):
     '''
-    This is a sample function to get time series from different sources
+    This is a sample function to get time series from multiple sources
     using the station json file as input.
 
     The outputs are obs and model time series in the
@@ -371,18 +458,20 @@ def get_timeseries_from_station_json(case_name='Missi_ida', station_json='/scicl
     '''
 
     # get station information from json
-    with open(station_json) as d:
-        dict = json.load(d)
-    
+    with open(station_json, encoding='utf-8') as d:
+        station_dict = json.load(d)
+
     # get mixed sources
-    stations = np.array(list(dict[case_name]['stations'].keys()))
+    stations = np.array(list(station_dict[case_name]['stations'].keys()))
 
     # coops
-    coops_station_idx = [i for i, x in enumerate(dict[case_name]['stations'].values()) if x["source"] == 'COOPS']
+    coops_station_idx = [
+        i for i, x in enumerate(station_dict[case_name]['stations'].values()) if x["source"] == 'COOPS'
+    ]
     if coops_station_idx:
         [coops_obs, coops_datums, coops_st_info] = get_coops_elev(
-            plot_start_day_str=dict[case_name]['plot_start_day_str'],
-            plot_end_day_str=dict[case_name]['plot_end_day_str'],
+            plot_start_day_str=station_dict[case_name]['plot_start_day_str'],
+            plot_end_day_str=station_dict[case_name]['plot_end_day_str'],
             noaa_stations=stations[coops_station_idx],
             default_datum="NAVD"
         )
@@ -390,43 +479,49 @@ def get_timeseries_from_station_json(case_name='Missi_ida', station_json='/scicl
         for i, datum in enumerate(coops_datums):
             if datum != "NAVD":
                 this_station = stations[coops_station_idx[i]]
-                datum_shift = dict[case_name]['stations'][this_station]['to_NAVD88_feet']
+                datum_shift = station_dict[case_name]['stations'][this_station]['to_NAVD88_feet']
                 datum_shift *= 0.3048  # to meters
                 coops_obs[i]['water_level'] += datum_shift
-    
+
     # get usace
-    usace_station_idx = [i for i, x in enumerate(dict[case_name]['stations'].values()) if x["source"] == 'USACE']
+    usace_station_idx = [
+        i for i, x in enumerate(station_dict[case_name]['stations'].values()) if x["source"] == 'USACE'
+    ]
     if usace_station_idx:
         [usace_obs, usace_st_info] = get_usace_elev(
             stations=stations[usace_station_idx],
-            start_time_str=dict[case_name]['plot_start_day_str'],
-            end_time_str=dict[case_name]['plot_end_day_str']
+            start_time_str=station_dict[case_name]['plot_start_day_str'],
+            end_time_str=station_dict[case_name]['plot_end_day_str']
         )
         # USCAE datums are local, need to be converted to NAVD88; USACE data is already converted from feet to meters
         for i, _ in enumerate(usace_obs):
             this_station = stations[usace_station_idx[i]]
-            datum_shift = dict[case_name]['stations'][this_station]['to_NAVD88_feet']
+            datum_shift = station_dict[case_name]['stations'][this_station]['to_NAVD88_feet']
             datum_shift *= 0.3048  # to meters
             usace_obs[i]['water_level'] += datum_shift
-    
+
     # get usgs
-    usgs_station_idx = [i for i, x in enumerate(dict[case_name]['stations'].values()) if x["source"] == 'USGS']
+    usgs_station_idx = [
+        i for i, x in enumerate(station_dict[case_name]['stations'].values()) if x["source"] == 'USGS'
+    ]
     if usgs_station_idx:
         usgs_obs, usgs_st_info = get_usgs_elev(
             station_ids=stations[usgs_station_idx],
-            start_date=dict[case_name]['plot_start_day_str'],
-            end_date=dict[case_name]['plot_end_day_str'],
+            start_date=station_dict[case_name]['plot_start_day_str'],
+            end_date=station_dict[case_name]['plot_end_day_str'],
         )
         # USGS datums may not be in NAVD88, need to be converted to NAVD88
         for i, _ in enumerate(usgs_obs):
-            this_station = stations[usgs_station_idx[i]]
-            datum_shift = dict[case_name]['stations'][this_station]['to_NAVD88_feet']
-            datum_shift *= 0.3048
-            usgs_obs[i]['water_level'] += datum_shift
+            if usgs_obs[i] is not None:
+                this_station = stations[usgs_station_idx[i]]
+                datum_shift = station_dict[case_name]['stations'][this_station]['to_NAVD88_feet']
+                datum_shift *= 0.3048
+                usgs_obs[i]['water_level'] += datum_shift
 
     # assemble all obs data in order
-    obs = []; st_info = []
-    for i, station in enumerate(stations):
+    obs = []
+    st_info = []
+    for i, _ in enumerate(stations):
         if i in coops_station_idx:
             obs.append(coops_obs[coops_station_idx.index(i)])
             st_info.append(coops_st_info[coops_station_idx.index(i)])
@@ -437,22 +532,14 @@ def get_timeseries_from_station_json(case_name='Missi_ida', station_json='/scicl
             obs.append(usgs_obs[usgs_station_idx.index(i)])
             st_info.append(usgs_st_info[usgs_station_idx.index(i)])
 
-
-    # get model
-    # mod = TimeHistory(
-    #     file_name = dict[case_name]['elev_out_file'],
-    #     start_time_str=dict[case_name]['model_start_day_str'],
-    #     sec_per_time_unit=86400,
-    #     columns=list(dict[case_name]['stations'].values())
-    # )
-    # mod.df.set_index('datetime', inplace=True)
-
     datums = ['NAVD' for _ in obs]
 
     return obs, st_info, datums
 
 
 if __name__ == "__main__":
-    make_bp_from_station_json()
+    subset_tidal_station_json()
+
+    # make_bp_from_station_json()
     # plot_operation()
     # os.system("rm stats*.txt *png")

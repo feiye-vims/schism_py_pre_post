@@ -107,21 +107,21 @@ def viz_source(w_dir, start_time_str, i_show_plot=0, scale=1e3, i_nc=False):
 
 
 if __name__ == "__main__":
+    '''Sample usage'''
+
     # vs = TimeHistory('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/Iv4/20220502/vsource.th')
     # ss = SourceSinkIn('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/Iv4/20220502/source_sink.in')
+    # ss.toPropFile(ne=5654161)
     # vs1 = TimeHistory('/sciclone/schism10/feiye/STOFS3D-v4/RUN23h/vsource.th')
     # ss1 = SourceSinkIn('/sciclone/schism10/feiye/STOFS3D-v4/RUN23h/source_sink.in')
     # ms = TimeHistory('/sciclone/home10/feiye/ChesBay/RUN110y/msource.th')
     # ss1 = source_sink('/sciclone/schism10/feiye/Coastal_Act/Pumps/11LL_3days/')
     # vs = TimeHistory('/sciclone/schism10/feiye/STOFS3D-v4/fcst_run/vsource.th')
-    '''
-    ------viz source------
-    '''
-    w_dir = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/I12x/Source_sink1/relocated_source_sink/'
 
-    # ss = source_sink(run_dir)
-    # ss.toPropFile(ne=5654161)
+    WDIR = '/sciclone/schism10/feiye/STOFS3D-v8/I03f/Relocated_SS/'
+    # ss = source_sink(WDIR)
+    # ss.vsource.df['131606'].plot()
 
-    [max_val, avg_source_sink, fig] = viz_source(w_dir, '2022-05-01 00:00:00', i_show_plot=-1, scale=1.e3)
+    [max_val, avg_source_sink, fig] = viz_source(WDIR, '2022-05-01 00:00:00', i_show_plot=-1, scale=1.e3)
 
     pass

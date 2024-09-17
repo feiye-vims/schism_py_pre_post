@@ -12,18 +12,18 @@ from datetime import datetime
 
 feet2meters = 0.3048
 
-def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-01', cache_ident_name='unspecified'):
+def get_usgs_data(station_ids=None, start_date='2021-05-01', end_date='2021-06-01', cache_ident_name='unspecified', var='gauge height'):
     # handle cache: cache file is saved per stations specified in a bp file.
     # The download function can do batch download for all stations, so it is not straightforward to save a per-station cache
     Cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
-    cache_file = f"{Cache_folder}/usgs_{cache_ident_name}_{start_date.replace(' ', '_')}-{end_date.replace(' ','_')}.pkl"
+    cache_file = f"{Cache_folder}/usgs_{var}_{cache_ident_name}_{start_date.replace(' ', '_')}-{end_date.replace(' ','_')}.pkl"
 
     if os.path.exists(cache_file):
         with open(cache_file, 'rb') as file:
             downloaded_data = pickle.load(file)
     else:
         downloaded_data = download_stations(
-            param_id=usgs_var_dict['gauge height']['id'],
+            param_id=usgs_var_dict[var]['id'],
             station_ids=station_ids,
             datelist=pd.date_range(start=start_date, end=end_date)
         )
@@ -75,16 +75,20 @@ def plot_elev_no_stats(mods, mod_run_ids, requested_obs_data, plot_start_day_str
             station_id = station_ids[i_station]
             if data is not None:
                 obs_date = [x.astimezone(pytz.utc) for x in data.df['date']]
-                ax[n].plot(obs_date, (data.df['value'] - data.df['value'].mean()) * feet2meters, 'r.', label='obs')
+                obs_y = (data.df['value'] - data.df['value'].mean()) * feet2meters
+                ax[n].plot(obs_date, obs_y, 'r.', label='obs')
                 if data.station_info['id'] != station_id:
-                    raise Exception('Station ids for obs and mod do not match')
+                    raise ValueError('Station ids for obs and mod do not match')
             for i, [mod_run_id, mod] in enumerate(zip(mod_run_ids, mods)):
-                ax[n].plot(mod.index, (mod[station_id] - mod[station_id].mean()), mod_run_colors[i], label=mod_run_id)
+                mod_y = mod[station_id] - mod[station_id].mean()
+                ax[n].plot(mod.index, mod_y, mod_run_colors[i], label=mod_run_id)
 
             ax[n].title.set_text(station_id)
             ax[n].tick_params(labelrotation=20)
             ax[n].set_xlim([datetime.strptime(plot_start_day_str, "%Y-%m-%d %H:%M:%S"),
                             datetime.strptime(plot_end_day_str, "%Y-%m-%d %H:%M:%S")])
+            if data is not None:  # set ylim to obs's range
+                ax[n].set_ylim(obs_y.min() - 0.5, obs_y.max() + 0.5)
             if n == 0:
                 ax[n].legend()
         for i in range(n + 1, n_subplot_col * n_subplot_row):
@@ -117,7 +121,7 @@ def plot_usgs(
     )
 
     print('Gathering observation')
-    obs_data = get_usgs_elev(
+    obs_data = get_usgs_data(
         station_ids=mods[0].columns.values[:],  # a list of station ids
         start_date=plot_start_day_str,
         end_date=plot_end_day_str,
@@ -135,17 +139,57 @@ def plot_usgs(
     )
 
 
+scenarios_dict = {
+    'v8_March_reforecast': {
+        'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA.bp',
+        'model_start_day_str': '2024-03-05 00:00:00',
+        'plot_start_day_str': '2024-03-10 00:00:00',
+        'plot_end_day_str': '2024-04-10 00:00:00',
+    },
+    'Ida': {
+        'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA.bp',
+        'model_start_day_str': '2021-08-01 00:00:00',
+        'plot_start_day_str': '2021-08-01 00:00:00',
+        'plot_end_day_str': '2021-09-10 00:00:00',
+    }
+}
+
+
+def viz_usgs():
+    '''quick visualization of usgs data'''
+
+    usgs_stations = ['07376000']
+    usgs = get_usgs_data(
+        station_ids=usgs_stations, start_date='2024-03-05', end_date='2024-04-10',
+        cache_ident_name='v8_March_reforecast', var='streamflow')
+
+    # plot time series in nx1 subplot
+    cubic_feet2cubic_meters = 0.0283168
+    _, ax = plt.subplots(len(usgs_stations)+1, 1, figsize=(10, 5))
+    for i, station in enumerate(usgs_stations):
+        ax[i].plot(usgs[i].df['date'], usgs[i].df['value']*cubic_feet2cubic_meters, 'r.', label='USGS')
+        ax[i].set_title(station)
+        ax[i].legend()
+    plt.show()
+
+
 if __name__ == "__main__":
+    scenario = scenarios_dict['v8_March_reforecast']
+
     plot_usgs(
-        station_bp_file='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA.bp',
-        model_start_day_str='2024-03-05 00:00:00',
+        station_bp_file=scenario['station_bp_file'],
+        model_start_day_str=scenario['model_start_day_str'],
         sec_per_time_unit=86400,
         elev_out_files={
-            'R03a': '/sciclone/schism10/feiye/STOFS3D-v8/O03a/fort.18',
-            'R03a_repositioned': '/sciclone/schism10/feiye/STOFS3D-v8/O03a/elevation.USGS_station_LA_repositioned.dat',
-            'R03b': '/sciclone/schism10/feiye/STOFS3D-v8/O03b/elevation.USGS_station_LA_repositioned.dat'
+            'R15a':
+                '/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O15a/elevation.USGS_station_LA_repositioned.dat',
+            'R03v':
+                '/sciclone/schism10/feiye/STOFS3D-v8/O03v/elevation.USGS_station_LA_repositioned.dat',
+            'R07':
+                '/sciclone/schism10/feiye/STOFS3D-v8/O07/elevation.USGS_station_LA_repositioned.dat',
+            'R07b':
+                '/sciclone/schism10/feiye/STOFS3D-v8/O07b/elevation.USGS_station_LA_repositioned.dat',
         },
-        plot_start_day_str='2024-03-10 00:00:00',
-        plot_end_day_str='2024-04-10 00:00:00',
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/O03a',
+        plot_start_day_str=scenario['plot_start_day_str'], plot_end_day_str=scenario['plot_end_day_str'],
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/O07b/',
     )
