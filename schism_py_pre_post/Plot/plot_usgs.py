@@ -183,13 +183,11 @@ if __name__ == "__main__":
         elev_out_files={
             'R15a':
                 '/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O15a/elevation.USGS_station_LA_repositioned.dat',
-            'R03v':
-                '/sciclone/schism10/feiye/STOFS3D-v8/O03v/elevation.USGS_station_LA_repositioned.dat',
-            'R07':
-                '/sciclone/schism10/feiye/STOFS3D-v8/O07/elevation.USGS_station_LA_repositioned.dat',
             'R07b':
                 '/sciclone/schism10/feiye/STOFS3D-v8/O07b/elevation.USGS_station_LA_repositioned.dat',
+            'R07c':
+                '/sciclone/schism10/feiye/STOFS3D-v8/O07c/elevation.USGS_station_LA_repositioned.dat',
         },
         plot_start_day_str=scenario['plot_start_day_str'], plot_end_day_str=scenario['plot_end_day_str'],
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/O07b/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/O07c/',
     )

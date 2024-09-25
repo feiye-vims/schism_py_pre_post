@@ -35,12 +35,17 @@ def b_in_a(a=None, b=None):
     return result
 
 
-def parse_date(date_string):
+def parse_date(input_date):
     '''
     Parses a date string and returns a datetime object.
     The order of the formats in the list matters:
     the function will stop at the first format that matches the input string.
+
+    returns: datetime object
     '''
+
+    if isinstance(input_date, datetime):
+        return input_date
 
     formats = [
         "%Y-%m-%d",           # e.g. 2023-06-13
@@ -70,9 +75,10 @@ def parse_date(date_string):
 
     for fmt in formats:
         try:
-            return datetime.strptime(date_string, fmt), fmt
-        except ValueError:
-            pass
+            return datetime.strptime(input_date, fmt), fmt
+        except ValueError as e:
+            print(f"Error: {e} for format {fmt}")
+
     print("--------------Invalid date format!----------------")
     return None, None
 
@@ -142,7 +148,7 @@ def vdatum_wrapper_pointwise(x, y, z, conversion_para='', print_info=''):
                 f"java -jar {vdatum_folder}/vdatum.jar "
                 f"{conversion_para} -pt:{x[i]},{y[i]},{z[i]} region:{region}",
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-                # check = False: check manually below
+
             if result.returncode == 0:
                 z_converted[i] = float(result.stdout.decode().split()[417])
                 print(f"{print_info}Point {i+1} ({x[i]}, {y[i]}, {z[i]})"

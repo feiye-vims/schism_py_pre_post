@@ -1,6 +1,23 @@
 """test pylib functions"""
 
 # %%
+from pylib import read
+bp1 = read('/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal.bp')
+bp2 = read('/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_v43.bp')
+
+for i, station in enumerate(bp1.station):
+    idx = bp2.station == station
+    if sum(idx) == 0:
+        raise ValueError(f"Station {station} not found in bp2.")
+    elif sum(idx) > 1:
+        raise ValueError(f"Station {station} found more than once in bp2.")
+    bp1.x[i] = bp2.x[idx]
+    bp1.y[i] = bp2.y[idx]
+    bp1.z[i] = bp2.z[idx]
+
+bp1.save('/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43.bp')
+
+# %%
 from pylib import convert_schism_source
 convert_schism_source(run='/sciclone/schism10/feiye/STOFS3D-v7/Shadow_fcst/',)
 

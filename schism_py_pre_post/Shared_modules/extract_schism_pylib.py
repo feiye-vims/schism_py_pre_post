@@ -4,9 +4,9 @@ import numpy as np
 from pylib import read_schism_output
 from pylib_experimental.schism_file import TimeHistory
 
-run_dir = '/sciclone/schism10/feiye/STOFS3D-v8/R07b/'
-output_file = '/sciclone/schism10/feiye/STOFS3D-v8/O07b/elevation.USGS_station_LA_repositioned_nontidal'
-bpfile = '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal.bp'
+run_dir = '/sciclone/schism10/feiye/STOFS3D-v8/R07d/'
+output_file = '/sciclone/schism10/feiye/STOFS3D-v8/O07d/elevation.USGS_station_LA_repositioned.dat'
+bpfile = '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_v43.bp'
 
 data = read_schism_output(run=run_dir, varname=['elevation'], xyz=bpfile, stacks=np.arange(1, 36))
 

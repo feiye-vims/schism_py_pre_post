@@ -1,4 +1,5 @@
-from schism_py_pre_post.Plot.plot_elev import plot_elev, get_hindcast_elev, get_obs_elev, datum_shift
+from schism_py_pre_post.Download.download_coops_elev import get_coops_elev
+from schism_py_pre_post.Plot.plot_elev import plot_elev, get_hindcast_elev, datum_shift
 from schism_py_pre_post.Grid.Bpfile import Bpfile
 import pandas as pd
 import json
@@ -265,12 +266,11 @@ if __name__ == "__main__":
         nvalid = 0
         n_station = 0
         for iter_groups, [group_name, stations] in enumerate(stations_groups.items()):
-            [obs, datums, st_info] = get_obs_elev(
-                plot_start_day_str=plot_start_day_str,
-                plot_end_day_str=plot_end_day_str,
-                noaa_stations=stations,
+            [obs, datums, st_info] = get_coops_elev(
+                plot_start_day_str, plot_end_day_str, stations,
                 default_datum=default_datums[group_name],
                 cache_folder=cache_folder,
+                retrieve_method='searvey'
             )
             n_station += len(stations)
             nvalid += sum([ob is not None for ob in obs])

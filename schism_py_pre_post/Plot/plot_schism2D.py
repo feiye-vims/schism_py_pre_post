@@ -98,10 +98,12 @@ def schism2sms_parallel(
             this_time = model_start_time + timedelta(seconds=this_time_dt.data.item())
             # save a copy as *.2dm
             if this_time in snapshots_times:
+                # make a copy of the grid because the grid will be modified
+                gd_copy = copy.deepcopy(gd)
                 if 'var' not in locals():
                     var = np.array(my_nc.variables[var_str])
                 if var_proc is not None:
-                    var, title_var_str = var_proc(gd, var)
+                    var, title_var_str = var_proc(gd_copy, var)
                 else:
                     title_var_str = var_str
 
@@ -111,11 +113,11 @@ def schism2sms_parallel(
                     print(f'Core {rank} skipping: {savefilename}\n')
                     continue  # skip existing figures
                 if var.ndim == 3:
-                    gd.dp = var[i_time, :, -1]
+                    gd_copy.dp = var[i_time, :, -1]
                 elif var.ndim == 2:
-                    gd.dp = var[i_time, :]
-                    gd.dp[np.isnan(gd.dp)] = -9999
-                grd2sms(gd, savefilename)
+                    gd_copy.dp = var[i_time, :]
+                    gd_copy.dp[np.isnan(gd_copy.dp)] = -9999
+                grd2sms(gd_copy, savefilename)
 
         my_nc.close()
         if 'var' in locals():
@@ -158,7 +160,7 @@ def plot_schism2D_parallel(
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    gd = schism_grid(f'{rundir}/hgrid.gr3')
+    gd = cread_schism_hgrid(f'{rundir}/hgrid.gr3')
 
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{fname_prefix}_{stack}.nc'
@@ -288,6 +290,9 @@ def get_positive_disturbance(hgrid_obj, elevation):
     return disturbance, 'positive_disturbance'
 
 plot_param_dict = {
+    'Pearl River': {
+        'xlim': [-89.87, -89.55], 'ylim': [30.30, 30.55], 'clim': [-2, 10],
+    },
     'LA': {
         'xlim': [-92.3, -88.5], 'ylim': [28.8, 31.2], 'clim': [-2, 10],
     },
@@ -301,19 +306,21 @@ plot_param_dict = {
 
 if __name__ == "__main__":
     # sample inputs
-    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v7/Runs/Rv7_Francine_update/'
+    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/R07b/'
     output_dir = f'{RUNDIR}/outputs/'
-    model_start_time = datetime.strptime('2024-09-11', "%Y-%m-%d")
+    model_start_time = datetime.strptime('2024-03-05', "%Y-%m-%d")
     VAR_STR = 'elevation'
-    var_proc = get_positive_disturbance
-    stacks = np.arange(1, 7)  # must cover the plot time stamps
+    var_proc = mask_dry_elevation
+    stacks = np.arange(1, 36)  # must cover the plot time stamps
     time_steps = []  # None (all time steps), or a list of time steps to plot
-    plot_params = plot_param_dict['LA']
+    plot_params = plot_param_dict['Pearl River']
 
     # -------------------- sample outputing to *.2dm -------------------------
     snapshots_times = (
-        datetime.strptime('2024-09-12 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        datetime.strptime('2024-09-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-06 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-20 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-27 00:00:00', "%Y-%m-%d %H:%M:%S"),
     )
     if snapshots_times:
         schism2sms_parallel(
@@ -323,6 +330,6 @@ if __name__ == "__main__":
     # ----------------------------- sample generating plot -------------------------
     plot_schism2D_parallel(
         RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
-        time_steps, plot_params, output_dir, iOverWrite=True)
+        time_steps, plot_params, output_dir, iOverWrite=False)
 
     print('All done!')

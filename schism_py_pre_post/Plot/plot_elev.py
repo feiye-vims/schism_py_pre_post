@@ -170,10 +170,11 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
 
     return model_df
 
+
 def get_obs_elev(
-    retrieve_method='noaa_coops',  # 'native', 'searvey' or 'noaa_coops'
     plot_start_day_str=None, plot_end_day_str=None, noaa_stations=None,
-    default_datum='NAVD', cache_folder='/sciclone/schism10/feiye/Cache/'
+    default_datum='NAVD', cache_folder='/sciclone/schism10/feiye/Cache/',
+    retrieve_method='noaa_coops',  # 'native', 'searvey' or 'noaa_coops'
 ):
 
     noaa_df_list = []
@@ -644,9 +645,9 @@ def test_plot_usgs():
     case_name = 'LA_reforecast_repos_nontidal'
     station_json_fname = '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json'
 
-    with open(station_json_fname, 'r') as f:
+    with open(station_json_fname, 'r', encoding='utf-8') as f:
         dict = json.load(f)
-    
+
     output_dir = dict[case_name]['cdir']
 
     obs, st_info, datums = get_obs_from_station_json(case_name, station_json_fname)

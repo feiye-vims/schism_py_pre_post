@@ -1,4 +1,4 @@
-from climata.usgs import InstantValueIO, SiteIO
+from climata.usgs import InstantValueIO, SiteIO, DailyValueIO
 import pandas as pd
 import numpy as np
 import gsw
@@ -95,11 +95,16 @@ def download_stations(param_id=None, station_ids=[], datelist=pd.date_range(star
     print(f'station ids: {station_ids}\n')
 
     # download
+    DOWNLOAD_METHODS = [InstantValueIO]
     total_data = []
     for i, station_ids_chunk in enumerate(chunks(station_ids, stations_chunk_size)):
-        data_chunk = InstantValueIO(start_date=datelist[0], end_date=datelist[-1],
-                                    station=station_ids_chunk,
-                                    parameter=param_id)
+
+        for download_method in DOWNLOAD_METHODS:
+            data_chunk = download_method(
+                start_date=datelist[0], end_date=datelist[-1],
+                station=station_ids_chunk, parameter=param_id
+            )
+
         for data in data_chunk:
             dates = [row[0] for row in data.data]
             values = [row[1] for row in data.data]
@@ -216,7 +221,7 @@ def get_usgs_obs_for_stofs3d(outdir=None, start_date_str='2015-09-18', end_date_
         os.remove(f"{outdir}/mean_tem_xyz_{start_date_str}")
     os.symlink(f"mean_temperature_xyz_{start_date_str}", f"{outdir}/mean_tem_xyz_{start_date_str}")
 
-def convert_to_ObsData(total_data:list, cache_fname=''):
+def convert_to_ObsData(total_data, cache_fname=None):
     '''
     Convert the downloaded "total_data" (see Sample 1 in __main__) to an old format used by some early scripts
     '''
@@ -232,8 +237,10 @@ def convert_to_ObsData(total_data:list, cache_fname=''):
     obs_data = ObsData(fname=None)
     obs_data.stations = stations
     obs_data.set_fID2id()
-    obs_data.saved_file = cache_fname
-    obs_data.save(obs_data.saved_file)
+
+    if cache_fname is not None:
+        obs_data.saved_file = cache_fname
+        obs_data.save(obs_data.saved_file)
 
     return obs_data
     
