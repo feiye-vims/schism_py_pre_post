@@ -118,10 +118,10 @@ if __name__ == "__main__":
     # ss1 = source_sink('/sciclone/schism10/feiye/Coastal_Act/Pumps/11LL_3days/')
     # vs = TimeHistory('/sciclone/schism10/feiye/STOFS3D-v4/fcst_run/vsource.th')
 
-    WDIR = '/sciclone/schism10/feiye/STOFS3D-v8/I03f/Relocated_SS/'
+    WDIR = '/sciclone/schism10/feiye/STOFS3D-v8/I09/Relocated_SS/'
     # ss = source_sink(WDIR)
     # ss.vsource.df['131606'].plot()
 
-    [max_val, avg_source_sink, fig] = viz_source(WDIR, '2022-05-01 00:00:00', i_show_plot=-1, scale=1.e3)
+    [max_val, avg_source_sink, fig] = viz_source(WDIR, '2024-03-05 00:00:00', i_show_plot=-1, scale=1.e3)
 
     pass

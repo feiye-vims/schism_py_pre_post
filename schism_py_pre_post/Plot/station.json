@@ -208,8 +208,8 @@
         "plot_start_day_str": "2024-03-12 00:00:00",
         "plot_end_day_str": "2024-04-06 00:00:00",
         "model_start_day_str": "2024-03-05 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O07d/elevation.USGS_station_LA_repositioned_nontidal.dat",
-        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O07d/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O09c/elevation.USGS_station_LA_repositioned_nontidal.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O09c/",
         "box": {
             "W": -93.5,
             "E": -88.5,

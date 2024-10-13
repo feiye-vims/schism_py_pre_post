@@ -17,3 +17,17 @@ def find_points_in_polyshp(pt_xy, shapefile_names):
 
     ind = ind.astype('bool')
     return ind
+
+
+def sample():
+    from pylib_experimental.schism_file import cread_schism_hgrid
+    gd = cread_schism_hgrid('/sciclone/schism10/feiye/STOFS3D-v8/I09b/Drag/drag.gr3')
+    idx = find_points_in_polyshp(
+        np.c_[gd.x, gd.y], ['/sciclone/schism10/feiye/STOFS3D-v8/I09b/Drag/atcha_mouth.shp']
+    )
+    gd.dp[idx] *= 10  # scale z by 10
+    gd.save('/sciclone/schism10/feiye/STOFS3D-v8/I09b/Drag/drag_tweaked.gr3')
+
+
+if __name__ == '__main__':
+    sample()

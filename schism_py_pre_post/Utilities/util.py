@@ -79,8 +79,7 @@ def parse_date(input_date):
         except ValueError as e:
             print(f"Error: {e} for format {fmt}")
 
-    print("--------------Invalid date format!----------------")
-    return None, None
+    raise ValueError("--------------Invalid date format!----------------")
 
 
 def my_mpi_idx(n_tasks, size, rank, distribution_type='cyclic'):

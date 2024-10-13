@@ -23,7 +23,7 @@ from searvey.coops import COOPS_Station, COOPS_Query
 import noaa_coops  # pip install noaa-coops
 
 from schism_py_pre_post.Utilities.util import parse_date
-
+from pylib import read as schism_read
 
 @dataclass
 class Unify:
@@ -198,6 +198,7 @@ def get_coops_station_info(station_ids: list, method='noaa_coops'):
 
     stations_info = []
     for station_id in station_ids:
+        print(f'Retrieving station {station_id} using {method}')
         try:
             station_info = retrieve_method(int(station_id))
         except JSONDecodeError:
@@ -205,41 +206,30 @@ def get_coops_station_info(station_ids: list, method='noaa_coops'):
             station_info = None
 
         # unify the attribute names for the two methods
-        if method == 'noaa_coops':
-            station_info.lon = station_info.lat_lon['lon']
-            station_info.lat = station_info.lat_lon['lat']
-        elif method == 'searvey':
-            station_info.lon = station_info.location.coords[0][0]
-            station_info.lat = station_info.location.coords[0][1]
+        if station_info is not None:
+            if method == 'noaa_coops':
+                station_info.lon = station_info.lat_lon['lon']
+                station_info.lat = station_info.lat_lon['lat']
+            elif method == 'searvey':
+                station_info.lon = station_info.location.coords[0][0]
+                station_info.lat = station_info.location.coords[0][1]
 
         stations_info.append(station_info)
 
     return stations_info
 
 
-def sample_get_coops_station_info():
-    '''
-    Sample function to demonstrate how to use get_coops_station_info function
-    '''
-    stations_info = get_coops_station_info(['8779770', 8725520], method='noaa_coops')
-    for station_info in stations_info:
-        if station_info is None:
-            print('Station info not available')
-        else:
-            print(station_info.id)
-            print(station_info.name)
-            print(station_info.lon)
-            print(station_info.lat)
-
-
 def get_coops_elev(
     begin_time: datetime, end_time: datetime, noaa_stations=None,
     retrieve_method='noaa_coops', default_datum='NAVD',
+    product='water_level',  # 'hourly_height' or 'water_level'
     cache_folder='/sciclone/schism10/feiye/Cache/'
 ):
 
     '''
-    Download elevation data for a coops station within a specific time range.
+    Download elevation (hourly_height) data for a coops station
+    within a specific time range.
+
     Inputs:
     - begin_time: datetime object, but string can also be parsed
     - end_time: datetime object, but string can also be parsed
@@ -248,16 +238,19 @@ def get_coops_elev(
     - default_datum: 'NAVD' or 'MSL'
     - cache_folder: folder to save cache files, set to None to disable cache
 
+
     Outputs:
     - noaa_df_list: list of pandas DataFrames
         The data is reformatted into a pandas DataFrame to unify the format from
         different downloading methods. The columns are:
         'date_time', 'water_level', 'sigma', 'flags', 'QC'
+        Unavailable data is represented as None.
+
     - datum_list: list of strings, the eventual datum used for each station
         (some requested datum may not be available, so a fallback datum is used)
+
     - station_data_list: list of station information objects
 
-    "hourly_height" is used as the product for the data retrieval.
     '''
 
     # if not receiving datetime objects, try to parse date strings
@@ -271,9 +264,11 @@ def get_coops_elev(
     datum_list = []
     station_data_list = []
 
+    # process each station
     for i, st in enumerate(noaa_stations):
         print(f'Processing Station {i+1} of {len(noaa_stations)}: {st}')
 
+        # --------------------------cache handling--------------------------
         # save each station into a separate cache file
         if cache_folder is not None:
             cache_filename = (
@@ -290,12 +285,13 @@ def get_coops_elev(
                 print(f'Existing obs data read from {cache_filename}')
                 cache_success = True
 
+        # --------------------------download data--------------------------
         if not cache_success:
             print('Failed to read from cache, regenerating ...')
-
+            # --------------------------get station info--------------------------
             for ntry in range(1, 6):  # try a few times to get station info
                 try:
-                    if retrieve_method in ['native', 'noaa_coops']:
+                    if retrieve_method in ['native', 'noaa_coops', 'searvey']:  # searvey has problems with station info, use noaa_coops
                         station_data = noaa_coops.Station(st)
                         break  # Success, exit loop
                     elif retrieve_method == 'searvey':  # searvey, convert into the same format as noaa_coops
@@ -313,6 +309,7 @@ def get_coops_elev(
 
                 time.sleep(2 ** ntry)  # Exponential backoff
 
+            # --------------------------get data--------------------------
             this_noaa_df = None
             this_datum = None
             for datum in [default_datum, 'MSL']:  # fall back to MSL, which is generally available
@@ -322,7 +319,7 @@ def get_coops_elev(
                         this_noaa_df = station_data.get_data(
                             begin_date=begin_time.strftime('%Y%m%d'),
                             end_date=end_time.strftime('%Y%m%d'),
-                            product="hourly_height", datum=datum, units="metric", time_zone="gmt"
+                            product="water_level", datum=datum, units="metric", time_zone="gmt"
                         )
                         this_noaa_df = reformat_data(this_noaa_df, download_method='noaa_coops')
                     elif retrieve_method == 'searvey':
@@ -346,19 +343,21 @@ def get_coops_elev(
                 except (noaa_coops.station.COOPSAPIError) as e:
                     print(f"Failed to get data for {st} with datum {datum}: {e}")
 
-                # clip data to the desired time range
+                # --------------------------post-process data--------------------------
                 if this_noaa_df is not None:
+                    # clip data to the desired time range
                     this_noaa_df = this_noaa_df[begin_time:end_time]
                     if this_noaa_df.empty:
                         print(f"Some data was found for {st} with datum {datum}, but not within the desired time range")
                         this_noaa_df = None
-
-                if this_noaa_df is not None:
-                    this_datum = datum  # record actual datum retrieved
+                    # record actual datum retrieved
+                    this_datum = datum
                     with open(cache_filename, 'wb') as f:
                         pickle.dump([this_noaa_df, this_datum, station_data], f)
-                    break  # found data, break
 
+                    break  # found data, break and exit the loop for datums
+
+        # gather each station into lists
         noaa_df_list.append(this_noaa_df)
         datum_list.append(this_datum)
         station_data_list.append(station_data)
@@ -366,6 +365,38 @@ def get_coops_elev(
     return [noaa_df_list, datum_list, station_data_list]
 
 
+def sample_get_coops_station_info():
+    '''
+    Sample function to demonstrate how to use get_coops_station_info function
+    '''
+    stations_info = get_coops_station_info(['8779770', 8725520], method='noaa_coops')
+    for station_info in stations_info:
+        if station_info is None:
+            print('Station info not available')
+        else:
+            print(station_info.id)
+            print(station_info.name)
+            print(station_info.lon)
+            print(station_info.lat)
+
+
+def sample_get_station_info_from_bp():
+    '''
+    Sample function to demonstrate how to get station information from a bp file
+    '''
+    fname = '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/station.in'
+    os.system(f'cp {fname} {fname}.bp')
+    bp = schism_read(f'{fname}.bp')
+    station_ids = bp.station[:164]
+    stations_info = get_coops_station_info(station_ids, method='noaa_coops')
+    pass
+    np.savetxt(
+        '/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/original_coops.txt',
+        np.c_[stations_info.lon, stations_info.lat, stations_info.id, stations_info.name],
+        fmt='%f %f %s %s'
+    )
+
+
 if __name__ == '__main__':
-    sample_get_coops_station_info()
+    sample_get_station_info_from_bp()
     print('Done')

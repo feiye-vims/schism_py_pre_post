@@ -2,30 +2,39 @@
 Sample usage of the source_sink module
 """
 
-# %%
 from pylib_experimental.schism_file import TimeHistory
-vs1 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink2/vsource.th')
-vs2 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink/vsource.th')
-
-print(vs1 == vs2)
-
-# %%
 from pylib_experimental.schism_file import source_sink
 
-ss = source_sink.from_ncfile(
-    '/sciclone/schism10/feiye/STOFS3D-v8/I03v/03_source.nc',
-)
 
-relocate_dict = {
-    131606: 173704
-}
+def diff_vsource():
+    """
+    Check if two vsource files are different
+    """
+    vs1 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink2/vsource.th')
+    vs2 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink/vsource.th')
 
-ss.reset_source_ele(relocate_dict)
-
-ss.nc_writer('/sciclone/schism10/feiye/STOFS3D-v8/I03v/Relocated_SS/')
-ss.writer('/sciclone/schism10/feiye/STOFS3D-v8/I03v/Relocated_SS/')
+    assert vs1 == vs2, 'Two vsource files are different'
 
 
-pass
+def manual_relocate():
+    """
+    Manually relocate the source elements
+    """
 
-# %%
+    ss = source_sink.from_files(
+        '/sciclone/schism10/feiye/STOFS3D-v8/I09/Source_sink/USGS_adjusted_sources/',
+    )
+
+    relocate_dict = {
+        63209: 112941
+    }
+
+    ss.reset_source_ele(relocate_dict)
+
+    ss.nc_writer('/sciclone/schism10/feiye/STOFS3D-v8/I09/Relocated_SS/')
+    ss.writer('/sciclone/schism10/feiye/STOFS3D-v8/I09/Relocated_SS/')
+
+
+if __name__ == '__main__':
+    manual_relocate()
+    print('Done')

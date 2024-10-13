@@ -64,8 +64,29 @@
         "plot_start_day_str": "2024-03-12 00:00:00",
         "plot_end_day_str": "2024-04-05 00:00:00",
         "model_start_day_str": "2024-03-05 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/station.in",
         "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O18/outputs/staout_1",
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O18/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "STOFS3D-v7_reforecast2": {
+        "name": "STOFS3D-7_reforecast2",
+        "plot_start_day_str": "2024-09-17 00:00:00",
+        "plot_end_day_str": "2024-10-15 00:00:00",
+        "model_start_day_str": "2024-09-17 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O20240917/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v7/R20240917/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "STOFS3D-v7_reforecast3": {
+        "name": "STOFS3D-7_reforecast3",
+        "plot_start_day_str": "2024-10-08 00:00:00",
+        "plot_end_day_str": "2024-10-15 00:00:00",
+        "model_start_day_str": "2024-10-08 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Runs/R20241009/outputs/staout_1",
+        "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v7/R20241009/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31}
     },
     "Florence": {

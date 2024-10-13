@@ -364,8 +364,8 @@ def plot_elev(
         ax[n].set_xlim([datetime.strptime(plot_start_day_str, "%Y-%m-%d %H:%M:%S"),
                         datetime.strptime(plot_end_day_str, "%Y-%m-%d %H:%M:%S")])
         ax[n].tick_params(labelrotation=label_rot)
-        ax[n].set_ylim([np.nanmin(np.fmin(my_comp.obs_df.value, my_comp.mod_interp_df.value)) - 0.5,
-                        np.nanmax(np.fmax(my_comp.obs_df.value, my_comp.mod_interp_df.value)) + 0.5])
+        ax[n].set_ylim([np.nanmin(np.fmin(my_comp.obs_df.value, my_comp.mod_df.value)) - 0.5,
+                        np.nanmax(np.fmax(my_comp.obs_df.value, my_comp.mod_df.value)) + 0.5])
         # ax[n].set_ylim([1, 9])
                        
         n = n + 1

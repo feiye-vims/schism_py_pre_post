@@ -168,12 +168,12 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    events = ['EX62']
+    events = ['STOFS3D-v7_reforecast3']
 
-    datum = 'MSL'  # '': (use predefined ones in ecgc_stations); 'NAVD'; 'MSL'
+    datum = 'NAVD'  # '': (use predefined ones in ecgc_stations); 'NAVD'; 'MSL'
     shift = 0.0  # uniform shift for all stations
     # if model outputs are not in NAVD, shift them to NAVD; None if no shift
-    datum_shift_file = None  # '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt'
+    datum_shift_file = '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt' # None
     nday_moving_average = 0  # 2-day moving average
 
     region = "Full_domain"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
@@ -265,16 +265,19 @@ if __name__ == "__main__":
         # there will be exception, then rerun this script until all obs are retrieved
         nvalid = 0
         n_station = 0
-        for iter_groups, [group_name, stations] in enumerate(stations_groups.items()):
-            [obs, datums, st_info] = get_coops_elev(
-                plot_start_day_str, plot_end_day_str, stations,
-                default_datum=default_datums[group_name],
-                cache_folder=cache_folder,
-                retrieve_method='searvey'
-            )
-            n_station += len(stations)
-            nvalid += sum([ob is not None for ob in obs])
-        print(f'{nvalid} out of {n_station} stations have valid data')
+
+        dry_run = False
+        if dry_run:
+            for iter_groups, [group_name, stations] in enumerate(stations_groups.items()):
+                [obs, datums, st_info] = get_coops_elev(
+                    plot_start_day_str, plot_end_day_str, stations,
+                    default_datum=default_datums[group_name],
+                    cache_folder=cache_folder,
+                    retrieve_method='searvey'
+                )
+                n_station += len(stations)
+                nvalid += sum([ob is not None for ob in obs])
+            print(f'{nvalid} out of {n_station} stations have valid data')
 
         final_datums = []
         stats = pd.DataFrame()
@@ -303,12 +306,13 @@ if __name__ == "__main__":
                 mod = datum_shift(mod, datum_shift_file=datum_shift_file)
 
             # get obs
-            [obs, datums, st_info] = get_obs_elev(
-                plot_start_day_str=plot_start_day_str,
-                plot_end_day_str=plot_end_day_str,
+            [obs, datums, st_info] = get_coops_elev(
+                begin_time=plot_start_day_str,
+                end_time=plot_end_day_str,
                 noaa_stations=stations,
                 default_datum=default_datums[group_name],
                 cache_folder=cache_folder,
+                retrieve_method='noaa_coops'
             )
             final_datums += datums
 
