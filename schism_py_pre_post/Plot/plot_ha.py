@@ -23,14 +23,15 @@ common_tidal_constituents = ['M2', 'S2', 'N2', 'K2', 'K1', 'O1', 'P1', 'Q1']
 def main():
     '''Compare harmonic analysis of model and obs for each station.'''
     pickle_read = False
-    cache_file = './ha.pickle'
 
     with open(
         '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/ha.json',
         'r', encoding='utf-8'
     ) as f:
         main_dict = json.load(f)
-    event = main_dict['EX62']
+    event = main_dict['Year2018']
+
+    cache_file = f'{event["cdir"]}/{event["plot_start_day_str"]}_{event["plot_end_day_str"]}_ha.pkl'
 
     if not pickle_read:
         mod = get_hindcast_elev(
@@ -123,11 +124,11 @@ def main():
 
     # plot
     fig = plt.figure(figsize=(30, 15))  # Adjust figsize as needed
-    gs = gridspec.GridSpec(6, 1)
+    gs = gridspec.GridSpec(8, 1)
     n_subplot = 0
     for constit in ['M2', 'K1']:
         if constit == 'Max':
-            ax = fig.add_subplot(gs[n_subplot])
+            ax = fig.add_subplot(gs[n_subplot:n_subplot + 2])
             ax.set_title('Max amplitude comparison')
             y_obs = [result.A[0] for result in ha_obs_results[valid_idx]]
             ax.plot(stations[valid_idx], y_obs, 'ro', label='Obs')
@@ -137,9 +138,9 @@ def main():
             ax.tick_params(axis='x', rotation=90)
             ax.set_ylabel('Max amplitude (m)')
             ax.grid(True)
-            n_subplot += 1
+            n_subplot += 2
         else:
-            ax = fig.add_subplot(gs[n_subplot])
+            ax = fig.add_subplot(gs[n_subplot:n_subplot + 2])
             ax.set_title(f'{constit} amplitude comparison')
             y_obs = [result.A[result.name == constit] for result in ha_obs_results[valid_idx]]
             ax.plot(stations[valid_idx], y_obs, 'ro', label='Obs')
@@ -149,7 +150,7 @@ def main():
             ax.tick_params(axis='x', rotation=90)
             ax.set_ylabel(f'{constit} amplitude (m)')
             ax.grid(True)
-            n_subplot += 1
+            n_subplot += 2
 
             ax = fig.add_subplot(gs[n_subplot])
             ax.set_title(f'{constit} phase comparison')
@@ -188,10 +189,8 @@ def main():
     # Adjust layout
     plt.tight_layout()
     plt.grid(True)
-    plt.savefig('ha.png')
+    plt.savefig(f'{event["cdir"]}/ha_{event["plot_start_day_str"]}_{event["plot_end_day_str"]}.svg')
     plt.show()
-    os.system(f"scp ha.png {event['cdir']}/")
-    os.system("rm ha.png")
 
 
 if __name__ == '__main__':

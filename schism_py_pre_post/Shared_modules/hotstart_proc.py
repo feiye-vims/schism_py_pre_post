@@ -576,11 +576,11 @@ if __name__ == "__main__":
 
     # Sample 3: interpolating one hotstart.nc to another
     hot_background = Hotstart(
-        grid_info='/sciclone/schism10/feiye/STOFS3D-v8/R07d/',  # contains hgrid.gr3 and vgrid.in
-        hot_file='/sciclone/schism10/feiye/STOFS3D-v8/R07d/hotstart.nc'
+        grid_info='/sciclone/schism10/feiye/STOFS3D-v7/Runs/R13/',  # contains hgrid.gr3 and vgrid.in
+        hot_file='/sciclone/schism10/feiye/STOFS3D-v7/Runs/R13/hotstart.nc'
     )  # create a Hotstart instance with existing values
     my_hot = Hotstart(
-        grid_info='/sciclone/schism10/feiye/STOFS3D-v8/R09/',
+        grid_info='/sciclone/schism10/feiye/STOFS3D-v8/I13/Interp_hot/',
         ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
     )  # create a Hotstart instance with empty values
     my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)

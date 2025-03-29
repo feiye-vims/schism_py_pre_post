@@ -151,7 +151,7 @@ def vdatum_wrapper_pointwise(x, y, z, conversion_para='', print_info=''):
             if result.returncode == 0:
                 z_converted[i] = float(result.stdout.decode().split()[417])
                 print(f"{print_info}Point {i+1} ({x[i]}, {y[i]}, {z[i]})"
-                      "successfully converted to {z_converted[i]}")
+                      f"successfully converted to {z_converted[i]}")
                 success = True
                 continue  # found the correct region, skip the rest
 

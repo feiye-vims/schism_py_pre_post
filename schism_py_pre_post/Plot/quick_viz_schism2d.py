@@ -1,69 +1,155 @@
-from pylib_experimental.schism_file import cread_schism_hgrid, read_schism_vgrid_cached
-from pylib import grd2sms, schism_grid
 import numpy as np
-import netCDF4
-import matplotlib.pyplot as plt
-from IPython.display import set_matplotlib_formats
-from pathlib import Path
-import xarray as xr
+import re
 import copy
-set_matplotlib_formats('svg')
+import matplotlib.pyplot as plt
+import xarray as xr
+from pathlib import Path
+from pylib_experimental.schism_file import cread_schism_hgrid
+from pylib import schism_grid
 
-print('reading data ...\n')
 
-gd_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Inputs/v6.1.static_inputs_snapshot20231105/hgrid.gr3'
-gd = cread_schism_hgrid(gd_fname)
+def match_out2d_fname(fname):
+    """
+    return corresponding out2d fname for a given netcdf file
+    """
+    pattern = r'(\w+)_(\d+)\.nc'  # \w+ captures any word before the number
+    match = re.search(pattern, fname)
+    
+    if match:
+        # Extract the prefix (group 1) and the number (group 2)
+        prefix = match.group(1)
+        number = match.group(2)
+        
+        out2d_fname = fname.replace(f'{prefix}_{number}.nc', f'out2d_{number}.nc')
+    else:
+        raise ValueError(f"Invalid filename {fname}")
+    
+    return out2d_fname
+        
 
-vg_fname = '/sciclone/schism10/feiye/STOFS3D-v6/Runs/RUN24a/vgrid.in'
-vg = read_schism_vgrid_cached(vg_fname, overwrite_cache=False)
+def read_schism_data(gd_fname, fnames, var_name, dry_mask_var, layer):
+    """
+    Read Schism grid and variable data.
+    """
+    print('Reading data ...')
+    gd = cread_schism_hgrid(gd_fname)
+    my_nc = xr.open_mfdataset(fnames)
+    var = np.array(my_nc[var_name])
+    my_nc.close()
 
-var_name = "salt_surface"
-fnames = [f'/sciclone/home/feiye/TEMP/v2.1/stofs_3d_atl.t12z.field2d_f025_036.nc']
-my_nc = xr.open_mfdataset(fnames)
+    if dry_mask_var is not None or layer == "b":
+        # read dry mask from out2d_*.nc instead of the original fnames
+        fnames = [match_out2d_fname(fname) for fname in fnames]
+        my_nc = xr.open_mfdataset(fnames)
+        dry_mask = np.array(my_nc[dry_mask_var])
+        kbp = np.array(my_nc['bottom_index_node'])
+    else:
+        dry_mask = np.zeros_like(var)
+        kbp = None
+    my_nc.close()
 
-elements = my_nc['SCHISM_hgrid_face_nodes'].values
-elements.shape
-i3_idx = np.argwhere(gd.i34==3).flatten()
-np.array_equal(gd.elnode[i3_idx, :3], elements[i3_idx, :3]-1)
+    return gd, var, dry_mask, kbp
 
-it = -1
-isurf = True
-caxis = [0, 30]
-xlim = None  # [-77, -75]
-ylim = None  # [37, 40]
-plt.figure(figsize=(7, 7))
 
-var = np.array(my_nc[var_name])
+def process_variable(var, dry_mask, it=-1, layer=-1, kbp=None):
+    """
+    Process the variable (e.g., mask dry nodes, extract surface or volume values).
 
-if isurf:
-    if len(var.shape) == 3:
-        value = var[it, :, -1]
-    elif len(var.shape) == 2:
-        value = np.max(var[:, :], axis=0)
-else:
-    value = var[it, :, :]
-    value = value[np.arange(gd.np), vg.kbp]
+    default input:
+        it = -1: last time step
+        layer = -1: surface value; "b" for bottom, "s" for surface, or layer number
+        kbp = None: bottom layer index (needed for layer="b")
+    """
+    for i, _ in enumerate(var):
+        var[i, dry_mask[i, :].astype(bool)] = np.nan
 
-disturbance = copy.deepcopy(value)
-land = gd.dp < 0.0
-disturbance[land] = value[land] + gd.dp[land]
+    if layer == "b":  # bottom value, needs kbp from vgrid
+        value = var[it, :, :]
+        value = value[np.arange(value.shape[0]), kbp]  # bottom index varies with nodes
+    elif layer == "s":  # surface value
+        if len(var.shape) == 3:
+            value = var[it, :, layer]  # surface value
+        elif len(var.shape) == 2:
+            value = var[it, :]
+    elif isinstance(layer, int):  # layer number
+        if len(var.shape) == 3:
+            value = var[it, :, layer]
+        elif len(var.shape) == 2:
+            value = var[it, :]
+    else:
+        raise ValueError(f"Invalid layer value {layer}")
 
-# output high disturbance points
-# idx = disturbance > 10
-# np.savetxt(f'{Path(fnames[0]).parent}/high_disturbance.xyz', np.vstack((gd.x[idx], gd.y[idx], disturbance[idx])).T, fmt='%.6f', delimiter=' ')
+    return value
 
-i_positive_disturbance = disturbance > 0  # i.e., abnormal inundation
-disturbance[~i_positive_disturbance] = -9999  # set negative disturbance to -9999
-gd.dp = disturbance
-grd2sms(gd, str(Path(fnames[0]).with_suffix('.positive_disturbance.2dm')))
 
-gd.dp = value
-grd2sms(gd, str(Path(fnames[0]).with_suffix(f'.{var_name}.2dm')))
+def plot_variable(
+    gd, value, caxis, xlim=None, ylim=None,
+    title_str=None, output_filename='output.png'
+):
+    """
+    Plot the variable data.
+    """
+    plt.figure(figsize=(7, 7))
+    gd.plot_grid(fmt=1, value=value, clim=caxis, levels=31, cmap='jet', xlim=xlim, ylim=ylim)
+    plt.gca().set_aspect('equal', 'box')
+    plt.title(title_str)
+    if output_filename is not None:
+        plt.savefig(output_filename, dpi=400)
 
-gd.plot_grid(fmt=1, value=value, clim=caxis, levels=31, ticks=np.arange(caxis[0], caxis[1], 2), cmap='jet', xlim=xlim, ylim=ylim)
-plt.gca().set_aspect('equal', 'box')
-plt.savefig(f'{fnames[0]}.png', dpi=400)
-plt.show()
-my_nc.close()
+    plt.show()
 
-pass
+
+def calculate_disturbance(gd, value):
+    """
+    Calculate the disturbance variable (if needed).
+    """
+    disturbance = copy.deepcopy(value)
+    land = gd.dp < 0.0
+    disturbance[land] = value[land] + gd.dp[land]
+    disturbance[~(disturbance > 0)] = -9999  # Set negative disturbance to -9999
+    gd.dp = disturbance
+
+    return disturbance
+
+
+def visualize_schism_data(
+    gd_fname, fnames, var_name, dry_mask_var=None, layer=-1,
+    caxis=None, xlim=None, ylim=None, output_filename='output.png'
+):
+    """
+    Main function to load, process, and visualize the Schism data.
+    """
+    if var_name == "disturbance":
+        var_name = "elevation"
+        processed_var_name = "disturbance"
+    else:
+        processed_var_name = var_name
+
+    # Read data
+    gd, var, dry_mask, kbp = read_schism_data(gd_fname, fnames, var_name, dry_mask_var=dry_mask_var, layer=layer)
+
+    # Process variable
+    value = process_variable(var, dry_mask, layer=layer, kbp=kbp)
+
+    if processed_var_name == "disturbance":
+        value = calculate_disturbance(gd, value)
+
+    # Plot the variable
+    plot_variable(gd, value, caxis, xlim, ylim, output_filename)
+
+
+if __name__ == "__main__":
+    # Configuration: Set filenames, variable names, and plotting parameters
+    gd_fname = '/sciclone/schism10/feiye/STOFS3D-v8/R15c_v7/hgrid.gr3'
+    var_name = "temperature"  # Variable name in the ncfile, e.g., "salt_surface" or "zeta"
+    layer = 'b'
+    dry_mask_var = "dryFlagNode"
+    fnames = ['/sciclone/schism10/feiye/STOFS3D-v8/R15c_v7/outputs/temperature_6.nc']
+    caxis = [-1, 35]
+    xlim = None  # [-77, -75]
+    ylim = None  # [37, 40]
+    output_filename = None
+
+    # Visualize the data
+    visualize_schism_data(gd_fname, fnames, var_name, dry_mask_var, layer, caxis, xlim, ylim, output_filename)
+    print('Done')

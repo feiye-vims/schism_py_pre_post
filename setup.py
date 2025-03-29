@@ -35,6 +35,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     'xarray',
     # 'climata==0.5.0',
     # 'gsw>=3.0.0',
-    'pyshp>=2.0.0'
+    'pyshp>=2.0.0',
+    'geopandas'
   ],
 )

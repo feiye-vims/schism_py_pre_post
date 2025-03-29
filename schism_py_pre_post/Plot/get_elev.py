@@ -22,6 +22,9 @@ from schism_py_pre_post.Grid.Bpfile import Bpfile
 from schism_py_pre_post.Shared_modules.test_modules import HYCOM
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
 from schism_py_pre_post.Utilities.util import b_in_a, parse_date
+from schism_py_pre_post.Download.download_usgs_with_api import \
+    download_stations as download_usgs
+from schism_py_pre_post.Download.download_usgs_with_api import usgs_var_dict
 
 
 def get_hycom_elev(point_xy: np.ndarray, hycom_file: str):
@@ -135,15 +138,17 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
 
 def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-01', cache_ident_name='unspecified'):
     # handle cache: cache file is saved per stations specified in a bp file.
-    # The download function can do batch download for all stations, so it is not straightforward to save a per-station cache
+    # The download function can do batch download for all stations,
+    # so it is not straightforward to save a per-station cache
     Cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
-    cache_file = f"{Cache_folder}/usgs_{cache_ident_name}_{start_date.replace(' ', '_')}-{end_date.replace(' ','_')}.pkl"
+    cache_file = (f"{Cache_folder}/usgs_gauge height_{cache_ident_name}_"
+                  f"{start_date.replace(' ', '_')}-{end_date.replace(' ','_')}.pkl")
 
     if os.path.exists(cache_file):
         with open(cache_file, 'rb') as file:
             downloaded_data = pickle.load(file)
     else:
-        downloaded_data = download_stations(
+        downloaded_data = download_usgs(
             param_id=usgs_var_dict['gauge height']['id'],
             station_ids=station_ids,
             datelist=pd.date_range(start=start_date, end=end_date)
@@ -151,11 +156,11 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
 
         with open(cache_file, 'wb') as file:
             pickle.dump(downloaded_data, file)
-    
+
     # convert from feet to meter
     for data in downloaded_data:
         data.df['value'] *= 0.3048
-        
+
     # Since the downloader may change the station order in station.bp,
     # arrange ids in the original order and mark missing data
     downloaded_station_ids = [x.station_info['id'] for x in downloaded_data]
@@ -166,7 +171,7 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
     obs_df = []
     st_info = []
     for i, data in enumerate(requested_data):
-        if data is None:
+        if data is None or data.df.empty:  # no data
             obs_df.append(None)
             station_info = {
                 'id': station_ids[i],
@@ -177,6 +182,7 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
         else:
             data.df.columns = ['datetime', 'water_level']
             data.df.set_index('datetime', inplace=True)
+            data.df.index = pd.to_datetime(data.df.index, utc=True)  # convert to UTC
             obs_df.append(data.df)
             # reformat station_info
             station_info = {
@@ -509,13 +515,18 @@ def get_obs_from_station_json(
             station_ids=stations[usgs_station_idx],
             start_date=station_dict[case_name]['plot_start_day_str'],
             end_date=station_dict[case_name]['plot_end_day_str'],
+            cache_ident_name=case_name
         )
         # USGS datums may not be in NAVD88, need to be converted to NAVD88
         for i, _ in enumerate(usgs_obs):
             if usgs_obs[i] is not None:
                 this_station = stations[usgs_station_idx[i]]
                 datum_shift = station_dict[case_name]['stations'][this_station]['to_NAVD88_feet']
-                datum_shift *= 0.3048
+
+                if datum_shift is not None:
+                    datum_shift *= 0.3048  # to meters
+                else:
+                    datum_shift = 0
                 usgs_obs[i]['water_level'] += datum_shift
 
     # assemble all obs data in order

@@ -5,6 +5,8 @@ import gsw
 import os
 from datetime import datetime, timedelta
 from schism_py_pre_post.Download.Data import ObsData, Station
+import requests
+
 
 
 # dict of param ids:
@@ -86,8 +88,65 @@ class GenericObsData():
         self.station_info = station_info
         self.df = df
 
+
+import requests
+import pandas as pd
+
+def get_usgs_data_as_dataframe(site_id, start_date, end_date):
+    # Define the API URL
+    base_url = "https://waterservices.usgs.gov/nwis/iv/"
+    
+    # Define the query parameters
+    params = {
+        "format": "json",
+        "sites": site_id,
+        "startDT": start_date,
+        "endDT": end_date,
+        "parameterCd": "00065",  # Discharge and gage height
+        "siteStatus": "all"
+    }
+    
+    try:
+        # Send the API request
+        response = requests.get(base_url, params=params)
+        response.raise_for_status()  # Raise an error for bad responses
+        
+        # Parse the JSON response
+        data = response.json()
+        
+        # Extract time-series data
+        time_series = data.get("value", {}).get("timeSeries", [])
+        if not time_series:
+            print("No data available for the provided site and date range.")
+            return pd.DataFrame()
+        
+        # Create a list to store data
+        records = []
+        
+        for series in time_series:
+            variable_name = series["variable"]["variableName"]
+            for value in series["values"][0]["value"]:
+                records.append({
+                    "datetime": value["dateTime"],
+                    "value": value["value"],
+                    "variable": variable_name
+                })
+        
+        # Convert records to a Pandas DataFrame
+        df = pd.DataFrame(records)
+        
+        # Ensure datetime column is in datetime format
+        df["datetime"] = pd.to_datetime(df["datetime"])
+        
+        return df
+    
+    except Exception as e:
+        print(f"Error: {e}")
+        return pd.DataFrame()
+
+
 def download_stations(param_id=None, station_ids=[], datelist=pd.date_range(start='2000-01-01', end='2000-01-02')):
-    stations_chunk_size = 200
+    stations_chunk_size = 100
 
     if type(station_ids) is np.ndarray:
         station_ids = station_ids.tolist()
@@ -246,6 +305,14 @@ def convert_to_ObsData(total_data, cache_fname=None):
     
 
 if __name__ == "__main__":
+    # Example usage
+    site_id = "01022840"  # USGS site ID
+    start_date = "2024-03-05"
+    end_date = "2024-04-10"
+
+    df = get_usgs_data_as_dataframe(site_id, start_date, end_date)
+    print(df.head())
+
 
     # Sample 0: download a list of stations if you know their ids
     total_data = download_stations(

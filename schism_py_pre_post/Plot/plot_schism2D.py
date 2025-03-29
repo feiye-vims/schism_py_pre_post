@@ -306,7 +306,7 @@ plot_param_dict = {
 
 if __name__ == "__main__":
     # sample inputs
-    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/R07b/'
+    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/R10a/'
     output_dir = f'{RUNDIR}/outputs/'
     model_start_time = datetime.strptime('2024-03-05', "%Y-%m-%d")
     VAR_STR = 'elevation'
@@ -317,10 +317,10 @@ if __name__ == "__main__":
 
     # -------------------- sample outputing to *.2dm -------------------------
     snapshots_times = (
-        # datetime.strptime('2024-03-06 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2024-03-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2024-03-20 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2024-03-27 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-06 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-20 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-27 00:00:00', "%Y-%m-%d %H:%M:%S"),
     )
     if snapshots_times:
         schism2sms_parallel(

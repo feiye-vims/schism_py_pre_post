@@ -223,7 +223,8 @@ def get_coops_elev(
     begin_time: datetime, end_time: datetime, noaa_stations=None,
     retrieve_method='noaa_coops', default_datum='NAVD',
     product='water_level',  # 'hourly_height' or 'water_level'
-    cache_folder='/sciclone/schism10/feiye/Cache/'
+    cache_folder='/sciclone/schism10/feiye/Cache/',
+    cache_begin_time=None, cache_end_time=None,
 ):
 
     '''
@@ -245,6 +246,7 @@ def get_coops_elev(
         different downloading methods. The columns are:
         'date_time', 'water_level', 'sigma', 'flags', 'QC'
         Unavailable data is represented as None.
+        Time Zone is set to GMT.
 
     - datum_list: list of strings, the eventual datum used for each station
         (some requested datum may not be available, so a fallback datum is used)
@@ -254,6 +256,11 @@ def get_coops_elev(
     '''
 
     # if not receiving datetime objects, try to parse date strings
+    if cache_begin_time is not None:
+        begin_time = cache_begin_time
+    if cache_end_time is not None:
+        end_time = cache_end_time
+
     begin_time, _ = parse_date(begin_time)
     end_time, _ = parse_date(end_time)
     begin_time_str = begin_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -281,9 +288,13 @@ def get_coops_elev(
         cache_success = False
         if os.path.exists(cache_filename):
             with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
-                this_noaa_df, this_datum, station_data = pickle.load(f)
-                print(f'Existing obs data read from {cache_filename}')
-                cache_success = True
+                try:
+                    this_noaa_df, this_datum, station_data = pickle.load(f)
+                    print(f'Existing obs data read from {cache_filename}')
+                    cache_success = True
+                except ModuleNotFoundError as e:
+                    print(f"Failed to read from cache: {e}")
+                    cache_success = False
 
         # --------------------------download data--------------------------
         if not cache_success:
@@ -301,7 +312,7 @@ def get_coops_elev(
                         break  # Success, exit loop
                     else:
                         raise ValueError(f"retrieve_method '{retrieve_method}' not supported")
-                except (ConnectionError, TimeoutError) as e:
+                except (ConnectionError, TimeoutError, JSONDecodeError) as e:
                     print(f"Network-related error for {st} on try {ntry}: {e}. Retrying...")
                 except ValueError as e:
                     print(f"Value error: {e}")
@@ -352,6 +363,8 @@ def get_coops_elev(
                         this_noaa_df = None
                     # record actual datum retrieved
                     this_datum = datum
+                    # set time zone to GMT
+                    this_noaa_df = this_noaa_df.tz_localize('UTC')
                     with open(cache_filename, 'wb') as f:
                         pickle.dump([this_noaa_df, this_datum, station_data], f)
 

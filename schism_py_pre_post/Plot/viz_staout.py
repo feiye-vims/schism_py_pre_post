@@ -20,7 +20,7 @@ def main():
         # '/sciclone/schism10/lcui01/schism20/ICOGS/ICOGS3D/RUN24/',
         # '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R12',
         # '/sciclone/schism10/feiye/STOFS3D-v7/Runs/R14',
-        '/sciclone/schism10/feiye/STOFS3D-v8/R04c/',
+        '/sciclone/schism10/feiye/STOFS3D-v8/R20/',
     ]
     line_styles = ['-', '--', '.-', '-.', ':', '-.', '--']
     line_colors = ['r', 'b', 'g', 'k', 'c', 'm', 'y',
@@ -36,7 +36,7 @@ def main():
         station_in = f'{run}/station.in'
         stations = Bpfile(station_in, cols=5)
         ts = TimeHistory.from_file(fname, columns=stations.st_id, start_time_str="2021-08-01 00:00:00")
-        ts.df.iloc[:, :].plot(color=line_colors, style=line_style, ax=ax, label=Path(run).stem)
+        ts.df.iloc[:, :10].plot(color=line_colors, style=line_style, ax=ax, label=Path(run).stem)
 
     fig.canvas.mpl_connect('pick_event', onpick2)
 

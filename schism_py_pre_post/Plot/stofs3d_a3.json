@@ -73,6 +73,29 @@
         "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v7/R13/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
+    "2018_v8": {
+        "name": "2018_v8",
+        "plot_start_day_str": "2018-01-01 00:00:00",
+        "plot_end_day_str": "2018-02-25 00:00:00",
+        "model_start_day_str": "2017-12-01 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/station.in",
+        "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/R15a_v7/outputs/elevation.stofs3d_atl_202503.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O15a_v7/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "default_datum": "NAVD"
+    },
+    "Harvey_2017": {
+        "name": "Harvey_2017",
+        "plot_start_day_str": "2017-08-15 00:00:00",
+        "plot_end_day_str": "2017-09-04 00:00:00",
+        "model_start_day_str": "2017-08-04 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/RUN08b/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/TEMP/RUN08b/outputs/staout_1",
+        "cdir": "/sciclone/schism10/feiye/TEMP/RUN08b/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "default_datum": "NAVD"
+    },
     "Year2015v6": {
         "name": "Year2015",
         "plot_start_day_str": "2015-01-01 00:00:00",

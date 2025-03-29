@@ -10,8 +10,8 @@ def diff_vsource():
     """
     Check if two vsource files are different
     """
-    vs1 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink2/vsource.th')
-    vs2 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I12w/Source_sink/relocated_source_sink/vsource.th')
+    vs1 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I14x/Source_sink/vsink.th')
+    vs2 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7/I14x/00x_ss/vsink.th')
 
     assert vs1 == vs2, 'Two vsource files are different'
 
@@ -36,5 +36,6 @@ def manual_relocate():
 
 
 if __name__ == '__main__':
+    diff_vsource()
     manual_relocate()
     print('Done')

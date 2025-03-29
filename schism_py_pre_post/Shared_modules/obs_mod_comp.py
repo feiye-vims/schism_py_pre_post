@@ -16,6 +16,7 @@ class obs_mod_comp():
         self.mod_dt = None
         self.mod_interp_df = None
         self.mod_interp_dt = None
+        self.valid = False
 
         tmp_dfs = [self.obs_df, self.mod_df]
         tmps = [obs, mod]
@@ -33,6 +34,11 @@ class obs_mod_comp():
 
         obs_in_mod_time = (self.obs_df['Day'].to_numpy() >= self.mod_df['Day'].to_numpy()[0]) & \
                           (self.obs_df['Day'].to_numpy() <= self.mod_df['Day'].to_numpy()[-1])
+
+        # sometimes no obs data is available in the model time range
+        if obs_in_mod_time.sum() == 0:
+            raise ValueError("No observation data available in the model time range")
+
         self.obs_df = self.obs_df[obs_in_mod_time]
 
         self.mod_interp_df = self.interp_mod_to_obs_time()
@@ -40,7 +46,7 @@ class obs_mod_comp():
         self.mod_interp_dt = mod_interp_day[1] - mod_interp_day[0]
         self.mod_interp_df.insert(1, 'Day', mod_interp_day, True)
 
-        pass
+        self.valid = True
 
     def get_moving_average(self, nday_avg=3):
         self.obs_df['value'].values[:] = self.moving_average(self.obs_df['value'].values, n=int(nday_avg/self.obs_dt))

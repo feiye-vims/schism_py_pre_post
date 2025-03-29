@@ -4,6 +4,11 @@
         "grid_spacing": 1,
         "symbol_size": 100
     },
+    "FromStationBP": {
+        "ilabel": 1,
+        "grid_spacing": 1,
+        "symbol_size": 100
+    },
     "FromDict": {
         "ilabel": 1,
         "grid_spacing": 1,

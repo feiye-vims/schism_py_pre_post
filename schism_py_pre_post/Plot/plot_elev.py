@@ -28,8 +28,8 @@ def write_stat(stats, fname, readablity=2):
                        'Bias', 'CC', 'ubRMSE', 'Max_Obs', 'Max_Mod']
     # remove invalid obs before calculating mean
     stats_df = stats_df[stats_df['station_name'] != 'NA']
-    stats_df = stats_df[stats_df['Max_Obs'] < 20]
-    stats_df = stats_df[stats_df['Max_Mod'] < 20]
+    # stats_df = stats_df[stats_df['Max_Obs'] < 20]
+    # stats_df = stats_df[stats_df['Max_Mod'] < 20]
 
     # rearrange columns
     stats_df = stats_df[rearranged_cols]
@@ -177,6 +177,9 @@ def get_obs_elev(
     retrieve_method='noaa_coops',  # 'native', 'searvey' or 'noaa_coops'
 ):
 
+    if default_datum not in ['NAVD', 'MSL']:
+        raise Exception(f'default_datum {default_datum} not supported')
+
     noaa_df_list = []
     datum_list = []
     station_data_list = []
@@ -262,7 +265,7 @@ def get_obs_elev(
                     this_datum = datum  # record actual datum retrieved
                     with open(cache_filename, 'wb') as f:
                         pickle.dump([this_noaa_df, this_datum, station_data], f)
-                    break  # found data, break
+                    break  # found data, break; also works when default_datum is MSL
 
         noaa_df_list.append(this_noaa_df)
         datum_list.append(this_datum)
@@ -277,7 +280,7 @@ def plot_elev(
               plot_name, iplot=True, subplots_shape=(10, None),
               fig_ax=None, line_styles=['r.', 'k'], font_size=6,
               nday_moving_average=0, demean=False,
-              label_strs=[], label_rot=10):
+              label_strs=[], label_rot=10, figure_type='png'):
     '''
     Plot time series and calculate stats.
     "obs_df_list" is a list of pd.DataFrame
@@ -312,22 +315,38 @@ def plot_elev(
     for i, st in enumerate(noaa_stations):
         if st in mod_df_all_stations.columns:
             mod_df = mod_df_all_stations[st]
+            # set utc time zone
+            mod_df = mod_df.tz_localize('UTC')
         else:
             raise Exception(f'cannot find {st} in mod_df_all_stations')
             mod_df = obs_df_list[i]['water_level']
 
-        if obs_df_list[i] is None:
+        if obs_df_list[i] is None or obs_df_list[i].empty:
+            print('No data for station', st, ', filling with nan')
             obs_df = mod_df * np.nan
         else:
             obs_df = obs_df_list[i]['water_level']
+        
+        # set time zone to UTC if not specified
+        if obs_df.index.tzinfo is None:
+            print(f"Warning: {st}, obs_df time zone has not been specified, and it is assumed to be UTC")
+            obs_df = obs_df.tz_localize('UTC')
 
         # clip data to the desired time range
         obs_df = obs_df.loc[(obs_df.index >= plot_start_day_str) & (obs_df.index <= plot_end_day_str)]
         mod_df = mod_df.loc[(mod_df.index >= plot_start_day_str) & (mod_df.index <= plot_end_day_str)]
+        if obs_df.empty:
+            print(f"No data for {st} within the desired time range, filling with nan")
+            obs_df = mod_df * np.nan
 
         if (datum_list[i] != 'NAVD' or demean):
             obs_df = obs_df - obs_df.mean()
             mod_df = mod_df - mod_df.mean()
+        
+        # check if obs overlaps with mod
+        if obs_df.index[0] > mod_df.index[-1] or obs_df.index[-1] < mod_df.index[0]:
+            print(f"Obs and Mod do not overlap for {st}, filling with nan")
+            obs_df = mod_df * np.nan
 
         my_comp = obs_mod_comp(obs=pd.DataFrame({'datetime': obs_df.index, 'value': obs_df}),
                                mod=pd.DataFrame({'datetime': mod_df.index, 'value': mod_df}))
@@ -346,7 +365,7 @@ def plot_elev(
         mod_maxs.append(max(my_comp.mod_df['value']))
         stats.append(my_comp.stats_dict)
 
-        datum_str = "NAVD 88" if datum_list[n] == "NAVD" else datum_list[n] 
+        datum_str = "NAVD 88" if datum_list[n] == "NAVD" else datum_list[n]
         if obs_df_list[i] is None:
             title_str = f'{st}, no data\n'
         else:
@@ -376,7 +395,7 @@ def plot_elev(
     fig.tight_layout()
     plt.subplots_adjust(wspace=0.2, hspace=1.0)
     if plot_name is not None:
-        plt.savefig(f'{plot_name}.png', dpi=400)
+        plt.savefig(f'{plot_name}.{figure_type}')
     if iplot:
         plt.show()
 
@@ -638,45 +657,66 @@ def test():
 
     print('test done.')
 
-    
-def test_plot_usgs():
-    '''Plot time series and calculate stats.'''
 
-    case_name = 'LA_reforecast_repos_nontidal'
-    station_json_fname = '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json'
+def test_plot_usgs():
+    '''
+    Plot time series and calculate stats.
+    Both obs and model results will be converted to NAVD88 if possible.
+    '''
+
+    case_name = 'v8_2018'  # 'LA_2018_repos_nontidal'  #  'LA_reforecast_repos_nontidal'  # 'v8'
+    station_json_fname = ('/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/'
+                          'station2.json')
 
     with open(station_json_fname, 'r', encoding='utf-8') as f:
-        dict = json.load(f)
+        plot_dict = json.load(f)
 
-    output_dir = dict[case_name]['cdir']
+    output_dir = plot_dict[case_name]['cdir']
 
     obs, st_info, datums = get_obs_from_station_json(case_name, station_json_fname)
 
+    mod_bp = Bpfile(plot_dict[case_name]['station_bp_file'], cols=5)
     mod = TimeHistory(
-        file_name=dict[case_name]['elev_out_file'],
-        start_time_str=dict[case_name]['model_start_day_str'],
+        file_name=plot_dict[case_name]['elev_out_file'],
+        start_time_str=plot_dict[case_name]['model_start_day_str'],
         sec_per_time_unit=86400,
-        columns=list(dict[case_name]['stations'].keys())
+        columns=list(plot_dict[case_name]['stations'].keys())
     )
     mod.df.set_index('datetime', inplace=True)
 
     # shift for mod
     mod.df.iloc[:, :] += 0.0
 
-    if dict[case_name]['default_datum'].lower() == 'navd88':
+    # ------------------apply correction to convert obs to NAVD88 if possible------------------
+    for i, (ob, info) in enumerate(zip(obs, st_info)):
+        st_id = info['id']
+        correction = plot_dict[case_name]['stations'][st_id]['to_NAVD88_feet']
+        if ob is not None:
+            if correction is not None:
+                obs[i]['water_level'] += correction * 0.3048  # feet to meter
+            else:  # demean both obs and mod
+                obs[i]['water_level'] -= obs[i]['water_level'].mean()
+                mod.df.iloc[:, i] -= mod.df.iloc[:, i].mean()
+                datums[i] = 'de-mean'
+
+    # ------------------convert mod to NAVD88 if possible------------------
+    if plot_dict[case_name]['model_datum'].lower() == 'navd88':
         pass
-    elif dict[case_name]['default_datum'].lower() == 'xgeoid20b':
+    elif plot_dict[case_name]['model_datum'].lower() == 'xgeoid20b':
         # datum shift for mod, from xgeoid20b to NAVD
-        st_lon = np.array([x['longitude'] for x in st_info])
-        st_lat = np.array([x['latitude'] for x in st_info])
-        st_shift = vdatum_wrapper_pointwise(
-            x=st_lon, y=st_lat, z=np.zeros_like(st_lat),
-            conversion_para=vdatum_preset['xgeoid20b_to_navd88'],
-            print_info='\nConverting from xgeoid20b to NAVD88:\n'
-        )
+        cache_name = f'/sciclone/schism10/feiye/Cache/{case_name}_xgeoid20b_to_navd88.txt'
+        if os.path.exists(cache_name):
+            st_shift = np.loadtxt(cache_name)
+        else:
+            st_shift = vdatum_wrapper_pointwise(
+                x=mod_bp.nodes[:, 0], y=mod_bp.nodes[:, 1], z=np.zeros(mod_bp.n_nodes, dtype=float),
+                conversion_para=vdatum_preset['xgeoid20b_to_navd88'],
+                print_info='\nConverting from xgeoid20b to NAVD88:\n'
+            )
+            np.savetxt(cache_name, st_shift, fmt='%.6f')
         for i in range(len(st_info)):
             mod.df.iloc[:, i] += st_shift[i]  # from xgeoid20b to NAVD
-    elif dict[case_name]['default_datum'].lower() in ['msl', "de-mean"]:
+    elif plot_dict[case_name]['model_datum'].lower() in ['msl', "de-mean"]:
         # demean both obs and mod, for all time
         # to demean for the plot period, use plot_elev() with demean=True
         mod.df.iloc[:, :] -= mod.df.mean(axis=0)
@@ -684,7 +724,7 @@ def test_plot_usgs():
             if ob is not None:
                 obs[i]['water_level'] -= obs[i]['water_level'].mean()
     else:
-        raise ValueError(f"Unknown default_datum: {dict['default_datum']}")
+        raise ValueError(f"Unknown model_datum: {plot_dict['model_datum']}")
 
     # plot
     # split stations into chunks, each with 25 stations
@@ -692,16 +732,16 @@ def test_plot_usgs():
     total_stats_df = pd.DataFrame()
     for stations_in_plot in stations_in_plots:
         plot_name = (
-            f"{output_dir}/ts_{case_name}_{dict[case_name]['elev_out_file'].split('.')[-1]}"
+            f"{output_dir}/ts_{case_name}_{plot_dict[case_name]['elev_out_file'].split('.')[-1]}"
             f"_{stations_in_plot.start}_{stations_in_plot.stop}")
         stats_df, _ = plot_elev(
             obs_df_list=obs[stations_in_plot],
             mod_df_all_stations=mod.df.iloc[:, stations_in_plot],
-            plot_start_day_str=dict[case_name]['plot_start_day_str'],
-            plot_end_day_str=dict[case_name]['plot_end_day_str'],
-            noaa_stations=list(dict[case_name]['stations'].keys())[stations_in_plot],
+            plot_start_day_str=plot_dict[case_name]['plot_start_day_str'],
+            plot_end_day_str=plot_dict[case_name]['plot_end_day_str'],
+            noaa_stations=list(plot_dict[case_name]['stations'].keys())[stations_in_plot],
             datum_list=datums[stations_in_plot],
-            demean=True,
+            demean=False,
             station_info=st_info[stations_in_plot],
             iplot=False, plot_name=plot_name,
             subplots_shape=(7, None), label_strs=['obs', 'model'],
@@ -711,7 +751,7 @@ def test_plot_usgs():
         write_stat(stats_df, f"{plot_name}_stats.txt")
 
     write_stat(total_stats_df, f"{output_dir}/"
-               f"stats_{case_name}_{dict[case_name]['elev_out_file'].split('.')[-1]}.txt")
+               f"stats_{case_name}_{plot_dict[case_name]['elev_out_file'].split('.')[-1]}.txt")
 
     print('Main function done.')
 
