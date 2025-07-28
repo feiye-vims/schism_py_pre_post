@@ -10,6 +10,10 @@ import matplotlib.pyplot as plt
 from glob import glob
 
 
+sample_stations = {'Sample': ['8720030', '8423898', '8419317', '8410140']}
+sample_datum = {'Sample': 'NAVD'}
+
+
 def pacific_stations(station_bp_file=None):
     # --------------define stations----------------------
     # stations, ICOGS v2 and v3, coastal act
@@ -31,10 +35,6 @@ def pacific_stations(station_bp_file=None):
         'West_Coast_3': 'NAVD',
     }
     return [stations_groups, default_datums]
-
-sample_stations = {'Sample': ['8720030', '8423898', '8419317', '8410140']}
-sample_datum = {'Sample': 'NAVD'}
-
 
 def ecgc_stations_subset(station_bp_file=None):
     # --------------define stations----------------------
@@ -116,6 +116,10 @@ def subset_stations_in_box(box, station_bp_file, group_name="Landfall_region", d
 def stats_scatter(stats=None, stats_file=None, var_str=None,
                   region="Full_domain", box={"W": -100, "E": -60, "S": 8, "N": 48},
                   plot_symbol_dict=None, filename=None):
+    """
+    Plot scatter points of the stats
+    """
+
     if stats is None:
         stats = pd.read_csv(stats_file)
     var_str0 = var_str.split('_')[0]
@@ -149,7 +153,11 @@ def stats_scatter(stats=None, stats_file=None, var_str=None,
     plt.savefig(f'{filename}_{var_str}.png', dpi=400)
     plt.close('all')
 
+
 def write_stat(stats, fname):
+    """
+    Write the stats to a file in human-readable format and allign the columns
+    """
     rearranged_cols = ['station_name', 'station_id', 'station_lon', 'station_lat', 'RMSE', 'MAE',
                     'Bias', 'CC', 'ubRMSE', 'Max_Obs', 'Max_Mod']
     stats = stats[rearranged_cols]
@@ -166,19 +174,75 @@ def write_stat(stats, fname):
 
     return stats.iloc[:1, :].to_string(index=False).split('\n')  # return the first row (var names) and second row (values)
 
-if __name__ == "__main__":
-    # ---------------------------------------------------------------------------------
-    #    inputs
-    # ---------------------------------------------------------------------------------
-    events = ['v7.2_Isabel']
 
-    datum = 'NAVD'  # '': (use predefined ones in ecgc_stations); 'NAVD'; 'MSL'
-    shift = 0.0  # uniform shift for all stations
-    # if model outputs are not in NAVD, shift them to NAVD; None if no shift
-    nday_moving_average = 0  # 2-day moving average
+def plot_coastal_act(
+    main_dict=None, events=None, region=None, datum=None, shift=None,
+    other_runs=None,
+    nday_moving_average=None, outfilename_suffix=None,
+    subplots_shape=None,
+):
+    """
+    Plot results of runs from coastal act and stofs3d
 
-    region = "Full_domain"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
+    A dictionary (*.json) is needed to define the runs, stations, and other parameters.
 
+    Inputs:
+    - main_dict: path to the main dictionary file
+    - events: list of events to process
+    - region: region to plot (e.g., "Full_domain", "Sample", "Landfall_region", "FromDict")
+    - datum: default datum to use for the stations (e.g., "NAVD"; if not available, use "MSL", i.e. demeaned)
+             which may be overwritten by predefined ones in ecgc_stations
+    - shift: uniform shift for all stations
+
+    - other runs: dictionaries for other runs to compare with, e.g.
+        other_runs = {
+            'Run 1': {
+                'dict_file': '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a2.json',
+                'shift': 0.0,
+                'line_style': 'g',
+            },
+            'Run 2': {
+                'dict_file': '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a3.json',
+                'shift': 0.0,
+                'line_style': 'c',
+            },
+        }
+    - other_dicts_files: list of other dictionaries to process
+    - other_shifts: list of shifts for the other runs
+    - other_line_styles: list of line styles for the other runs
+
+    - nday_moving_average: number of days for moving average
+    - outfilename_suffix: user-specified suffix for the output filename for information only
+    """
+
+    # --start inputs-------------------------------------------------------------------------------
+    if main_dict is None:
+        raise ValueError("main_dict is required")
+    if events is None:
+        raise ValueError("events is required")
+    if region is None:
+        region = "Full_domain"
+        print(f"region is not specified, using {region} as default")
+    if datum is None:
+        datum = 'NAVD'
+        print(f"datum is not specified, using {datum} as default")
+    if shift is None:
+        shift = 0.0  # uniform shift for all stations
+        print(f"shift is not specified, using {shift} as default")
+
+    if nday_moving_average is None:
+        nday_moving_average = 0
+        print(f"nday_moving_average is not specified, using {nday_moving_average} as default")
+    else:
+        print(f"nday_moving_average is set to {nday_moving_average}")
+
+    if outfilename_suffix is None:
+        outfilename_suffix = ''
+
+    # --end inputs-------------------------------------------------------------------------------
+
+    # -- additional inputs -----------------------------------------------------------------
+    subplots_shape = [10, None]  # n per col
     # neglect stations, only for stats
     # neglect_stations =['8551910', '8548989', '8545240', '8539094', '8720226', '8652857', '8447435', '8575512', '8738043', '8729108']
     # neglect_stations = [
@@ -189,16 +253,17 @@ if __name__ == "__main__":
     neglect_stations = []  # Washington DC, Lake Charles
 
     var_str = 'MAE'  # for the scatter plot
+    # -- end additional inputs ------------------------------------------------------------
 
-    main_dict = '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a1.json'  # 'coastal_act_stats_period_3D_1st_round.json'
-    other_dicts_files = []  # ['/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a2.json']  # ['coastal_act_stats_period_3D_others.json']
-    other_shifts = [0]  # uniform shift for all stations and for each of the other runs
-    other_line_styles = ['g']
-
-    outfilename_suffix = ''  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
-
-    subplots_shape = [10, None]  # n per col
-    # --end inputs-------------------------------------------------------------------------------
+    # populate other runs if other_runs are provided
+    if other_runs is not None:
+        other_dicts_files = [x['dict_file'] for x in other_runs.values()]
+        other_shifts = [x['shift'] for x in other_runs.values()]
+        other_line_styles = [x['line_style'] for x in other_runs.values()]
+    else:
+        other_dicts_files = []
+        other_shifts = []
+        other_line_styles = []
 
     with open('/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/coastal_act_stats_plot_symbols.json') as d:
         plot_symbol_dict = json.load(d)
@@ -379,3 +444,23 @@ if __name__ == "__main__":
         
         pass
             
+if __name__ == "__main__":
+    plot_coastal_act(
+        main_dict='/sciclone/home/feiye/s1/GIT_REPOS/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a1.json',
+        events=['2018_v8'],
+        datum='NAVD',
+        shift=0.0,
+        other_runs={
+            'RUN13': {
+                'dict_file': '/sciclone/home/feiye/s1/GIT_REPOS/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a2.json',
+                'shift': 0.0,
+                'line_style': 'b',
+            },
+            'RUN24': {
+                'dict_file': '/sciclone/home/feiye/s1/GIT_REPOS/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a3.json',
+                'shift': 0.0,
+                'line_style': 'g',
+            }
+        }
+    )
+    print("Done!")

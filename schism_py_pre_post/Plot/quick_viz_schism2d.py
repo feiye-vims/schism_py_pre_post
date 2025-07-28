@@ -4,16 +4,39 @@ import copy
 import matplotlib.pyplot as plt
 import xarray as xr
 from pathlib import Path
-from pylib_experimental.schism_file import cread_schism_hgrid
-from pylib import schism_grid
+from pylib_experimental.schism_file import cread_schism_hgrid as read_schism_hgrid
+# from pylib import schism_grid as read_schism_hgrid
 
 
-default_caxis = {
-    'elevation': [-2, 2],
-    'zeta': [-2, 2],
-    'salinity': [0, 35],
-    'temperature': [0, 35],
-    'disturbance': [0, 2],
+var_dict = {
+    "surface_temperature": {
+        "file_name": "stofs_3d_atl.t12z.temperature_f001_012.nc",
+        "var_name": "temperature",
+        "dry_mask_var": "dryFlagNode",
+        "layer": "s",
+    },
+    "bottom_temperature": {
+        "file_name": "stofs_3d_atl.t12z.temperature_f001_012.nc",
+        "var_name": "temperature",
+        "dry_mask_var": "dryFlagNode",
+        "layer": "b",
+    },
+    "surface_salinity": {
+        "file_name": "stofs_3d_atl.t12z.salinity_f001_012.nc",
+        "var_name": "salinity",
+        "dry_mask_var": "dryFlagNode",
+        "layer": "s",
+    },
+    "bottom_salinity": {
+        "file_name": "stofs_3d_atl.t12z.salinity_f001_012.nc",
+        "var_name": "salinity",
+        "dry_mask_var": "dryFlagNode",
+        "layer": "b",
+    },
+    "elevation": {
+        "file_name": "stofs_3d_atl.t12z.out2d_f001_012.nc",
+        "var_name": "elevation",
+    }
 }
 
 
@@ -21,17 +44,13 @@ def match_out2d_fname(fname):
     """
     return corresponding out2d fname for a given netcdf file
     """
-    pattern = r'(\w+)_(\d+)\.nc'  # \w+ captures any word before the number
-    match = re.search(pattern, fname)
-    
-    if match:
-        # Extract the prefix (group 1) and the number (group 2)
-        prefix = match.group(1)
-        number = match.group(2)
-        
-        out2d_fname = fname.replace(f'{prefix}_{number}.nc', f'out2d_{number}.nc')
-    else:
-        raise ValueError(f"Invalid filename {fname}")
+    try:
+        out2d_fname = re.sub(
+            r"(out2d|temperature|salinity|horizontalVelX|horizontalVelY|verticalVelocity)",
+            "out2d", fname
+        )
+    except:
+        raise ValueError(f"Invalid filename format: {fname}")
     
     return out2d_fname
         
@@ -41,8 +60,8 @@ def read_schism_data(gd_fname, fnames, var_name, dry_mask_var, layer):
     Read Schism grid and variable data.
     """
     print('Reading data ...')
-    gd = cread_schism_hgrid(gd_fname)
-    my_nc = xr.open_mfdataset(fnames)
+    gd = read_schism_hgrid(gd_fname)
+    my_nc = xr.open_mfdataset(fnames, engine='netcdf4')
     var = np.array(my_nc[var_name])
     my_nc.close()
 
@@ -50,8 +69,14 @@ def read_schism_data(gd_fname, fnames, var_name, dry_mask_var, layer):
         # read dry mask from out2d_*.nc instead of the original fnames
         fnames = [match_out2d_fname(fname) for fname in fnames]
         my_nc = xr.open_mfdataset(fnames)
-        dry_mask = np.array(my_nc[dry_mask_var])
-        kbp = np.array(my_nc['bottom_index_node'])
+        if dry_mask_var is not None:
+            dry_mask = np.array(my_nc[dry_mask_var])
+        else:
+            dry_mask = np.zeros_like(var)
+        if layer == "b":
+            kbp = np.array(my_nc['bottom_index_node'])
+        else:
+            kbp = None
     else:
         dry_mask = np.zeros_like(var)
         kbp = None
@@ -73,11 +98,8 @@ def process_variable(var, dry_mask, it=-1, layer=-1, kbp=None):
         var[i, dry_mask[i, :].astype(bool)] = np.nan
 
     if layer == "b":  # bottom value, needs kbp from vgrid
-        if len(var.shape) == 3:
-            value = var[it, :, :]
-            value = value[np.arange(value.shape[0]), kbp]  # bottom index varies with nodes
-        elif len(var.shape) == 2:
-            value = var[it, :]
+        value = var[it, :, :]
+        value = value[np.arange(value.shape[0]), kbp]  # bottom index varies with nodes
     elif layer == "s":  # surface value
         if len(var.shape) == 3:
             value = var[it, :, -1]  # surface value
@@ -152,12 +174,12 @@ def visualize_schism_data(
 
 if __name__ == "__main__":
     # Configuration: Set filenames, variable names, and plotting parameters
-    gd_fname = '/sciclone/schism10/feiye/STOFS3D-v8/R15c_v7/hgrid.gr3'
-    var_name = "elevation"  # Variable name in the ncfile, e.g., "salt_surface" or "zeta"
-    layer = 's'
+    gd_fname = '/sciclone/schism10/feiye/TEMP/SST/hgrid.gr3'
+    var_name = "salinity"  # Variable name in the ncfile, e.g., "salt_surface" or "zeta"
+    layer = 's'  # 's' for surface, 'b' for bottom, or specific layer number
     dry_mask_var = "dryFlagNode"
-    fnames = ['/sciclone/schism10/feiye/STOFS3D-v8/R15d1_v7/outputs/out2d_29.nc']
-    caxis = default_caxis[var_name]  # [-2, 2]
+    fnames = ['/sciclone/schism10/feiye/TEMP/SST/outputs/stofs_3d_atl.t12z.fields.salinity_f001_012.nc']
+    caxis = [0, 40]  # [-2, 35]  # [0, 40]  # [-1, 1]
     xlim = None  # [-77, -75]
     ylim = None  # [37, 40]
     output_filename = None

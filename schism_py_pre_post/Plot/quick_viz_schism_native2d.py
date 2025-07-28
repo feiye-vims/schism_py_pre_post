@@ -9,11 +9,11 @@ import copy
 set_matplotlib_formats('svg')
 
 
-gd_fname = '/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7/Shared_for_CERA/From_Zizang/hgrid.gr3'
+gd_fname = '/sciclone/schism10/feiye/TEMP/SST/hgrid.gr3'
 gd = cread_schism_hgrid(gd_fname)
 
-var_name = "zeta_max"  # "salt_surface"
-fnames = ['/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7/Shared_for_CERA/From_Zizang/schout_adcirc_20250203.nc']
+var_name = "temperature"  # "salt_surface"
+fnames = ['/sciclone/schism10/feiye/TEMP/SST/outputs/temperature_1.nc']
 my_nc = xr.open_mfdataset(fnames)
 value = np.array(my_nc[var_name])
 caxis = [-2, 2]

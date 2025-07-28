@@ -22,8 +22,8 @@ import io
 from urllib.request import urlopen, Request
 from PIL import Image
 
-from pylib_experimental.schism_file import cread_schism_hgrid
-from pylib import grd2sms, schism_grid
+# from pylib_experimental.schism_file import cread_schism_hgrid as read_schism_hgrid
+from pylib import grd2sms, schism_grid, read_schism_hgrid
 
 
 try:
@@ -85,7 +85,7 @@ def schism2sms_parallel(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    gd = cread_schism_hgrid(f'{rundir}/hgrid.gr3')
+    gd = read_schism_hgrid(f'{rundir}/hgrid.gr3')
 
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{fname_prefix}_{stack}.nc'
@@ -101,7 +101,7 @@ def schism2sms_parallel(
                 # make a copy of the grid because the grid will be modified
                 gd_copy = copy.deepcopy(gd)
                 if 'var' not in locals():
-                    var = np.array(my_nc.variables[var_str])
+                    var = my_nc.variables[var_str][:]
                 if var_proc is not None:
                     var, title_var_str = var_proc(gd_copy, var)
                 else:
@@ -160,7 +160,7 @@ def plot_schism2D_parallel(
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    gd = cread_schism_hgrid(f'{rundir}/hgrid.gr3')
+    gd = read_schism_hgrid(f'{rundir}/hgrid.gr3')
 
     for stack in stacks_proc:
         fname = f'{rundir}/outputs/{fname_prefix}_{stack}.nc'
@@ -254,7 +254,7 @@ def image_spoof(self, tile):
     return img, self.tileextent(tile), 'lower' # reformat for cartopy
 
 
-def mask_dry_nodes(hgrid_obj, var, var_str, elevation, min_depth=0.0):
+def mask_dry_nodes(hgrid_obj, var, var_str, elevation, min_depth=0.01):
     '''mask dry nodes in the variable
     min_depth: minimum depth to be considered as water
     '''
@@ -268,7 +268,7 @@ def mask_dry_nodes(hgrid_obj, var, var_str, elevation, min_depth=0.0):
     return var, 'masked_' + var_str
 
 def mask_dry_elevation(hgrid_obj, elevation):
-    return mask_dry_nodes(hgrid_obj, elevation, 'elevation', elevation, min_depth=0.0)
+    return mask_dry_nodes(hgrid_obj, elevation, 'elevation', elevation, min_depth=0)
 
 def get_disturbance(hgrid_obj, elevation):
     '''elevation can have a time dimension,
@@ -285,10 +285,9 @@ def get_disturbance(hgrid_obj, elevation):
 def get_positive_disturbance(hgrid_obj, elevation):
     disturbance, _ = get_disturbance(hgrid_obj, elevation)
 
-    disturbance[disturbance < 0] = np.nan
+    disturbance[disturbance<0] = np.nan
 
     return disturbance, 'positive_disturbance'
-
 
 plot_param_dict = {
     'Pearl River': {
@@ -300,45 +299,40 @@ plot_param_dict = {
     'New Orleans': {
         'xlim': [-90.19665, -89.96121], 'ylim': [29.89496, 30.05080], 'clim': [-2, 10],
     },
-    'Bayou Lafourche': {
-        'xlim': [-90.8, -90.0], 'ylim': [29.3, 29.72], 'clim': [-2, 10],
-    },
     'Outfall Canal': {
         'xlim': [-90.10806, -90.00778], 'ylim': [29.97116, 30.03879], 'clim': [-2, 10],
-    },
-    'DB': {
-        'xlim': [-75.8, -74.5], 'ylim': [38.5, 40.4], 'clim': [-2, 10],
-    },
+    }
 }
 
 if __name__ == "__main__":
     # sample inputs
-    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7.1/'
+    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15h_v7/'
     output_dir = f'{RUNDIR}/outputs/'
-    model_start_time = datetime.strptime('2024-03-05', "%Y-%m-%d")
+    model_start_time = datetime.strptime('2021-08-01', "%Y-%m-%d")
     VAR_STR = 'elevation'
-    var_proc = mask_dry_elevation  # processing on the variable
-    stacks = np.arange(1, 36)  # must cover the plot time stamps
+    var_proc = mask_dry_elevation
+    stacks = np.arange(1, 47)  # must cover the plot time stamps
     time_steps = []  # None (all time steps), or a list of time steps to plot
-    plot_params = plot_param_dict['Bayou Lafourche']
+    plot_params = plot_param_dict['LA']
 
     # -------------------- sample outputing to *.2dm -------------------------
     snapshots_times = (
-        datetime.strptime('2024-03-20 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-01 01:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-08-29 00:00:00', "%Y-%m-%d %H:%M:%S"),
         # datetime.strptime('2021-08-30 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2021-09-10 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2021-08-31 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2021-09-01 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-06 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-20 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-27 00:00:00', "%Y-%m-%d %H:%M:%S"),
     )
     if snapshots_times:
         schism2sms_parallel(
             RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
-            output_dir, snapshots_times, iOverWrite=True)
+            output_dir, snapshots_times, iOverWrite=False)
 
     # ----------------------------- sample generating plot -------------------------
-    # plot_schism2D_parallel(
-    #     RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
-    #     time_steps, plot_params, output_dir, iOverWrite=True)
+    plot_schism2D_parallel(
+        RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
+        time_steps, plot_params, output_dir, iOverWrite=False)
 
     print('All done!')
