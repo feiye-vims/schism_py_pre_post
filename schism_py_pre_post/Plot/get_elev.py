@@ -173,23 +173,22 @@ def get_usgs_elev(station_ids=None, start_date='2021-05-01', end_date='2021-06-0
     for i, data in enumerate(requested_data):
         if data is None or data.df.empty:  # no data
             obs_df.append(None)
-            station_info = {
-                'id': station_ids[i],
-                'site_name': 'NA',
-                'latitude': 'NA',
-                'longitude': 'NA'
-            }
         else:
             data.df.columns = ['datetime', 'water_level']
             data.df.set_index('datetime', inplace=True)
             data.df.index = pd.to_datetime(data.df.index, utc=True)  # convert to UTC
             obs_df.append(data.df)
+
+        if data is None:  # station not found
+            station_info = {'id': station_ids[i], 'site_name': 'NA', 'latitude': 'NA', 'longitude': 'NA'}
+        else:  # station exists
             # reformat station_info
             station_info = {
                 'id': data.station_info['id'],
                 'site_name': data.station_info['name'],
                 'latitude': data.station_info['lat'],
-                'longitude': data.station_info['lon']}
+                'longitude': data.station_info['lon']
+            }
         st_info.append(station_info)
 
     return obs_df, st_info
@@ -403,11 +402,17 @@ def make_bp_from_station_json(
 def subset_tidal_station_json(
     case_name='LA_reforecast', tidal_constituents=['M2', 'K1', 'O1'],
     station_json='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json',
-    bpfile='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned.bp'
+    bpfile='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles_test/USGS_station_LA.bp',
+    subset_tidal=False
 ):
     """Make a station json file by subsetting the tidal/non-tidal stations from an existing one."""
     import utide
     from pathlib import Path
+
+    if subset_tidal:
+        print('Subsetting tidal stations')
+    else:
+        print('Subsetting non-tidal stations')
 
     station_dict = json.load(open(station_json, encoding='utf-8'))[case_name]
 
@@ -422,20 +427,33 @@ def subset_tidal_station_json(
             amplitude = max(tides['A'][constituent_idx])
             if amplitude > 0.05:
                 print(f"Station {st_info['id']} is tidal, amplitude: {amplitude}")
+                if subset_tidal:
+                    subset_stations.append(st_info['id'])
+                    subset_indices.append(i)
             else:
                 print(f"Station {st_info['id']} is non-tidal, amplitude: {amplitude}")
-                subset_stations.append(st_info['id'])
-                subset_indices.append(i)
+                if not subset_tidal:
+                    subset_stations.append(st_info['id'])
+                    subset_indices.append(i)
         
     # write new station json
     new_station_dict = station_dict.copy()
     new_station_dict['stations'] = {x: station_dict['stations'][x] for x in subset_stations}
-    with open(Path(station_json).parent / f"{case_name}_tidal.json", 'w', encoding='utf-8') as f:
+
+    if subset_tidal:
+        json_name = f"{Path(station_json).parent}/{case_name}_tidal.json"
+    else:
+        json_name = f"{Path(station_json).parent}/{case_name}_nontidal.json"
+    with open(json_name, 'w', encoding='utf-8') as f:
         json.dump(new_station_dict, f, indent=4)
     
     # write new bpfile
+    if subset_tidal:
+        out_bpfile = Path(bpfile).parent / f"{case_name}_tidal.bp"
+    else:
+        out_bpfile = Path(bpfile).parent / f"{case_name}_non_tidal.bp"
     with open(bpfile, 'r', encoding='utf-8') as fin:
-        with open(Path(bpfile).parent / f"{case_name}_tidal.bp", 'w', encoding='utf-8') as fout:
+        with open(out_bpfile, 'w', encoding='utf-8') as fout:
             line = fin.readline()
             fout.write(line)
 
@@ -524,7 +542,7 @@ def get_obs_from_station_json(
                 datum_shift = station_dict[case_name]['stations'][this_station]['to_NAVD88_feet']
 
                 if datum_shift is not None:
-                    datum_shift *= 0.3048  # to meters
+                    datum_shift *= 0.3048  # convert datum shift value unit from feet to meters
                 else:
                     datum_shift = 0
                 usgs_obs[i]['water_level'] += datum_shift
@@ -549,7 +567,7 @@ def get_obs_from_station_json(
 
 
 if __name__ == "__main__":
-    subset_tidal_station_json()
+    subset_tidal_station_json(subset_tidal=True)
 
     # make_bp_from_station_json()
     # plot_operation()

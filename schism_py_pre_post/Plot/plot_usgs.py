@@ -80,7 +80,8 @@ def get_model_elev(elev_out_files, model_start_day_str, station_bp_file, sec_per
 def plot_elev_no_stats(
     mods, mod_run_ids, requested_obs_data,
     plot_start_day_str, plot_end_day_str,
-    output_dir='./', mod_run_colors=None
+    output_dir='./', mod_run_colors=None,
+    demean=True, output_format='png',
 ):
     """
     Plot model results and observations without statistics
@@ -92,41 +93,53 @@ def plot_elev_no_stats(
     # time_stamps = [x.replace(tzinfo=pytz.UTC) for x in mods[0].index]
 
     # plot
-    n_subplot_row = 7
-    n_subplot_col = 4
+    n_subplot_row = 5
+    n_subplot_col = 5
     n_chunk = 25
     plt.rcParams.update({'font.size': 20})
     i_station = -1
     for ichunk, chunk in enumerate(chunks(requested_obs_data, n_chunk)):
         fig, ax = plt.subplots(n_subplot_row, n_subplot_col, figsize=(60, 30))
         ax = ax.ravel()
+        ylim_min = np.ones(n_chunk) * 9999
+        ylim_max = np.ones(n_chunk) * -9999
         for n, data in enumerate(chunk):
             i_station += 1
             station_id = station_ids[i_station]
             if data is not None:
                 obs_date = [x.astimezone(pytz.utc) for x in data.df['date']]
-                obs_y = (data.df['value'] - data.df['value'].mean()) * FEET2METERS
+                data.df['value'] *= FEET2METERS
+                if demean:
+                    obs_y = data.df['value'] - data.df['value'].mean()
+                else:
+                    obs_y = data.df['value']
                 ax[n].plot(obs_date, obs_y, 'r.', label='obs')
                 if data.station_info['id'] != station_id:
                     raise ValueError('Station ids for obs and mod do not match')
             for i, [mod_run_id, mod] in enumerate(zip(mod_run_ids, mods)):
-                mod_y = mod[station_id] - mod[station_id].mean()
-                ax[n].plot(mod.index, mod_y, mod_run_colors[i], label=mod_run_id)
+                mod_y = mod[station_id]
+                if demean:
+                    mod_y = mod_y.loc[(mod_y.index >= plot_start_day_str) & (mod_y.index <= plot_end_day_str)]
+                    mod_y -= mod_y.mean()
+                ax[n].plot(mod_y.index, mod_y, mod_run_colors[i], label=mod_run_id, linewidth=3)
 
             ax[n].title.set_text(station_id)
             ax[n].tick_params(labelrotation=20)
             ax[n].set_xlim([datetime.strptime(plot_start_day_str, "%Y-%m-%d %H:%M:%S"),
                             datetime.strptime(plot_end_day_str, "%Y-%m-%d %H:%M:%S")])
             if data is not None and not data.df.empty:  # set ylim to obs's range
-                ax[n].set_ylim(obs_y.min() - 0.5, obs_y.max() + 0.5)
+                ylim_min[n] = min(ylim_min[n], min(obs_y.min(), mod_y.min()))
+                ylim_max[n] = max(ylim_max[n], max(obs_y.max(), mod_y.max()))
+                ax[n].set_ylim(ylim_min[n] - 0.3, ylim_max[n] + 1.05)
             if n == 0:
-                ax[n].legend()
+                ax[n].legend(fontsize=32)
+                ax[n].set_ylabel('Water level (m; demeaned)')
             ax[n].grid()
             # for i in range(n + 1, n_subplot_col * n_subplot_row):
             #     ax[i].axis('off')
         plt.tight_layout(h_pad=1, w_pad=1)
         # plt.show()
-        plt.savefig(f'Chunk_{ichunk}.png')
+        plt.savefig(f'Chunk_{ichunk}.{output_format}')
         plt.close(fig)
 
     os.makedirs(output_dir, exist_ok=True)
@@ -148,6 +161,8 @@ def plot_usgs(
         'RUN01b': '/sciclone/schism10/feiye/STOFS3D-v5/Outputs/O01b_JZ/fort.18'
     },
     '''
+
+    os.makedirs(output_dir, exist_ok=True)
 
     print('Gathering model results')
     mod_run_ids, mods = get_model_elev(
@@ -173,6 +188,7 @@ def plot_usgs(
         plot_start_day_str=plot_start_day_str,
         plot_end_day_str=plot_end_day_str,
         output_dir=output_dir,
+        demean=True, output_format='png',
     )
 
 
@@ -183,16 +199,46 @@ scenarios_dict = {
         'plot_start_day_str': '2024-03-10 00:00:00',
         'plot_end_day_str': '2024-04-10 00:00:00',
     },
+    'v8_March_reforecast_LA_tidal': {
+        'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_tidal.bp',
+        'model_start_day_str': '2024-03-05 00:00:00',
+        'plot_start_day_str': '2024-03-12 00:00:00',
+        'plot_end_day_str': '2024-04-06 00:00:00',
+    },
     'v8_March_reforecast_LA_nontidal': {
         'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43.bp',
         'model_start_day_str': '2024-03-05 00:00:00',
-        'plot_start_day_str': '2024-03-10 00:00:00',
-        'plot_end_day_str': '2024-04-10 00:00:00',
+        'plot_start_day_str': '2024-03-12 00:00:00',
+        'plot_end_day_str': '2024-04-06 00:00:00',
+    },
+    'v8_March_reforecast_LA_nontidal_paper': {
+        'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43_paper.bp',
+        'model_start_day_str': '2024-03-05 00:00:00',
+        'plot_start_day_str': '2024-03-12 00:00:00',
+        'plot_end_day_str': '2024-04-06 00:00:00',
+    },
+    'Ida_LA_nontidal_paper': {
+        'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43_paper.bp',
+        'model_start_day_str': '2021-08-01 00:00:00',
+        'plot_start_day_str': '2021-08-10 00:00:00',
+        'plot_end_day_str': '2021-09-10 00:00:00',
+    },
+    'Ida_LA_tidal': {
+        'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_tidal.bp',
+        'model_start_day_str': '2021-08-01 00:00:00',
+        'plot_start_day_str': '2021-08-10 00:00:00',
+        'plot_end_day_str': '2021-09-10 00:00:00',
+    },
+    'Ida_LA_nontidal': {
+        'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43.bp',
+        'model_start_day_str': '2021-08-01 00:00:00',
+        'plot_start_day_str': '2021-08-10 00:00:00',
+        'plot_end_day_str': '2021-09-10 00:00:00',
     },
     'Ida_LA': {
         'station_bp_file': '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA.bp',
         'model_start_day_str': '2021-08-01 00:00:00',
-        'plot_start_day_str': '2021-08-01 00:00:00',
+        'plot_start_day_str': '2021-08-10 00:00:00',
         'plot_end_day_str': '2021-09-10 00:00:00',
     },
     'v8': {
@@ -233,21 +279,31 @@ def viz_usgs():
 
 if __name__ == "__main__":
 
-    scenario = scenarios_dict['2018_hindcast']  # see scenarios_dict for options
+    # scenario = scenarios_dict['Ida_LA_nontidal_paper']
+    # scenario = scenarios_dict['Ida_LA_tidal']
+    scenario = scenarios_dict['v8_March_reforecast_LA_nontidal_paper']
+    # scenario = scenarios_dict['v8_March_reforecast_LA_tidal']
 
     plot_usgs(
         station_bp_file=scenario['station_bp_file'],
         model_start_day_str=scenario['model_start_day_str'],
         sec_per_time_unit=86400,
-        # elev_out_files={
-        #     'R15a_v7': '/sciclone/schism10/feiye/STOFS3D-v8/O15a_v7/elevation.USGS_station_LA_repositioned_nontidal.dat',
-        #     'R09c': '/sciclone/schism10/feiye/STOFS3D-v8/O09c/elevation.USGS_station_LA_repositioned_nontidal.dat',
-        # },
         elev_out_files={
-            'RUN16_v6': '/sciclone/schism10/feiye/STOFS3D-v8/O16_v6/elevation.USGS_repositioned_v49.dat',
-            'R20b': '/sciclone/schism10/feiye/STOFS3D-v8/O20b/elevation.USGS_repositioned_v50.dat',
+            'Dev 7': '/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/elevation.USGS_station_LA_repositioned_nontidal_v7p1_paper.dat',
+            'Dev 8': '/sciclone/schism10/feiye/STOFS3D-v8/O09i2/elevation.USGS_station_LA_repositioned_nontidal_v43_paper.dat',
+            # 'Dev 7': '/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/elevation.USGS_station_LA_tidal.dat',
+            # 'Dev 8': '/sciclone/schism10/feiye/STOFS3D-v8/O09i2/elevation.USGS_station_LA_tidal.dat',
+            # 'R09f4': '/sciclone/schism10/feiye/STOFS3D-v8/O09f4/elevation.USGS_station_LA_repositioned_nontidal_v43_paper.dat',
+            # 'R09j1': '/sciclone/schism10/feiye/STOFS3D-v8/O09j1/elevation.USGS_station_LA_repositioned_nontidal_v43_paper.dat',
+            # 'R09j1': '/sciclone/schism10/feiye/STOFS3D-v8/O09j1/elevation.USGS_station_LA_tidal.dat',
+            # 'R09k4': '/sciclone/schism10/feiye/STOFS3D-v8/O09k4/elevation.USGS_station_LA_tidal.dat',
+            # 'R09k4': '/sciclone/schism10/feiye/STOFS3D-v8/O09k4/elevation.USGS_station_LA_repositioned_nontidal_v43_paper.dat',
         },
+        # elev_out_files={
+        #     'RUN16_v6': '/sciclone/schism10/feiye/STOFS3D-v8/O16_v6/elevation.USGS_repositioned_v49.dat',
+        #     'R20b': '/sciclone/schism10/feiye/STOFS3D-v8/O20b/elevation.USGS_repositioned_v50.dat',
+        # },
         plot_start_day_str=scenario['plot_start_day_str'],
         plot_end_day_str=scenario['plot_end_day_str'],
-        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/O20b/',
+        output_dir='/sciclone/schism10/feiye/STOFS3D-v8/O09i2/Paper/',
     )

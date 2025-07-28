@@ -4,7 +4,8 @@
         "plot_start_day_str": "2021-08-01 00:00:00",
         "plot_end_day_str": "2021-09-11 00:00:00",
         "model_start_day_str": "2021-08-01 00:00:00",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O17a/PostP/elevation.dat.Missi_Ida2_moved.O17a",
+        "station_bp_file": "/sciclone/schism10/feiye/ICOGS/BPfiles/Missi_Ida2_moved.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/R15d_v7/outputs/elevation.Missi_Ida2_moved.dat.15d_v7",
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/Missi/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31},
         "stations": {
@@ -22,7 +23,7 @@
             "01850": {"source": "USACE", "to_NAVD88_feet": 0},
             "8760922": {"source": "COOPS", "to_NAVD88_feet": 1.03}
         },
-        "default_datum": "xgeoid20b"
+        "model_datum": "xgeoid20b"
     },
     "Missi_reforecast": {
         "name": "Missi_reforecast",
@@ -47,7 +48,7 @@
             "01850": {"source": "USACE", "to_NAVD88_feet": 0},
             "8760922": {"source": "COOPS", "to_NAVD88_feet": 1.03}
         },
-        "default_datum": "xgeoid20b"
+        "model_datum": "xgeoid20b"
     },
     "LA_reforecast": {
         "name": "LA_reforecast",
@@ -201,7 +202,7 @@
             "08031050": {"source": "USGS", "to_NAVD88_feet": 0.0},
             "08042522": {"source": "USGS", "to_NAVD88_feet": 0.0}
         },
-        "default_datum": "MSL"
+        "model_datum": "MSL"
     },
     "v8": {
         "name": "STOFS-3D v8 full domain",
@@ -983,7 +984,7 @@
             "01302600": {"source": "USGS", "to_NAVD88_feet": 0.0},
             "01302250": {"source": "USGS", "to_NAVD88_feet": 0.0}
         },
-        "default_datum": "MSL"
+        "model_datum": "MSL"
     },
     "LA_reforecast_repos_nontidal": {
         "name": "LA_reforecast_repos_nontidal",
@@ -1360,6 +1361,6 @@
                 "to_NAVD88_feet": 0.0
             }
         },
-        "default_datum": "MSL"
+        "model_datum": "MSL"
     }
 }

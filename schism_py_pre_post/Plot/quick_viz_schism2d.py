@@ -8,6 +8,15 @@ from pylib_experimental.schism_file import cread_schism_hgrid
 from pylib import schism_grid
 
 
+default_caxis = {
+    'elevation': [-2, 2],
+    'zeta': [-2, 2],
+    'salinity': [0, 35],
+    'temperature': [0, 35],
+    'disturbance': [0, 2],
+}
+
+
 def match_out2d_fname(fname):
     """
     return corresponding out2d fname for a given netcdf file
@@ -64,11 +73,14 @@ def process_variable(var, dry_mask, it=-1, layer=-1, kbp=None):
         var[i, dry_mask[i, :].astype(bool)] = np.nan
 
     if layer == "b":  # bottom value, needs kbp from vgrid
-        value = var[it, :, :]
-        value = value[np.arange(value.shape[0]), kbp]  # bottom index varies with nodes
+        if len(var.shape) == 3:
+            value = var[it, :, :]
+            value = value[np.arange(value.shape[0]), kbp]  # bottom index varies with nodes
+        elif len(var.shape) == 2:
+            value = var[it, :]
     elif layer == "s":  # surface value
         if len(var.shape) == 3:
-            value = var[it, :, layer]  # surface value
+            value = var[it, :, -1]  # surface value
         elif len(var.shape) == 2:
             value = var[it, :]
     elif isinstance(layer, int):  # layer number
@@ -141,11 +153,11 @@ def visualize_schism_data(
 if __name__ == "__main__":
     # Configuration: Set filenames, variable names, and plotting parameters
     gd_fname = '/sciclone/schism10/feiye/STOFS3D-v8/R15c_v7/hgrid.gr3'
-    var_name = "temperature"  # Variable name in the ncfile, e.g., "salt_surface" or "zeta"
-    layer = 'b'
+    var_name = "elevation"  # Variable name in the ncfile, e.g., "salt_surface" or "zeta"
+    layer = 's'
     dry_mask_var = "dryFlagNode"
-    fnames = ['/sciclone/schism10/feiye/STOFS3D-v8/R15c_v7/outputs/temperature_6.nc']
-    caxis = [-1, 35]
+    fnames = ['/sciclone/schism10/feiye/STOFS3D-v8/R15d1_v7/outputs/out2d_29.nc']
+    caxis = default_caxis[var_name]  # [-2, 2]
     xlim = None  # [-77, -75]
     ylim = None  # [37, 40]
     output_filename = None

@@ -69,6 +69,7 @@ def ecgc_stations(station_bp_file=None):
     noaa_stations_all = Bpfile(station_bp_file, cols=5).st_id
 
     stations_groups = {
+         # 'Additional': noaa_stations_all[-7:],
         'Florida': noaa_stations_all[:10],
         'Atlantic': noaa_stations_all[10:29],
         'GoME': noaa_stations_all[29:39], 'GoMX_west': noaa_stations_all[41:60],
@@ -77,6 +78,7 @@ def ecgc_stations(station_bp_file=None):
         'Puerto_Rico': noaa_stations_all[150:164] + noaa_stations_all[39:41]  # last 2 are bermuda
     }
     default_datums = {
+        # 'Additional': 'NAVD',
         'Florida': 'NAVD',
         'Atlantic': 'NAVD',
         'GoME': 'NAVD', 'GoMX_west': 'NAVD',
@@ -168,12 +170,11 @@ if __name__ == "__main__":
     # ---------------------------------------------------------------------------------
     #    inputs
     # ---------------------------------------------------------------------------------
-    events = ['STOFS3D-v7_reforecast3']
+    events = ['v7.2_Isabel']
 
     datum = 'NAVD'  # '': (use predefined ones in ecgc_stations); 'NAVD'; 'MSL'
     shift = 0.0  # uniform shift for all stations
     # if model outputs are not in NAVD, shift them to NAVD; None if no shift
-    datum_shift_file = '/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt' # None
     nday_moving_average = 0  # 2-day moving average
 
     region = "Full_domain"  # "Sample", "Landfall_region", "Full_domain", "FromDict"
@@ -189,9 +190,9 @@ if __name__ == "__main__":
 
     var_str = 'MAE'  # for the scatter plot
 
-    main_dict = '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d.json'  # 'coastal_act_stats_period_3D_1st_round.json'
-    other_dicts_files = []  # ['/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_other.json']  # ['coastal_act_stats_period_3D_others.json']
-    other_shifts = []  # uniform shift for all stations and for each of the other runs
+    main_dict = '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a1.json'  # 'coastal_act_stats_period_3D_1st_round.json'
+    other_dicts_files = []  # ['/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a2.json']  # ['coastal_act_stats_period_3D_others.json']
+    other_shifts = [0]  # uniform shift for all stations and for each of the other runs
     other_line_styles = ['g']
 
     outfilename_suffix = ''  # 'Mostly_NAVD': some stations don't have NAVD datum and their elevation time series will be demeaned and shown as "MSL"
@@ -207,6 +208,7 @@ if __name__ == "__main__":
     with open(main_dict) as d:
         hurricane_dict = json.load(d)
     station_bp_file = hurricane_dict[events[0]]['station_bp_file']
+    datum_shift_file = hurricane_dict[events[0]]['datum_shift_file']
     with open(station_bp_file) as f:
         f.readline()
         n_station = int(f.readline().split()[0])
@@ -240,26 +242,11 @@ if __name__ == "__main__":
             box = hurricane_dict[event]['box']
             stations_groups, default_datums = subset_stations_in_box(box, station_bp_file, group_name=region, default_datum=datum)
 
-        # ---------------------------------------------------------------------------------
-        # # Manually override the parameters read from '*.json', only for testing
-        # overwrite default_datums
-        if datum is not None and datum != '':
-            for key in default_datums:
-                default_datums[key] = datum
-
-        # plot_start_day_str = '2018-08-17 00:00:00'
-        # plot_end_day_str = '2018-10-01 00:00:00'
-        # model_start_day_str = '2017-08-04 00:00:00'
-        # # model outputs
-        # elev_out_file = '/sciclone/schsm10/feiye/Coastal_Act/RUN13b/PostP/staout_1'
-        # cdir = '$cdir/srv/www/htdocs/yinglong/feiye/Coastal_Act/RUN13b/'
-
         other_dicts = []; other_runs_stats = [pd.DataFrame()] * len(other_dicts_files)
         for other_dict_file in other_dicts_files:
             with open(other_dict_file) as d:
                 other_dicts.append(json.load(d))
         other_runids = [os.path.basename(os.path.dirname(x[event]['cdir'])) for x in other_dicts]
-        # ---------------------------------------------------------------------------------
 
         # get all obs and save cache, if the connection is unstable,
         # there will be exception, then rerun this script until all obs are retrieved
@@ -336,7 +323,8 @@ if __name__ == "__main__":
                         station_in_subset=other_subset
                     )
                     other_mod += other_shift
-                    other_mod = datum_shift(other_mod, datum_shift_file='/sciclone/schism10/feiye/STOFS3D-v6/fcst/run/navd2xgeoid_shift.txt')
+                    other_mod = datum_shift(other_mod, datum_shift_file=other_dict[event]['datum_shift_file'])
+
                     other_stat, _ = plot_elev(obs, other_mod, plot_start_day_str, plot_end_day_str,
                                               stations_groups[group_name],
                                               datums, st_info, None, iplot=False, nday_moving_average=nday_moving_average, subplots_shape=subplots_shape,

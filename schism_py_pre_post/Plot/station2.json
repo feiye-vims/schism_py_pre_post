@@ -5,8 +5,8 @@
         "plot_end_day_str": "2018-11-30 00:00:00",
         "model_start_day_str": "2017-12-01 00:00:00",
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_repositioned_v49.bp",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O16_v6/elevation.USGS_repositioned_v49.dat",
-        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O16_v6/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O13_v7.1/elevation.USGS_repositioned_v49.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O13_v7.1_copy/",
         "box": {
             "W": -93.5,
             "E": -88.5,
@@ -6155,6 +6155,718 @@
         },
         "model_datum": "NAVD88"
     },
+    "LA_reforecast_repos_nontidal_paper_v8":
+    {
+        "name": "LA_reforecast_repos_nontidal_paper",
+        "description": "LA_reforecast_repos_nontidal for paper, removed stations outside auto arc coverage, NAVD88",
+        "plot_start_day_str": "2024-03-12 00:00:00",
+        "plot_end_day_str": "2024-04-06 00:00:00",
+        "model_start_day_str": "2024-03-05 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43_paper.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O09f4/elevation.USGS_station_LA_repositioned_nontidal_v43_paper.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O09f4/",
+        "box": {
+            "W": -93.5,
+            "E": -88.5,
+            "S": 28.5,
+            "N": 31.5
+        },
+        "stations": {
+            "02492511": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.97
+            },
+            "02492519": {
+                "source": "USGS",
+                "to_NAVD88_feet": -9.78
+            },
+            "02492600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.86
+            },
+            "02492700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.33
+            },
+            "07374000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745253": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07374581": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.44
+            },
+            "07375170": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375175": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.32
+            },
+            "07375222": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.83
+            },
+            "07375230": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.11
+            },
+            "07375500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 6.6
+            },
+            "07375650": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.75
+            },
+            "07376000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 18.65
+            },
+            "07378050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.95
+            },
+            "07378500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.35
+            },
+            "07378745": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378746": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378748": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378810": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379050": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379075": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380101": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.28
+            },
+            "07380102": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.71
+            },
+            "07380120": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.36
+            },
+            "07380126": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380127": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380200": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.91
+            },
+            "07380212": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380215": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073802220": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802225": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022295": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022395": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802273": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802280": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802282": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802284": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380330": {
+                "source": "USGS",
+                "to_NAVD88_feet": 1.67
+            },
+            "07380401": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.82
+            },
+            "07380500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.25
+            },
+            "07381150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.9
+            },
+            "07381324": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.36
+            },
+            "07381350": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.7
+            },
+            "07381355": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.18
+            },
+            "07381450": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.17
+            },
+            "07381454": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.14
+            },
+            "07381460": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381490": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.07545932
+            },
+            "07381515": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073815450": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381590": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.79
+            },
+            "073815945": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.81
+            },
+            "073815963": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "07381600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "07384400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.89
+            },
+            "07385700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385702": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385765": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07385820": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.6
+            },
+            "07386600": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07386850": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08010000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 12.97
+            },
+            "08012150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.29
+            },
+            "292952090565300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.85
+            },
+            "293809092361500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.19
+            },
+            "294045092492300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "294717092250000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.98
+            },
+            "295011091184300": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "2951190901217": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.5
+            },
+            "295124089542100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.46
+            },
+            "295447091191500": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "295501090190400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -7.1
+            },
+            "300312091320000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "300507091355600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.61
+            },
+            "300602090375100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.67
+            },
+            "300703089522700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -5.91
+            },
+            "301200090072400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "301324090382400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.65
+            },
+            "302020091435700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            }
+        },
+        "model_datum": "NAVD88"
+    },
+    "LA_reforecast_repos_nontidal_paper_v7p1":
+    {
+        "name": "LA_reforecast_repos_nontidal_paper",
+        "description": "LA_reforecast_repos_nontidal for paper, removed stations outside auto arc coverage, xGEOID20b",
+        "plot_start_day_str": "2024-03-12 00:00:00",
+        "plot_end_day_str": "2024-04-06 00:00:00",
+        "model_start_day_str": "2024-03-05 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v7p1_paper.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/elevation.USGS_station_LA_repositioned_nontidal_v7p1_paper.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/",
+        "box": {
+            "W": -93.5,
+            "E": -88.5,
+            "S": 28.5,
+            "N": 31.5
+        },
+        "stations": {
+            "02492511": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.97
+            },
+            "02492519": {
+                "source": "USGS",
+                "to_NAVD88_feet": -9.78
+            },
+            "02492600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.86
+            },
+            "02492700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.33
+            },
+            "07374000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745253": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07374581": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.44
+            },
+            "07375170": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375175": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.32
+            },
+            "07375222": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.83
+            },
+            "07375230": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.11
+            },
+            "07375500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 6.6
+            },
+            "07375650": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.75
+            },
+            "07376000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 18.65
+            },
+            "07378050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.95
+            },
+            "07378500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.35
+            },
+            "07378745": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378746": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378748": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378810": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379050": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379075": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380101": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.28
+            },
+            "07380102": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.71
+            },
+            "07380120": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.36
+            },
+            "07380126": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380127": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380200": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.91
+            },
+            "07380212": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380215": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073802220": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802225": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022295": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022395": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802273": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802280": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802282": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802284": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380330": {
+                "source": "USGS",
+                "to_NAVD88_feet": 1.67
+            },
+            "07380401": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.82
+            },
+            "07380500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.25
+            },
+            "07381150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.9
+            },
+            "07381324": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.36
+            },
+            "07381350": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.7
+            },
+            "07381355": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.18
+            },
+            "07381450": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.17
+            },
+            "07381454": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.14
+            },
+            "07381460": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381490": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.07545932
+            },
+            "07381515": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073815450": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381590": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.79
+            },
+            "073815945": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.81
+            },
+            "073815963": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "07381600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "07384400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.89
+            },
+            "07385700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385702": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385765": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07385820": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.6
+            },
+            "07386600": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07386850": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08010000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 12.97
+            },
+            "08012150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.29
+            },
+            "292952090565300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.85
+            },
+            "293809092361500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.19
+            },
+            "294045092492300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "294717092250000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.98
+            },
+            "295011091184300": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "2951190901217": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.5
+            },
+            "295124089542100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.46
+            },
+            "295447091191500": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "295501090190400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -7.1
+            },
+            "300312091320000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "300507091355600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.61
+            },
+            "300602090375100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.67
+            },
+            "300703089522700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -5.91
+            },
+            "301200090072400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "301324090382400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.65
+            },
+            "302020091435700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            }
+        },
+        "model_datum": "NAVD88"
+    },
     "LA_reforecast_repos_nontidal":
     {
         "name": "LA_reforecast_repos_nontidal",
@@ -6162,8 +6874,8 @@
         "plot_end_day_str": "2024-04-06 00:00:00",
         "model_start_day_str": "2024-03-05 00:00:00",
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43.bp",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O09c2/elevation.USGS_station_LA_repositioned_nontidal.dat",
-        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O09c2/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O09i/elevation.USGS_station_LA_repositioned_nontidal.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O09i/",
         "box": {
             "W": -93.5,
             "E": -88.5,
@@ -6541,8 +7253,8 @@
         "plot_end_day_str": "2019-01-01 00:00:00",
         "model_start_day_str": "2017-12-01 00:00:00",
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43.bp",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O13_v7/elevation.USGS_station_LA_repositioned_nontidal.dat",
-        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O13_v7/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O14/elevation.USGS_station_LA_repositioned_nontidal.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O14_copy/",
         "box": {
             "W": -93.5,
             "E": -88.5,
@@ -6909,6 +7621,1130 @@
             "08031020": {
                 "source": "USGS",
                 "to_NAVD88_feet": 0.0
+            }
+        },
+        "model_datum": "xGEOID20b"
+    },
+    "LA_Ida_repos_nontidal":
+    {
+        "name": "LA_Ida_repos_nontidal",
+        "plot_start_day_str": "2021-08-10 00:00:00",
+        "plot_end_day_str": "2021-09-10 00:00:00",
+        "model_start_day_str": "2021-08-01 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O09j/elevation.USGS_station_LA_repositioned_nontidal.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O09j/",
+        "box": {
+            "W": -93.5,
+            "E": -88.5,
+            "S": 28.5,
+            "N": 31.5
+        },
+        "stations": {
+            "02492511": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.97
+            },
+            "02492519": {
+                "source": "USGS",
+                "to_NAVD88_feet": -9.78
+            },
+            "02492600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.86
+            },
+            "02492700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.33
+            },
+            "07374000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745253": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07374581": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.44
+            },
+            "07375170": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375175": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.32
+            },
+            "07375222": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.83
+            },
+            "07375230": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.11
+            },
+            "07375500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 6.6
+            },
+            "07375650": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.75
+            },
+            "07376000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 18.65
+            },
+            "07378050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.95
+            },
+            "07378500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.35
+            },
+            "07378745": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378746": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378748": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378810": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379050": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379075": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380101": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.28
+            },
+            "07380102": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.71
+            },
+            "07380120": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.36
+            },
+            "07380126": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380127": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380200": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.91
+            },
+            "07380212": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380215": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073802220": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802225": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022295": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022395": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802273": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802280": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802282": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802284": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380330": {
+                "source": "USGS",
+                "to_NAVD88_feet": 1.67
+            },
+            "07380401": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.82
+            },
+            "07380500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.25
+            },
+            "07381150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.9
+            },
+            "07381324": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.36
+            },
+            "07381350": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.7
+            },
+            "07381355": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.18
+            },
+            "07381450": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.17
+            },
+            "07381454": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.14
+            },
+            "07381460": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381490": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.07545932
+            },
+            "07381515": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073815450": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381590": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.79
+            },
+            "073815945": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.81
+            },
+            "073815963": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "07381600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "07384400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.89
+            },
+            "07385700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385702": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385765": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07385820": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.6
+            },
+            "07386600": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07386850": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08010000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 12.97
+            },
+            "08012150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.29
+            },
+            "08015500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 10.93
+            },
+            "292952090565300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.85
+            },
+            "293809092361500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.19
+            },
+            "294045092492300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "294717092250000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.98
+            },
+            "295011091184300": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "2951190901217": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.5
+            },
+            "295124089542100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.46
+            },
+            "295231093100100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.13
+            },
+            "295447091191500": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "295501090190400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -7.1
+            },
+            "295744093303800": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.08
+            },
+            "300312091320000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "300507091355600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.61
+            },
+            "300602090375100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.67
+            },
+            "300703089522700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -5.91
+            },
+            "301200090072400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "301324090382400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.65
+            },
+            "302020091435700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08030500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -7.59
+            },
+            "08030520": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08031020": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            }
+        },
+        "model_datum": "xGEOID20b"
+    },
+    "LA_Ida_repos_nontidal_paper_v8":
+    {
+        "name": "LA_Ida_repos_nontidal_paper_v8",
+        "plot_start_day_str": "2021-08-08 00:00:00",
+        "plot_end_day_str": "2021-09-10 00:00:00",
+        "model_start_day_str": "2021-08-01 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v43_paper.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O09k4/elevation.USGS_station_LA_repositioned_nontidal_v43_paper.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O09k4/",
+        "box": {
+            "W": -93.5,
+            "E": -88.5,
+            "S": 28.5,
+            "N": 31.5
+        },
+        "stations": {
+            "02492511": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.97
+            },
+            "02492519": {
+                "source": "USGS",
+                "to_NAVD88_feet": -9.78
+            },
+            "02492600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.86
+            },
+            "02492700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.33
+            },
+            "07374000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073745253": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07374581": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.44
+            },
+            "07375170": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07375175": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.32
+            },
+            "07375222": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.83
+            },
+            "07375230": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.11
+            },
+            "07375500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 6.6
+            },
+            "07375650": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.75
+            },
+            "07376000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 18.65
+            },
+            "07378050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.95
+            },
+            "07378500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.35
+            },
+            "07378745": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378746": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378748": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.5
+            },
+            "07378810": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379050": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379075": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380101": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.28
+            },
+            "07380102": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.71
+            },
+            "07380120": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.36
+            },
+            "07380126": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380127": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380200": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.91
+            },
+            "07380212": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380215": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073802220": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802225": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022295": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "0738022395": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802245": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802273": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802280": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802282": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802284": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380330": {
+                "source": "USGS",
+                "to_NAVD88_feet": 1.67
+            },
+            "07380401": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.82
+            },
+            "07380500": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.25
+            },
+            "07381150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.9
+            },
+            "07381324": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.36
+            },
+            "07381350": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.7
+            },
+            "07381355": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.18
+            },
+            "07381450": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.17
+            },
+            "07381454": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.14
+            },
+            "07381460": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381490": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.07545932
+            },
+            "07381515": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.38
+            },
+            "073815450": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07381590": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.79
+            },
+            "073815945": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.81
+            },
+            "073815963": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "07381600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "07384400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.89
+            },
+            "07385700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385702": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.12
+            },
+            "07385765": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07385820": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.6
+            },
+            "07386600": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07386850": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08010000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 12.97
+            },
+            "08012150": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.29
+            },
+            "292952090565300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.85
+            },
+            "293809092361500": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.19
+            },
+            "294045092492300": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.31
+            },
+            "294717092250000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.98
+            },
+            "295011091184300": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "2951190901217": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.5
+            },
+            "295124089542100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.46
+            },
+            "295447091191500": {
+                "source": "USGS",
+                "to_NAVD88_feet": null
+            },
+            "295501090190400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -7.1
+            },
+            "300312091320000": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "300507091355600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.61
+            },
+            "300602090375100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.67
+            },
+            "300703089522700": {
+                "source": "USGS",
+                "to_NAVD88_feet": -5.91
+            },
+            "301200090072400": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "301324090382400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.65
+            },
+            "302020091435700": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            }
+        },
+        "model_datum": "NAVD88"
+    },
+    "LA_reforecast_tidal_v8":
+    {
+        "name": "LA_reforecast_tidal_v8",
+        "plot_start_day_str": "2024-03-12 00:00:00",
+        "plot_end_day_str": "2024-04-06 00:00:00",
+        "model_start_day_str": "2024-03-05 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_tidal.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O09i/elevation.USGS_station_LA_tidal.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O09i/",
+        "box": {
+            "W": -93.5,
+            "E": -88.5,
+            "S": 28.5,
+            "N": 31.5
+        },
+        "stations": {
+            "073745235": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07374525": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.58
+            },
+            "073745257": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.2
+            },
+            "073745258": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.59
+            },
+            "07374526": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.29
+            },
+            "07374527": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.18
+            },
+            "073745275": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.41
+            },
+            "07378722": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379100": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379960": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802332": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802339": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380245": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.59
+            },
+            "07380249": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.28
+            },
+            "073802511": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.03
+            },
+            "073802512": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.91 
+            },
+            "073802516": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.31
+            },
+            "07380255": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.94
+            },
+            "07380260": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.5
+            },
+            "07381349": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.03
+            },
+            "073813498": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.41
+            },
+            "073816525": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.39
+            },
+            "07381670": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.21
+            },
+            "07386940": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07386980": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.68
+            },
+            "07387040": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.48
+            },
+            "07387050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -5.42
+            },
+            "08017044": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08017095": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.8871392
+            },
+            "08017118": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.53
+            },
+            "291929089562600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.3
+            },
+            "292800090060000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.38
+            },
+            "292939089544400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.01
+            },
+            "292952089453800": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.26
+            },
+            "293229091230800": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.09
+            },
+            "300722089150100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.97
+            },
+            "301001089442600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.0
+            },
+            "08030530": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08030540": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08030730": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08030800": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08031010": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08031050": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08042522": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.2795276
+            }
+        },
+        "model_datum": "NAVD88"
+    },
+    "LA_reforecast_tidal_v7p1":
+    {
+        "name": "LA_reforecast_tidal_v7p1",
+        "plot_start_day_str": "2024-03-12 00:00:00",
+        "plot_end_day_str": "2024-04-06 00:00:00",
+        "model_start_day_str": "2024-03-05 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_tidal.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7.1/elevation.USGS_station_LA_tidal.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O15b2_v7.1/",
+        "box": {
+            "W": -93.5,
+            "E": -88.5,
+            "S": 28.5,
+            "N": 31.5
+        },
+        "stations": {
+            "073745235": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07374525": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.58
+            },
+            "073745257": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.2
+            },
+            "073745258": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.59
+            },
+            "07374526": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.29
+            },
+            "07374527": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.18
+            },
+            "073745275": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.41
+            },
+            "07378722": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379100": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07379960": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802332": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "073802339": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07380245": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.59
+            },
+            "07380249": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.28
+            },
+            "073802511": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.03
+            },
+            "073802512": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.91 
+            },
+            "073802516": {
+                "source": "USGS",
+                "to_NAVD88_feet": -6.31
+            },
+            "07380255": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.94
+            },
+            "07380260": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.5
+            },
+            "07381349": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.03
+            },
+            "073813498": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.41
+            },
+            "073816525": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.39
+            },
+            "07381670": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.21
+            },
+            "07386940": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "07386980": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.68
+            },
+            "07387040": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.48
+            },
+            "07387050": {
+                "source": "USGS",
+                "to_NAVD88_feet": -5.42
+            },
+            "08017044": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08017095": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.8871392
+            },
+            "08017118": {
+                "source": "USGS",
+                "to_NAVD88_feet": -3.53
+            },
+            "291929089562600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -2.3
+            },
+            "292800090060000": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.38
+            },
+            "292939089544400": {
+                "source": "USGS",
+                "to_NAVD88_feet": -4.01
+            },
+            "292952089453800": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.26
+            },
+            "293229091230800": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.09
+            },
+            "300722089150100": {
+                "source": "USGS",
+                "to_NAVD88_feet": -0.97
+            },
+            "301001089442600": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.0
+            },
+            "08030530": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08030540": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08030730": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08030800": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08031010": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08031050": {
+                "source": "USGS",
+                "to_NAVD88_feet": 0.0
+            },
+            "08042522": {
+                "source": "USGS",
+                "to_NAVD88_feet": -1.2795276
             }
         },
         "model_datum": "xGEOID20b"

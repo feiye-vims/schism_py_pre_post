@@ -108,7 +108,10 @@ class obs_mod_comp():
             un_biased_mse = metrics.mean_squared_error(y_demeaned, yhat_demeaned)
             unbiased_rmse = np.sqrt(un_biased_mse)
 
-            CC = np.corrcoef(y, yhat)[0, 1]
+            if np.std(y) == 0 or np.std(yhat) == 0:
+                CC = np.nan
+            else:
+                CC = np.corrcoef(y, yhat)[0, 1]
 
             stats_dict = {
                 'Bias': np.mean(d),
@@ -129,7 +132,7 @@ class obs_mod_comp():
         self.stats_dict = stats_dict
         self.stats_str = copy.copy(stats_dict)
         for key in stats_dict:
-            self.stats_str[key] = "{:.3f}".format(stats_dict[key]),
+            self.stats_str[key] = "{:.3f}".format(stats_dict[key])
 
         return stats_dict
 

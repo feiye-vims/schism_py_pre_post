@@ -7,12 +7,12 @@ from pylib import read_schism_output, save_schism_grid
 from pylib_experimental.schism_file import TimeHistory
 
 # --------------- inputs ----------------
-RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15a_v7/'
+RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7/'
 output_files = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/O15a_v7/outputs/elevation.coops_test.dat'
+    '/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7/outputs/elevation.stofs3d_atl_202503.dat'
 ]
 bpfile_list = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/coops_test.bp'
+    '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/stofs3d_atl_202503.bp'
 ]
 
 start_stack = 1

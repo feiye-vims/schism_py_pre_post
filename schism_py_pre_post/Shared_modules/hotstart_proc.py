@@ -1,4 +1,4 @@
-from pylib import schism_grid, schism_vgrid, WriteNC, inside_polygon  # from ZG's pylib: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pylibs4schism==0.1.10
+from pylib import schism_grid, schism_vgrid, read, WriteNC, inside_polygon, zdata  # from ZG's pylib: pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple pylibs4schism==0.1.10
 from scipy import spatial
 from scipy.interpolate import griddata
 from scipy.sparse import csc_matrix
@@ -17,9 +17,9 @@ def nearest_neighbour(points_a, points_b):
     return tree.query(points_a)[1]
 
 
-class zdata():
-    def __init__(self):
-        pass  # dummy class to adhere to pylib's style
+# class zdata():
+#     def __init__(self):
+#         pass  # dummy class to adhere to pylib's style
 
 
 class Hotstart():
@@ -329,6 +329,23 @@ class Hotstart():
                 print(f'Generating diagnostic outputs for trnd took {time()-t} seconds', flush=True)
                 t = time()
             print(f'Total time for interpolation: {time()-t0} seconds', flush=True)
+    
+    def set_dry_flags(self, h0=1e-5):
+        '''
+        Set idry, idry_e and idry_s based on eta2,
+        not used at the moment
+        '''
+        self.idry.val = (self.eta2 < -self.hgrid.dp + h0).astype('int32')
+        # An element is wet if and only if depths at all nodes >h0
+        self.idry_e.val = np.ones(self.hgrid.ne).astype('int32')
+        for i34 in [3, 4]:
+            idx = (self.hgrid.i34 == i34)
+            self.idry_e.val[idx] = np.amax(self.idry.val[self.hgrid.elnode[idx, 0: i34]], axis=1).astype(int)
+
+        # slightly different from SCHISM:
+        # SCHISM: A node is wet if and only if at least one surrounding element is wet. This script: skipped
+        # SCHISM: A side is wet if and only if at least one surrounding element is wet. This script: changed to both nodes are wet
+        self.idry_s.val = np.amax(self.idry.val[self.hgrid.isidenode], axis=1).astype('int32')
 
     def trnd_propogate(self):
         '''
@@ -344,7 +361,7 @@ class Hotstart():
 
     def writer(self, fname):
         self.attrs = ['dimname','dims']
-        WriteNC(fname, self, fmt=0)
+        WriteNC(fname, self, vars=self.vars, fmt=0)
 
     def plot(self, var, plot_layer=-1, out_dir='./'):
         self.grid.hgrid.compute_all()
@@ -458,6 +475,21 @@ def GetVerticalWeight(zcor_in, kbp_in, zcor_out, neighbors):
     return [z_weight_lower, z_idx_lower, z_idx_upper]
 
 
+def find_ele_node_in_region(bpfile, grid):
+    '''
+    Find element/node index within one or more polygons defined in a bpfile
+        bpfile: schism bpfile path name
+        grid: schism_grid instance
+    '''
+    bp = read(bpfile)
+    grid.compute_ctr()
+    
+    inside_ele_mask = inside_polygon(np.c_[grid.xctr, grid.yctr], bp.x, bp.y).astype('bool')
+    inside_node_mask = inside_polygon(np.c_[grid.x, grid.y], bp.x, bp.y).astype('bool')
+
+    return [inside_ele_mask, inside_node_mask]
+
+
 def find_ele_node_in_shpfile(shapefile_name, grid):
     '''
     Find element/node index within one or more polygons defined in a shapefile
@@ -554,37 +586,43 @@ if __name__ == "__main__":
     #     shapefile_name='./ocean.shp',
     # )  # sample *.shp is provided under the same folder as this script in SCHISM GIT
 
-    # # Sample 2.3 tweaking a single variable directly
-    # [_, node_idx_list] = find_ele_node_in_shpfile(
-    #     shapefile_name="/sciclone/schism10/feiye/ICOGS/Ida04b/Elev_IC/city_polys_from_v10_lonlat.shp",
-    #     grid=fg_hot.grid.hgrid
-    # )
+    # Sample 2.3 tweaking a single variable directly
+    [_, node_mask] = find_ele_node_in_region(
+        bpfile='/sciclone/schism10/feiye/TEMP/Pacific_Hot/modify.reg',
+        grid=read('/sciclone/schism10/feiye/TEMP/Pacific_Hot/hgrid.gr3')
+    )
+    fg_hot = Hotstart(
+        grid_info='/sciclone/schism10/feiye/TEMP/Pacific_Hot/',
+        hot_file='/sciclone/schism10/feiye/TEMP/Pacific_Hot/hotstart.nc'
+    )
+    fg_hot.tr_nd.val[node_mask, :, 1] = 0.0  # set salinity to 0
+    fg_hot.trnd_propogate()
     # for ind in node_idx_list:
     #     fg_hot.eta2.val[ind] = -fg_hot.grid.hgrid.dp[ind] - 0.1  # set water surface to 0.1 m below ground
-    # # Note: do fg_hot.trnd_propogate() before writing if trnd is changed; it propogates trnd values to trnd0 and tr_el
-    # fg_hot.writer(f'{fg_hot.source_dir}/hotstart.nc')
+    # Note: do fg_hot.trnd_propogate() before writing if trnd is changed; it propogates trnd values to trnd0 and tr_el
+    fg_hot.writer(f'{fg_hot.source_dir}/hotstart_S0.nc')
 
     # Sample 2.4 tweaking a single variable directly
     # my_hot = Hotstart(
-    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v6/Runs/RUN16e/',
-    #     hot_file='/sciclone/schism10/feiye/STOFS3D-v6/Inputs/I16e/Hot/hotstart_it=51840.nc'
+    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v8/R09/',
+    #     hot_file='/sciclone/schism10/feiye/STOFS3D-v8/I09f/Hotstart_tweak/R09_hotstart_it=19584.nc'
     # )
-    # my_hot.tr_el.val[:, :, 0] -= 1.0
-    # my_hot.tr_nd.val[:, :, 0] -= 1.0
-    # my_hot.tr_nd0.val[:, :, 0] -= 1.0
-    # my_hot.writer(f'{my_hot.source_dir}/hotstart_no_T_adjust_it=51480.nc')
+    # my_hot.tr_nd.val[:, :, 0] = 20
+    # my_hot.tr_nd.val[:, :, 1] = 0
+    # my_hot.trnd_propogate()
+    # my_hot.writer(f'/sciclone/schism10/feiye/STOFS3D-v8/I09f/Hotstart_tweak/hotstart_T20_S0.nc')
 
     # Sample 3: interpolating one hotstart.nc to another
-    hot_background = Hotstart(
-        grid_info='/sciclone/schism10/feiye/STOFS3D-v7/Runs/R13/',  # contains hgrid.gr3 and vgrid.in
-        hot_file='/sciclone/schism10/feiye/STOFS3D-v7/Runs/R13/hotstart.nc'
-    )  # create a Hotstart instance with existing values
-    my_hot = Hotstart(
-        grid_info='/sciclone/schism10/feiye/STOFS3D-v8/I13/Interp_hot/',
-        ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
-    )  # create a Hotstart instance with empty values
-    my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
-    my_hot.writer(f'{my_hot.source_dir}/hotstart.nc')
+    # hot_background = Hotstart(
+    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v7/Runs/R13/',  # contains hgrid.gr3 and vgrid.in
+    #     hot_file='/sciclone/schism10/feiye/STOFS3D-v7/Runs/R13/hotstart.nc'
+    # )  # create a Hotstart instance with existing values
+    # my_hot = Hotstart(
+    #     grid_info='/sciclone/schism10/feiye/STOFS3D-v8/I13/Interp_hot/',
+    #     ntracers=hot_background.dims[4]  # dims: [np, ne, ns, nvrt, ntracers, one]
+    # )  # create a Hotstart instance with empty values
+    # my_hot.interp_from_existing_hotstart(hot_in=hot_background, iplot=False, i_vert_interp=True)
+    # my_hot.writer(f'{my_hot.source_dir}/hotstart.nc')
 
     # Sample 4: visualize hotstart
     # my_hot = Hotstart(

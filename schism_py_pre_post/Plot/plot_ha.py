@@ -11,29 +11,52 @@ import json
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
+import geopandas as gpd
 
 from utide import solve
 from plot_elev import get_hindcast_elev, get_obs_elev
 from schism_py_pre_post.Shared_modules.obs_mod_comp import obs_mod_comp
+from pylib import read_schism_bpfile
 
 cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
 common_tidal_constituents = ['M2', 'S2', 'N2', 'K2', 'K1', 'O1', 'P1', 'Q1']
 
 
-def main():
-    '''Compare harmonic analysis of model and obs for each station.'''
-    pickle_read = False
+def get_stations_from_groups(grouping_polygon_shpfile=None, station_bp_file=None):
+    stations_groups = {}
+    station_bp = read_schism_bpfile(station_bp_file)
 
-    with open(
-        '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/ha.json',
-        'r', encoding='utf-8'
-    ) as f:
-        main_dict = json.load(f)
-    event = main_dict['Year2018']
+    station_points_gdf = gpd.GeoDataFrame(
+        {'Station_Id': station_bp.station},
+        geometry=gpd.points_from_xy(station_bp.x, station_bp.y)
+    )
+
+    group_polys = gpd.read_file(grouping_polygon_shpfile)
+
+    for i, group in enumerate(group_polys['Group_Name']):
+        print('Group: ', group)
+        # find stations in this polygon
+        stations_in_group = station_points_gdf[station_points_gdf.geometry.within(group_polys.geometry[i])]
+        stations_groups[group] = stations_in_group['Station_Id'].tolist()
+        
+    return stations_groups
+
+
+def plot_ha(event=None, color_groups=None, cache: bool = False):
+    '''
+    Compare harmonic analysis of model and obs for each station.
+
+    Parameters
+    - event: dict, event information, which is read from a json file
+    - color_groups: list of colors for each group (e.g., [Gulf_Coast, East_Coast],
+      ['yellow', 'blue'])
+    - cache: bool, whether to read from cache or not
+      The cache file saves the harmonic analysis results for each station.
+    '''
 
     cache_file = f'{event["cdir"]}/{event["plot_start_day_str"]}_{event["plot_end_day_str"]}_ha.pkl'
 
-    if not pickle_read:
+    if not cache:
         mod = get_hindcast_elev(
             model_start_day_str=event['model_start_day_str'],
             noaa_stations=None,
@@ -61,6 +84,15 @@ def main():
                 pd.Timestamp(event['plot_end_day_str']) - pd.Timestamp(event['plot_start_day_str'])
             ).total_seconds() / dt.total_seconds():
                 valid_idx[i] = False
+
+        # set color for each group
+        color_idx = np.zeros(len(stations))
+        if color_groups is not None:
+            for i, [group_name, group_stations] in enumerate(color_groups.items()):
+                for j, st in enumerate(stations):
+                    if st in group_stations:
+                        color_idx[j] = i
+
 
         # harmonic analysis
         ha_obs_results = np.empty(len(stations), dtype=object)
@@ -122,7 +154,7 @@ def main():
         with open(cache_file, 'rb') as f:
             ha_obs_results, ha_mod_results, stations, valid_idx, complex_error, complex_error_all_const = pickle.load(f)
 
-    # plot
+    # plot 1: horizontally spread out stations
     fig = plt.figure(figsize=(30, 15))  # Adjust figsize as needed
     gs = gridspec.GridSpec(8, 1)
     n_subplot = 0
@@ -130,6 +162,7 @@ def main():
         if constit == 'Max':
             ax = fig.add_subplot(gs[n_subplot:n_subplot + 2])
             ax.set_title('Max amplitude comparison')
+
             y_obs = [result.A[0] for result in ha_obs_results[valid_idx]]
             ax.plot(stations[valid_idx], y_obs, 'ro', label='Obs')
             y_mod = [result.A[0] for result in ha_mod_results[valid_idx]]
@@ -192,6 +225,113 @@ def main():
     plt.savefig(f'{event["cdir"]}/ha_{event["plot_start_day_str"]}_{event["plot_end_day_str"]}.svg')
     plt.show()
 
+    # plot 2: scatter plot of model vs obs
+    # 4 subplots: M2, K1, Amplitude, Phase
+    # set global font size
+    plt.rcParams.update({'font.size': 20})
+
+    fig = plt.figure(figsize=(15, 15))  # Adjust figsize as needed
+    n = 0  # number of subplots
+    plot_consitituents = ['M2', 'K1']
+    colors = [ (1, 0.7, 0.0), 'blue', 'red', 'black']
+    ha_obs_valid_results = ha_obs_results[valid_idx]
+    ha_mod_valid_results = ha_mod_results[valid_idx]
+    valid_color_idx = color_idx[valid_idx]
+    alpha = 0.5
+    # Amplitude
+    for constit in plot_consitituents:
+        ax = fig.add_subplot(2, 2, n + 1)
+        ax.set_title(f'{constit} amplitude (m) comparison')
+        ax.set_xlabel('Obs')
+        ax.set_ylabel('Mod')
+
+        for i, group in enumerate(color_groups):
+            mask = valid_color_idx == i
+            y_obs = [result.A[result.name == constit] for result in ha_obs_valid_results[mask]]
+            y_mod = [result.A[result.name == constit] for result in ha_mod_valid_results[mask]]
+            ax.plot(y_obs, y_mod, 'o', alpha=alpha, color=colors[i], label=group, markersize=7)
+            
+        y_obs = [result.A[result.name == constit] for result in ha_obs_results[valid_idx]]
+        ax.plot(y_obs, y_obs, 'k-', alpha=0.3)  # 45 degree line
+        ax.grid(True)
+        ax.legend()
+        ax.set_aspect('equal', adjustable='box')
+        n += 1
+
+    # Phase
+    for constit in plot_consitituents:
+        ax = fig.add_subplot(2, 2, n + 1)
+        ax.set_title(f'{constit} phase (degrees) comparison')
+        ax.set_xlabel('Obs')
+        ax.set_ylabel('Mod')
+
+        for i, group in enumerate(color_groups):
+            mask = valid_color_idx == i
+            y_obs = [result.g[result.name == constit] for result in ha_obs_valid_results[mask]]
+            y_mod = [result.g[result.name == constit] for result in ha_mod_valid_results[mask]]
+            ax.plot(y_obs, y_mod, 'o', alpha=alpha, color=colors[i], label=group, markersize=7)
+
+        y_obs = [result.g[result.name == constit] for result in ha_obs_results[valid_idx]]
+        ax.plot(y_obs, y_obs, 'k-', alpha=0.3)  # 45 degree line
+        ax.legend()
+        ax.grid(True)
+        ax.set_aspect('equal', adjustable='box')
+        n += 1
+
+    # Adjust layout
+    plt.savefig(
+        f'{event["cdir"]}/ha_scatter_'
+        f'{event["plot_start_day_str"]}_{event["plot_end_day_str"]}.png'
+    )
+    plt.show()
+    
+    # plot 2.5: lower values in M2 amplitude
+    plt.rcParams.update({'font.size': 30})
+    constit = 'M2'
+    fig = plt.figure(figsize=(8, 8))  # Adjust figsize as needed
+    ax = fig.add_subplot(1, 1, 1)
+    # ax.set_title(f'{constit} amplitude (m) comparison')
+    ax.set_xlabel('Obs')
+    ax.set_ylabel('Mod')
+
+    ha_obs_valid_results = ha_obs_results[valid_idx]
+    ha_mod_valid_results = ha_mod_results[valid_idx]
+    valid_color_idx = color_idx[valid_idx]
+    for i, group in enumerate(color_groups):
+        mask = valid_color_idx == i
+        y_obs = [result.A[result.name == constit] for result in ha_obs_valid_results[mask]]
+        y_mod = [result.A[result.name == constit] for result in ha_mod_valid_results[mask]]
+        ax.plot(y_obs, y_mod, 'o', alpha=alpha, color=colors[i], label=group, markersize=15)
+            
+    y_obs = [result.A[result.name == constit] for result in ha_obs_results[valid_idx]]
+    ax.plot(y_obs, y_obs, 'k-', alpha=0.3)  # 45 degree line
+
+    # limit x and y axis to 0.5
+    ax.set_xlim(0, 0.5)
+    ax.set_ylim(0, 0.5)
+    ax.grid(True)
+    # Adjust layout
+    plt.tight_layout()
+    plt.savefig(
+        f'{event["cdir"]}/ha_scatter_'
+        f'{event["plot_start_day_str"]}_{event["plot_end_day_str"]}_zoomed_in.png'
+    )
+    plt.show()
+    
 
 if __name__ == '__main__':
-    main()
+    project_json = './Plot/ha.json'
+    event_name = 'EX62'
+
+    with open(project_json, 'r', encoding='utf-8') as f:
+        main_dict = json.load(f)
+    event = main_dict[event_name]
+    
+    # group stations by region
+    station_groups = get_stations_from_groups(
+        grouping_polygon_shpfile='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/station_group_polygons.shp',
+        station_bp_file=event['station_bp_file']
+    )
+
+    plot_ha(event, color_groups=station_groups, cache=True)
+    print("done!")

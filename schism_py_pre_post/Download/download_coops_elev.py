@@ -383,6 +383,7 @@ def sample_get_coops_station_info():
     Sample function to demonstrate how to use get_coops_station_info function
     '''
     stations_info = get_coops_station_info(['8779770', 8725520], method='noaa_coops')
+
     for station_info in stations_info:
         if station_info is None:
             print('Station info not available')
@@ -393,7 +394,7 @@ def sample_get_coops_station_info():
             print(station_info.lat)
 
 
-def sample_get_station_info_from_bp():
+def sample_get_station_info_from_bp2():
     '''
     Sample function to demonstrate how to get station information from a bp file
     '''
@@ -408,6 +409,28 @@ def sample_get_station_info_from_bp():
         np.c_[stations_info.lon, stations_info.lat, stations_info.id, stations_info.name],
         fmt='%f %f %s %s'
     )
+
+
+def sample_get_station_info_from_bp():
+    '''
+    Sample function to demonstrate how to get station information from a bp file
+    '''
+    fname = "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/stofs3d_atl_202503.bp"
+    bp = schism_read(fname)
+    station_ids = bp.station[:164]
+    stations_info = get_coops_station_info(station_ids, method='noaa_coops')
+
+    # compare station locations in the original file and the downloaded data
+    bp_coor = np.c_[bp.x[:164], bp.y[:164]]
+    coops_coor = np.array([[st.lon, st.lat] for st in stations_info])
+    relocation_dist = np.sqrt(np.sum((bp_coor - coops_coor) ** 2, axis=1)) * 111.12 *1000  # m
+    # sort by distance
+    sorted_indices = np.argsort(relocation_dist)
+    with open('/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/original_coops_relocation.txt', 'w') as f:
+        f.write('station_id, relocation_dist(m), name, bp_lon, bp_lat, coops_lon, coops_lat \n')
+        for i in sorted_indices:
+            f.write(f'{station_ids[i]}, {relocation_dist[i]}, {stations_info[i].name}, '
+                    f'{bp_coor[i, 0]}, {bp_coor[i, 1]}, {coops_coor[i, 0]}, {coops_coor[i, 1]}\n')
 
 
 if __name__ == '__main__':

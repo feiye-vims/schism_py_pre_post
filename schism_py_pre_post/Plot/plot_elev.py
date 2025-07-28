@@ -383,11 +383,17 @@ def plot_elev(
         ax[n].set_xlim([datetime.strptime(plot_start_day_str, "%Y-%m-%d %H:%M:%S"),
                         datetime.strptime(plot_end_day_str, "%Y-%m-%d %H:%M:%S")])
         ax[n].tick_params(labelrotation=label_rot)
-        ax[n].set_ylim([np.nanmin(np.fmin(my_comp.obs_df.value, my_comp.mod_df.value)) - 0.5,
-                        np.nanmax(np.fmax(my_comp.obs_df.value, my_comp.mod_df.value)) + 0.5])
+        try:
+            ax[n].set_ylim([np.nanmin(np.fmin(my_comp.obs_df.value, my_comp.mod_df.value)) - 0.5,
+                            np.nanmax(np.fmax(my_comp.obs_df.value, my_comp.mod_df.value)) + 0.5])
+        except ValueError as e:
+            print(f"Warning: {e}, setting y limit to default")
+            ax[n].set_ylim([-2, 2])
+        
         # ax[n].set_ylim([1, 9])
                        
         n = n + 1
+
     ax[0].legend()
     for i in range(n, n_subplot_col * n_subplot_row):
         ax[i].axis('off')
@@ -401,6 +407,11 @@ def plot_elev(
 
     # assemble station info
     try:
+        station_id_list = [x.id for x in station_info]
+    except AttributeError:
+        station_id_list = [x['id'] for x in station_info]
+
+    try:
         station_name_list = [x.name for x in station_info]
     except AttributeError:
         station_name_list = [x['site_name'] for x in station_info]
@@ -412,6 +423,12 @@ def plot_elev(
         lat_list = [x.lat_lon['lat'] for x in station_info]
     except AttributeError:
         lat_list = [x['latitude'] for x in station_info]
+    
+    # save station info
+    # with open('station_info.txt', 'w', encoding='utf-8') as f:
+    #     f.write(f"Station ID, Station Name, Longitude, Latitude\n")
+    #     for i, st in enumerate(station_id_list):
+    #         f.write(f"{st}: {station_name_list[i]}, {lon_list[i]}, {lat_list[i]}\n")
 
     stat_df = pd.DataFrame({
         'station_id': noaa_stations,
@@ -658,13 +675,21 @@ def test():
     print('test done.')
 
 
-def test_plot_usgs():
+def test_plot():
     '''
     Plot time series and calculate stats.
     Both obs and model results will be converted to NAVD88 if possible.
     '''
 
-    case_name = 'v8_2018'  # 'LA_2018_repos_nontidal'  #  'LA_reforecast_repos_nontidal'  # 'v8'
+    # case_name =   # 'Missi_Ida2' # 'v8_2018'  #     # 'v8'
+
+    # case_name = 'LA_reforecast_tidal_v8'
+    # case_name = 'LA_reforecast_tidal_v7p1'
+
+    case_name = 'LA_Ida_repos_nontidal_paper_v8'
+    # case_name = 'LA_reforecast_repos_nontidal_paper_v8'
+    # case_name = 'LA_reforecast_repos_nontidal_paper_v7p1'
+
     station_json_fname = ('/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/'
                           'station2.json')
 
@@ -674,6 +699,11 @@ def test_plot_usgs():
     output_dir = plot_dict[case_name]['cdir']
 
     obs, st_info, datums = get_obs_from_station_json(case_name, station_json_fname)
+    # save station info
+    with open(f'{output_dir}/station_info.txt', 'w', encoding='utf-8') as f:
+        f.write(f"Station ID, Name, Longitude, Latitude\n")
+        for i, st in enumerate(st_info):
+            f.write(f"{st['id']}, {st['longitude']}, {st['latitude']}\n")
 
     mod_bp = Bpfile(plot_dict[case_name]['station_bp_file'], cols=5)
     mod = TimeHistory(
@@ -687,13 +717,14 @@ def test_plot_usgs():
     # shift for mod
     mod.df.iloc[:, :] += 0.0
 
-    # ------------------apply correction to convert obs to NAVD88 if possible------------------
+    # ------------------demean if no datum info------------------
     for i, (ob, info) in enumerate(zip(obs, st_info)):
         st_id = info['id']
         correction = plot_dict[case_name]['stations'][st_id]['to_NAVD88_feet']
         if ob is not None:
-            if correction is not None:
-                obs[i]['water_level'] += correction * 0.3048  # feet to meter
+            if correction is not None:  # already done in get_obs_from_station_json
+                # obs[i]['water_level'] += correction * 0.3048  # feet to meter
+                pass
             else:  # demean both obs and mod
                 obs[i]['water_level'] -= obs[i]['water_level'].mean()
                 mod.df.iloc[:, i] -= mod.df.iloc[:, i].mean()
@@ -741,11 +772,11 @@ def test_plot_usgs():
             plot_end_day_str=plot_dict[case_name]['plot_end_day_str'],
             noaa_stations=list(plot_dict[case_name]['stations'].keys())[stations_in_plot],
             datum_list=datums[stations_in_plot],
-            demean=False,
+            demean=False,  # already done above if needed
             station_info=st_info[stations_in_plot],
             iplot=False, plot_name=plot_name,
             subplots_shape=(7, None), label_strs=['obs', 'model'],
-            font_size=8,
+            font_size=12,
         )
         total_stats_df = total_stats_df.append(stats_df)
         write_stat(stats_df, f"{plot_name}_stats.txt")
@@ -753,11 +784,11 @@ def test_plot_usgs():
     write_stat(total_stats_df, f"{output_dir}/"
                f"stats_{case_name}_{plot_dict[case_name]['elev_out_file'].split('.')[-1]}.txt")
 
-    print('Main function done.')
+    print('test plot done.')
 
 
 if __name__ == "__main__":
-    test_plot_usgs()
+    test_plot()
     plot_operation()
     test()
     print('Done.')

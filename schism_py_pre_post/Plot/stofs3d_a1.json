@@ -53,7 +53,7 @@
         "plot_start_day_str": "2018-01-01 00:00:00",
         "plot_end_day_str": "2019-01-01 00:00:00",
         "model_start_day_str": "2017-12-01 00:00:00",
-        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/station.in",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/stofs3d_atl_202503.bp",
         "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
         "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7/outputs/elevation.stofs3d_atl_202503.dat",
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7/",
@@ -90,6 +90,17 @@
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7/Inputs/v7_static_inputs_20240521/station.in",
         "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O18/outputs/staout_1",
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O18/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "v7.2_Isabel": {
+        "name": "STOFS3D-v7.2 Isabel",
+        "plot_start_day_str": "2003-09-15 00:00:00",
+        "plot_end_day_str": "2003-10-01 00:00:00",
+        "model_start_day_str": "2003-09-08 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/stofs3d_atl_202503.bp",
+        "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.2/O16a/outputs/staout_1",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.2/O16a/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31}
     },
     "STOFS3D-v8_reforecast": {

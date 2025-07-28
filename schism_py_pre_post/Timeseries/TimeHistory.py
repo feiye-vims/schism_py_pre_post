@@ -82,10 +82,10 @@ class TimeHistory():
             self.df['datetime'] = self.datetime
         elif isinstance(self.df['datetime'][0], datetime):
             self.time = numpy.array([(x-self.df['datetime'][0]).total_seconds() for x in self.df['datetime']])
+            self.sec_per_time_unit = 1.0
             self.datetime = self.df['datetime']
         else:
             raise Exception('unknown datatype for the first column, neither datetime or float')
-
 
         # mask invalid values
         self.data = self.df.iloc[:, 1:].to_numpy(dtype=float)
@@ -95,8 +95,10 @@ class TimeHistory():
 
         self.delta_t = self.time[1] - self.time[0]
         if self.delta_t < 50:  # probably in days
+            print(f'dt = {self.delta_t}, original time unit probably in days')
             self.time *= 86400.0
             self.delta_t *= 86400.0
+            self.sec_per_time_unit = 1.0
             print("Time unit converted from days to seconds")
         else:
             print("Time unit: seconds")

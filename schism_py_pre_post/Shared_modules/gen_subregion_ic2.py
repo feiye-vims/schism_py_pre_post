@@ -9,7 +9,25 @@ import schism_py_pre_post
 from schism_py_pre_post.Geometry.interp import inverse_distance_weighting
 
 
-def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_str='2000-01-01'):
+def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_str='2000-01-01', n_nei=6):
+    '''
+    Generate initial condition based on HYCOM and Observations
+    in the subregion defined by ecgc_sub_grid.reg
+
+    Inputs:
+        wdir: working directory, where the model grid files are located
+        obsdir: directory where the observations are downloaded
+        hycom_TS_file: temperature and salinity file from HYCOM
+        date_str: date string in the format YYYY-MM-DD
+        n_nei: number of neighbors for inverse distance weighting,
+            also used as a minimum number of observations required,
+            if less than n_nei, exception will be raised
+    
+    Outputs:
+        ecgc_coastal_tem.gr3: initial temperature on the model grid
+        ecgc_coastal_sal.gr3: initial salinity on the model grid
+    '''
+
     # copy datafiles
     mydir = os.path.dirname(schism_py_pre_post.__file__)
     os.system(f'cp {mydir}/Datafiles/ecgc_sub_grid.reg {wdir}')
@@ -32,6 +50,7 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
         # Manually defined coastal shoreline, which will take HYCOM values,
         # The purpose is to improve the interpolation along the shoreline
         # Not need for temperature because the horizontal gradient is small compared to salinity
+        # The "z" value in the file will be replaced by the interpolated value from HYCOM
         if var_dict[var]['f_ecgc_shoreline'] is not None:
             f_ecgc_shoreline = wdir + var_dict[var]['f_ecgc_shoreline']
         else:
@@ -59,6 +78,11 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
         # ----------------------------------------------------------------------------------
         # usgs coastal watershed
         usgs_coastal = np.array(pd.read_csv(f_usgs_coastal, delimiter=' ', header=None).values[:, :-1]).astype(float)
+        if usgs_coastal.shape[0] < n_nei:
+            raise ValueError(
+                f'not enough observations for {var} in {f_usgs_coastal}, '
+                f'{usgs_coastal.shape[0]} < {n_nei}'
+            )
 
         # shoreline
         if f_ecgc_shoreline is None:
@@ -137,7 +161,7 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
             # z_interp = idw_tree(np.transpose(np.vstack([gd_x, gd_y])))
             z_interp = inverse_distance_weighting(
                 X=xyz[:, 0:2], val=xyz[:, 2],
-                Xq=np.transpose(np.vstack([gd_x, gd_y])), n_nei=6
+                Xq=np.transpose(np.vstack([gd_x, gd_y])), n_nei=n_nei
             )
         else:
             raise Exception(f'unknown interp_method {interp_method}')
