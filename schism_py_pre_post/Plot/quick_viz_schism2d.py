@@ -4,8 +4,8 @@ import copy
 import matplotlib.pyplot as plt
 import xarray as xr
 from pathlib import Path
-from pylib_experimental.schism_file import cread_schism_hgrid as read_schism_hgrid
-# from pylib import schism_grid as read_schism_hgrid
+# from pylib_experimental.schism_file import cread_schism_hgrid as read_schism_hgrid
+from pylib import schism_grid as read_schism_hgrid
 
 
 var_dict = {
@@ -172,17 +172,76 @@ def visualize_schism_data(
     plot_variable(gd, value, caxis, xlim, ylim, output_filename)
 
 
+def export_schism_data(
+    gd_fname, fnames, var_name, dry_mask_var=None, layer=-1,
+    output_filename='output.xyuv'
+):
+    """
+    Main function to load, process, and export the Schism data.
+    """
+    var_dict = {}
+    if "horizontalVel" in var_name:
+        if "X" in var_name:
+            var_dict['horizontalVelX'] = {'fnames': fnames}
+            var_dict['horizontalVelY'] = {'fnames': [fname.replace("horizontalVelX", "horizontalVelY") for fname in fnames]}
+        elif "Y" in var_name:
+            var_dict['horizontalVelX'] = {'fnames': [fname.replace("horizontalVelY", "horizontalVelX") for fname in fnames]}
+            var_dict['horizontalVelY'] = {'fnames': fnames}
+    elif "vel" in var_name:
+        if "uvel" in var_name:
+            var_dict[var_name] = {'fnames': fnames}
+            var_dict[var_name.replace("uvel", "vvel")] = {'fnames': fnames}
+        elif "vvel" in var_name:
+            var_dict[var_name.replace("vvel", "uvel")] = {'fnames': fnames}
+            var_dict[var_name] = {'fnames': fnames}
+    else:
+        var_dict[var_name] = {'fnames': fnames}
+
+    # Read data
+    processed_vars = {}
+    for var_name, info in var_dict.items():
+        fnames = info['fnames']
+        gd, var, dry_mask, kbp = read_schism_data(gd_fname, fnames, var_name, dry_mask_var=dry_mask_var, layer=layer)
+        var = process_variable(var, dry_mask, layer=layer, kbp=kbp)
+        processed_vars[var_name] = {'var': var, 'dry_mask': dry_mask, 'kbp': kbp}
+
+    # Export data
+    if "vel" in list(processed_vars.keys())[0].lower():
+        np.savetxt(
+            output_filename,
+            np.column_stack((
+                gd.x, gd.y, processed_vars[list(processed_vars.keys())[0]]['var'],
+                processed_vars[list(processed_vars.keys())[1]]['var']
+            )),
+            header=f'x y {list(processed_vars.keys())[0]} {list(processed_vars.keys())[1]}',
+            fmt='%f %f %f %f'
+        )
+    else:
+        np.savetxt(
+            output_filename,
+            np.column_stack((gd.x, gd.y, processed_vars[var_name]['var'])),
+            header=f'x y {var_name}', fmt='%f %f %f'
+        )
+    print(f'Exported data to {output_filename}')
+
+
 if __name__ == "__main__":
     # Configuration: Set filenames, variable names, and plotting parameters
     gd_fname = '/sciclone/schism10/feiye/TEMP/SST/hgrid.gr3'
-    var_name = "salinity"  # Variable name in the ncfile, e.g., "salt_surface" or "zeta"
+    var_name = "uvel_surface"  # Variable name in the ncfile, e.g., "salt_surface" or "zeta"
     layer = 's'  # 's' for surface, 'b' for bottom, or specific layer number
-    dry_mask_var = "dryFlagNode"
-    fnames = ['/sciclone/schism10/feiye/TEMP/SST/outputs/stofs_3d_atl.t12z.fields.salinity_f001_012.nc']
-    caxis = [0, 40]  # [-2, 35]  # [0, 40]  # [-1, 1]
+    dry_mask_var = None  # "dryFlagNode"
+    fnames = ['/sciclone/schism10/feiye/TEMP/SST/outputs/stofs_3d_atl.t12z.field2d_f001_012.nc',]
+    caxis = [-1, 1]  # [0, 40]  # [-2, 35]  # [0, 40]  # [-1, 1]
     xlim = None  # [-77, -75]
     ylim = None  # [37, 40]
     output_filename = None
+
+    # Export the data
+    export_schism_data(
+        gd_fname, fnames, var_name, dry_mask_var, layer,
+        output_filename='output.xys'
+    )
 
     # Visualize the data
     visualize_schism_data(gd_fname, fnames, var_name, dry_mask_var, layer, caxis, xlim, ylim, output_filename)

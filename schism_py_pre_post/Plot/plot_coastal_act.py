@@ -371,7 +371,7 @@ def plot_coastal_act(
             # plot time series
             stat, fig_ax = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str, stations,
                                      datums, st_info, 'ts_' + filename_base, iplot=False, subplots_shape=subplots_shape,
-                                     nday_moving_average=nday_moving_average, label_strs=['obs', runid])
+                                     nday_moving_average=nday_moving_average, label_strs=['obs', runid], figure_type='png')
             stats = pd.concat([stats, stat], axis=0, ignore_index=True)
             mean_stats_string = write_stat(stat, f'stats_{runid}_{group_name}.txt')
             if iter_groups == 0:  # add header before the first group
@@ -401,7 +401,7 @@ def plot_coastal_act(
                         other_group_stats[i] +=  ''.ljust(25) + mean_stats_string[0] + "\n"
                     other_group_stats[i] += f'{group_name.ljust(25)}: {mean_stats_string[1]}\n'
 
-                    fig_ax[0].savefig(f'compare_ts_{filename_base}.png')
+                    fig_ax[0].savefig(f'compare_ts_{filename_base}.svg')
 
         # ---------------------------------------------------------------------------------
         filename_base = f'{event}_{region}_{outfilename_suffix}'
@@ -439,28 +439,35 @@ def plot_coastal_act(
         input("Press Enter to continue...")
 
         # upload to ccrm drive:
-        os.system(f"scp *stats*txt *png {cdir}/")
-        os.system(f"rm *stats*txt *png")
-        
+        os.system(f"scp *stats*txt *.??g {cdir}/")
+        os.system("rm *stats*txt *.??g")
+
         pass
-            
+
+
 if __name__ == "__main__":
+    # plot_coastal_act(
+    #     main_dict='/sciclone/home/feiye/spp/Plot/stofs3d_a1.json',
+    #     events=['2005_v7p3'], datum='NAVD', shift=0.0,
+    #     other_runs={
+    #         # 'R15b4_v7': {
+    #         #     'dict_file': '/sciclone/home/feiye/spp/Plot/stofs3d_a3.json',
+    #         #     'shift': 0.0,
+    #         #     'line_style': '--g',
+    #         # }
+    #     }
+    # )
+
     plot_coastal_act(
-        main_dict='/sciclone/home/feiye/s1/GIT_REPOS/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a1.json',
-        events=['2018_v8'],
-        datum='NAVD',
-        shift=0.0,
+        main_dict='/sciclone/home/feiye/spp/Plot/stofs3d_a2.json',
+        events=['EnOI_2008'], datum='NAVD', shift=0.0,
         other_runs={
-            'RUN13': {
-                'dict_file': '/sciclone/home/feiye/s1/GIT_REPOS/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a2.json',
-                'shift': 0.0,
-                'line_style': 'b',
-            },
-            'RUN24': {
-                'dict_file': '/sciclone/home/feiye/s1/GIT_REPOS/schism_py_pre_post/schism_py_pre_post/Plot/stofs3d_a3.json',
-                'shift': 0.0,
-                'line_style': 'g',
-            }
+            # 'EnOI': {
+            #     'dict_file': '/sciclone/home/feiye/spp/Plot/stofs3d_a3.json',
+            #     'shift': 0.0,
+            #     'line_style': '--g',
+            # }
         }
     )
+
     print("Done!")

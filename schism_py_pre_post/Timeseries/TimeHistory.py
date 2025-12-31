@@ -52,7 +52,7 @@ class TimeHistory():
         if file_name is None:
             self.df = pd.DataFrame(data_array)
         else:
-            self.df = read_csv(file_name, delim_whitespace=True, index_col=False, header=None)
+            self.df = read_csv(file_name, sep='\s+', index_col=False, header=None)
 
         if type(columns) is str:  # from a file
             if os.path.exists(columns):

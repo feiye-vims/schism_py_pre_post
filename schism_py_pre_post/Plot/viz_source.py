@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
-from pylib_experimental.schism_file import cread_schism_hgrid
-from schism_py_pre_post.Grid.SourceSinkIn import SourceSinkIn, source_sink
+from pylib import read
+from pylib_experimental.schism_file import cread_schism_hgrid, source_sink, SourceSinkIn
 import numpy as np
 import os
 
@@ -30,6 +30,40 @@ def find_duplicates(arr):
     duplicates = {key: indices for key, indices in index_dict.items() if len(indices) > 1}
     
     return duplicates
+
+
+def find_source_ele_by_coords(hgrid, source_sink_in, x, y):
+    """
+    Find nearest element index in the hgrid given x, y coordinates.
+    x, y: float or array-like
+    """
+    from scipy.spatial import cKDTree
+    hgrid.compute_ctr()
+    source_x = hgrid.xctr[source_sink_in.ele_groups[0] - 1]
+    source_y = hgrid.yctr[source_sink_in.ele_groups[0] - 1]
+    tree = cKDTree(np.c_[source_x, source_y])
+    dist, idx = tree.query(np.c_[x, y], k=1)
+    return dist, idx
+
+
+def plot_source_at_coords(hgrid, source_sink_in, vsource_th, x_coords, y_coords, tol=5e-2):
+    '''
+    Plot source/sink time series at given coordinates
+    x_coords, y_coords: list of floats
+    tol: tolerance to find nearest element; default is 5e-2 (about 5 km)
+    '''
+    dist, ele_idx = find_source_ele_by_coords(hgrid, source_sink_in, x_coords, y_coords)
+    for i, idx in enumerate(ele_idx):
+        if dist[i] > tol:
+            print(f"Warning: No source/sink found within tolerance {tol} for point ({x_coords[i]}, {y_coords[i]})")
+        source_ele_id = str(source_sink_in.ele_groups[0][idx])
+        plt.plot(vsource_th.df.index, vsource_th.df[str(source_ele_id)], label=f'Point {i} at ({x_coords[i]}, {y_coords[i]})')
+
+    plt.xlabel('Time')
+    plt.ylabel('Source/Sink Value')
+    plt.legend()
+    plt.show()
+    
 
 def viz_source(w_dir, start_time_str, i_show_plot=0, scale=1e3, i_nc=False):
     '''
@@ -108,6 +142,48 @@ def viz_source(w_dir, start_time_str, i_show_plot=0, scale=1e3, i_nc=False):
 
 if __name__ == "__main__":
     '''Sample usage'''
+    hgrid = read('/sciclone/schism10/feiye/STOFS3D-v7.3/R21l/hgrid.gr3')
+    ss = source_sink.from_files('/sciclone/schism10/feiye/STOFS3D-v7.3/R21j/')
+    xy = np.array([
+        [-91.7223, 31.0457],  # Atchafalaya River
+        [-91.56, 31.05],  # Mississippi River
+        [-76.1096, 39.5874],  # Susquehanna River
+        [-69.77256, 44.31494],  # Kennebec River, ME
+        [-73.90869, 42.13509],  # Hudson River, NY
+        [-74.94442, 40.34478],  # Delaware River, NJ
+        [-78.425288, 34.508177],  # Cape Fear River, NC
+        [-80.10808, 33.50005],  # Santee River, SC
+        [-79.81703, 33.59694],  # Black River, SC
+        [-79.57210, 33.71223],  # Black Mingo Creek, SC
+        [-79.49997, 33.84686],  # Lynches River, SC
+        [-79.48467, 33.93939],  # Pee Dee River, SC
+        [-79.33247, 33.98196],  # Little Pee Dee River, SC
+        [-77.917829, 34.749979],  # Northeast Cape Fear River, NC
+        [-87.9523, 30.8472],  # Mobile River, AL
+        [-96.695401, 28.968284],  # Lavaca River, TX
+        [-96.548436, 28.999706],  # Lake Texana, TX
+        [-93.83342666667, 30.355123333333],  # Cypress Creek, TX
+        [-89.764476, 30.551926],  # Lotts Creek, LA
+        [-87.219805, 30.567296],  # Escambia River, FL
+        [-83.987035, 30.331327],  # Horsehead Creek and Little River, FL
+        [-83.928038, 30.30404],  # Bailey Mill Creek, FL
+        [-82.950913, 29.958097],  # Suwannee River, FL
+        [-81.02370433333333, 27.315079666666666],  # Kissimmee River, FL
+        [-81.997572, 30.786870],  # St Marys River, FL
+        [-79.43425, 33.84487],  # Lyches River, SC
+        [-74.74868, 39.47915],  # Great Egg Harbor River, NJ
+        [-73.94009733333333, 42.06972966666667],  # Saugeties Creek, NY
+        [-73.971293, 41.920595999999996],  # Hudson River branch, NY
+        [-73.92918633333333, 41.592421333333334],  # Hudson River branch, NY
+        [-73.07229533333333, 41.303546000000004],  # Housatonic River, CT
+        [-72.625735, 41.656137666666666],  # Connecticut River, CT
+        [-72.64970633333333, 41.572111666666665],  # Mattabesset River, CT
+        [-72.470818, 41.47020933333334],  # Salmon River, CT
+        [-72.11158266666666, 41.455657333333335],  # Stony Brook, CT
+        [-72.090553, 41.535118000000004],  # Yantic River, CT
+        [-72.06195833333334, 41.525600000000004],  # Quinebaug River, CT
+    ])
+    plot_source_at_coords(hgrid, ss.source_sink_in, ss.vsource, xy[:, 0], xy[:, 1], tol=5e-2)
 
     # vs = TimeHistory('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/Iv4/20220502/vsource.th')
     # ss = SourceSinkIn('/sciclone/schism10/feiye/STOFS3D-v4/Inputs/Iv4/20220502/source_sink.in')

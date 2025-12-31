@@ -1,11 +1,11 @@
 {
     "Missi_Ida2": {
         "name": "Missi_Ida2",
-        "plot_start_day_str": "2021-08-01 00:00:00",
+        "plot_start_day_str": "2021-08-13 00:00:00",
         "plot_end_day_str": "2021-09-11 00:00:00",
         "model_start_day_str": "2021-08-01 00:00:00",
         "station_bp_file": "/sciclone/schism10/feiye/ICOGS/BPfiles/Missi_Ida2_moved.bp",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/R15d_v7/outputs/elevation.Missi_Ida2_moved.dat.15d_v7",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15m_v7/elevation.Missi_Ida2_moved.dat.15m",
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/Missi/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31},
         "stations": {

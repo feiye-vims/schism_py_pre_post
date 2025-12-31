@@ -22,6 +22,8 @@ def gen_subregion_ic_stofs3d(wdir=None, obsdir=None, hycom_TS_file=None, date_st
         n_nei: number of neighbors for inverse distance weighting,
             also used as a minimum number of observations required,
             if less than n_nei, exception will be raised
+        ecgc_sub_grid.reg: region file defining the subregion to be modified
+        ecgc_shoreline_sal.txt: manually defined shoreline for salinity interpolation
     
     Outputs:
         ecgc_coastal_tem.gr3: initial temperature on the model grid

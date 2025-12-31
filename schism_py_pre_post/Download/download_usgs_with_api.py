@@ -1,4 +1,22 @@
+'''
+Workaround to install climata on python >= 3.10:
+
+If pip install climata fails, try the following:
+
+pip uninstall -y suds suds-jurko  # ignore errors if not present
+pip install "suds-community>=1.1"
+pip install --no-deps "climata==0.5.0"
+
+replace in /sciclone/home/feiye/mambaforge/envs/stofs/lib/python3.10/site-packages/wq/io/base.py:
+    from collections import MutableMapping, MutableSequence  
+->
+    from collections.abc import MutableMapping, MutableSequence¬
+
+'''
+
 from climata.usgs import InstantValueIO, SiteIO, DailyValueIO
+import pickle
+from matplotlib.pylab import sample
 import pandas as pd
 import numpy as np
 import gsw
@@ -18,7 +36,8 @@ usgs_var_dict = {
     "conductance": {"id": '00095', "unit_conv": 0.001},
 }
 
-ecgc_states = ['ME', 'NH', 'MA', 'RI', 'CT', 'NY', 'NJ', 'DE', 'PA', 'MD', 'VA', 'NC', 'SC', 'GA', 'FL', 'AL', 'MI', 'LA', 'TX']
+ecgc_states = ['ME', 'NH', 'MA', 'RI', 'CT', 'NY', 'NJ', 'DE', 'PA', 'MD',
+               'DC', 'VA', 'NC', 'SC', 'GA', 'FL', 'AL', 'MI', 'LA', 'TX']
 
 
 class SiteIOIV(SiteIO):
@@ -40,7 +59,15 @@ def get_usgs_stations_from_state(states=['VA', 'MD'], data_type='iv', parameter=
     col = [[], [], [], [], [], [], []]
 
     for state in states:
-        site_params = SiteIOIV(state=state)
+        for i in range(5):  # retry 5 times
+            try:
+                site_params = SiteIOIV(state=state)
+                break
+            except Exception as e:
+                print(f"Error retrieving data for state {state}, retrying ... ({i+1}/5)")
+                if i == 4:
+                    raise e
+
         for i, col_name in enumerate(col_names):
             if col_name == 'state':  # state is not in site_param
                 if parameter is None:
@@ -145,45 +172,70 @@ def get_usgs_data_as_dataframe(site_id, start_date, end_date):
         return pd.DataFrame()
 
 
-def download_stations(param_id=None, station_ids=[], datelist=pd.date_range(start='2000-01-01', end='2000-01-02')):
-    stations_chunk_size = 100
+def download_stations(
+    param_id=None, station_ids=[], cache_fname=None,
+    datelist=pd.date_range(start='2000-01-01', end='2000-01-02'),
+    stations_chunk_size=20
+):
+    if cache_fname is not None and os.path.exists(cache_fname):
+        print(f'Loading cached data from {cache_fname} ...')
+        with open(cache_fname, 'rb') as f:
+            total_data = pickle.load(f)
+        return total_data
+    
+    else:
+        print(f'Downloading data for {len(station_ids)} stations ...')
 
-    if type(station_ids) is np.ndarray:
-        station_ids = station_ids.tolist()
+        if type(station_ids) is np.ndarray:
+            station_ids = station_ids.tolist()
 
-    print(f'station ids: {station_ids}\n')
+        print(f'station ids: {station_ids}\n')
 
-    # download
-    DOWNLOAD_METHODS = [InstantValueIO]
-    total_data = []
-    for i, station_ids_chunk in enumerate(chunks(station_ids, stations_chunk_size)):
+        # download
+        DOWNLOAD_METHODS = [InstantValueIO] * 5  # can add other methods if needed
+        total_data = []
+        for i, station_ids_chunk in enumerate(chunks(station_ids, stations_chunk_size)):
 
-        for download_method in DOWNLOAD_METHODS:
-            data_chunk = download_method(
-                start_date=datelist[0], end_date=datelist[-1],
-                station=station_ids_chunk, parameter=param_id
-            )
+            for download_method in DOWNLOAD_METHODS:
+                try:
+                    data_chunk = download_method(
+                        start_date=datelist[0], end_date=datelist[-1],
+                        station=station_ids_chunk, parameter=param_id
+                    )
+                    break  # exit the loop if successful
+                except Exception as e:
+                    print(f"Error with {download_method.__name__}, trying next method ...")
+                    if i == len(DOWNLOAD_METHODS) - 1:
+                        raise e  # re-raise the last exception if all methods fail
 
-        for data in data_chunk:
-            dates = [row[0] for row in data.data]
-            values = [row[1] for row in data.data]
-            df = pd.DataFrame({'date': dates, 'value': values})
-            total_data.append(
-                GenericObsData(
-                    station_info={'id': data.site_code,
-                                  'name': data.site_name,
-                                  'lon': data.longitude,
-                                  'lat': data.latitude,
-                                  'var_name': data.variable_name,
-                                  'var_code': data.variable_code,
-                                  'unit': data.unit},
-                    df=df
+            for data in data_chunk:
+                dates = [row[0] for row in data.data]
+                values = [row[1] for row in data.data]
+                df = pd.DataFrame({'date': dates, 'value': values})
+                total_data.append(
+                    GenericObsData(
+                        station_info={
+                            'id': data.site_code,
+                            'name': data.site_name,
+                            'lon': data.longitude,
+                            'lat': data.latitude,
+                            'var_name': data.variable_name,
+                            'var_code': data.variable_code,
+                            'unit': data.unit
+                        }, df=df
+                    )
                 )
-            )
-        print(f'stations processed: {min(len(station_ids),(i+1)*stations_chunk_size)} of {len(station_ids)}')
-    print(f'Number of stations with available data: {len(total_data)}')
+            print(f'stations processed: {min(len(station_ids),(i+1)*stations_chunk_size)} of {len(station_ids)}')
+        print(f'Number of stations with available data: {len(total_data)}')
 
-    return total_data
+        # save to cache
+        if cache_fname is not None:
+            print(f'Saving downloaded data to {cache_fname} ...')
+            with open(cache_fname, 'wb') as f:
+                pickle.dump(total_data, f)
+
+        return total_data
+
 
 def write_time_average(input_data, param_id=None, unit_conv=1, outfilename=None):
     # write mean_val_xyz
@@ -229,6 +281,7 @@ def all_states_time_average(param_id=None, unit_conv=1, states=None,
 
     if states is None:
         states = ['ME', 'NH', 'MA', 'RI', 'CT', 'NY', 'NJ', 'DE', 'PA', 'MD', 'VA', 'NC', 'SC', 'GA', 'FL', 'AL', 'MI', 'LA', 'TX']
+        # states = ['TX', 'LA', 'MS']
     station_info_df = get_usgs_stations_from_state(states)
     station_ids = station_info_df["site_no"].to_list()
 
@@ -280,6 +333,7 @@ def get_usgs_obs_for_stofs3d(outdir=None, start_date_str='2015-09-18', end_date_
         os.remove(f"{outdir}/mean_tem_xyz_{start_date_str}")
     os.symlink(f"mean_temperature_xyz_{start_date_str}", f"{outdir}/mean_tem_xyz_{start_date_str}")
 
+
 def convert_to_ObsData(total_data, cache_fname=None):
     '''
     Convert the downloaded "total_data" (see Sample 1 in __main__) to an old format used by some early scripts
@@ -302,55 +356,92 @@ def convert_to_ObsData(total_data, cache_fname=None):
         obs_data.save(obs_data.saved_file)
 
     return obs_data
-    
 
-if __name__ == "__main__":
-    # Example usage
-    site_id = "01022840"  # USGS site ID
-    start_date = "2024-03-05"
-    end_date = "2024-04-10"
 
-    df = get_usgs_data_as_dataframe(site_id, start_date, end_date)
+def sample_get_station_info():
+    """
+    Example usage of get_usgs_stations_from_state function
+    """
+    stations = [
+        "02492511", "02492519", "02492600", "02492700", "07374000", "073745245", "073745253", "07374581",
+        "07375050", "07375170", "07375175", "07375222", "07375230", "07375500", "07375650", "07376000",
+        "07378050", "07378500", "07378745", "07378746", "07378748", "07378810", "07379050", "07379075",
+        "07380101", "07380102", "07380120", "07380126", "07380127", "07380200", "07380212", "07380215",
+        "073802220", "073802225", "0738022295", "0738022395", "073802245", "073802273", "073802280", "073802282",
+        "073802284", "07380330", "07380401", "07380500", "07381000", "07381150", "07381324", "07381350",
+        "07381355", "07381450", "07381454", "07381460", "07381490", "07381515", "073815450", "07381590",
+        "073815945", "073815963", "07381600", "07384400", "07385700", "07385702", "07385765", "07385820",
+        "07386600", "07386850", "08010000", "08012150", "292952090565300", "293809092361500", "294045092492300",
+        "294717092250000", "295011091184300", "2951190901217", "295124089542100", "295447091191500",
+        "295501090190400", "300312091320000", "300507091355600", "300602090375100",
+        "300703089522700", "301200090072400", "301324090382400", "302020091435700",
+    ]
+    total_data = download_stations(
+        param_id=usgs_var_dict['gauge height']['id'],
+        station_ids=stations,
+        datelist=pd.date_range(start='2021-07-31', end='2021-08-01')
+    )
+    # save station id and names in csv
+    station_ids = [data.station_info['id'] for data in total_data]
+    station_names = [data.station_info['name'] for data in total_data]
+    # strip leading and trailing spaces and quotes
+    station_ids = [sid.strip().strip('"') for sid in station_ids]
+    station_names = [sname.strip().strip('"') for sname in station_names]
+    # write to csv, using ';' as separator
+    df = pd.DataFrame({'site_no': station_ids, 'station_nm': station_names
+                        }).drop_duplicates(subset='site_no')
+    df.to_csv('station_info.csv', index=False, sep=';')
     print(df.head())
 
 
-    # Sample 0: download a list of stations if you know their ids
-    total_data = download_stations(
-        param_id=usgs_var_dict['streamflow']['id'],
-        station_ids=['07374000', '07381490'],
-        datelist=pd.date_range(start='2021-07-31', end='2021-09-30')
-    )
-    # plt.plot(total_data[0].df['date'], total_data[0].df['value'])
-    # plt.plot(total_data[1].df['date'], total_data[1].df['value'])
+def Samples():
+    
+    # # Example usage -1:
+    # site_id = "01022840"  # USGS site ID
+    # start_date = "2024-03-05"
+    # end_date = "2024-04-10"
 
-    # make a *.th file based on the downloaded data
-    from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
-    import pytz
-    # convert time zone to UTC
-    utc_tz = pytz.timezone('UTC')
-    louisiana_tz = pytz.timezone('US/Central')
-    # check if there is any missing time
-    for i, _ in enumerate(total_data):
-        dt = np.array(total_data[i].df['date'].diff().dt.total_seconds())
-        total_data[i].df.set_index('date', inplace=True)
-        if dt[1] != dt[2]:
-            raise ValueError('Time interval is not consistent at the beginning, check the data.')
-        if (dt[1:] != dt[1]).any():
-            print('Time interval is not consistent, interpolation may be needed.')
-            # interpolate for missing time using dt[1]
-            total_data[i].df = total_data[i].df.resample(f'{dt[1]}S').interpolate()
+    # df = get_usgs_data_as_dataframe(site_id, start_date, end_date)
+    # print(df.head())
 
-    combined_df = pd.concat([total_data[0].df, total_data[1].df], axis=1)
-    combined_df.reset_index(inplace=True)
-    combined_df['date'] = combined_df['date'].dt.tz_convert(utc_tz)
-    # truncate to a time span
-    combined_df = combined_df[(combined_df['date'] >= '2021-08-01') & (combined_df['date'] < '2021-09-29')]
-    # convert time to seconds
-    time = np.array((combined_df['date'] - combined_df['date'].iloc[0]).dt.total_seconds())
-    data = combined_df['value'].to_numpy() * usgs_var_dict['streamflow']['unit_conv']  # convert to m^3/s
-    flux_th = TimeHistory(data_array=np.c_[time, -data])  # negative means inflow for SCHISM
-    flux_th.writer('flux.th')
-    pass
+
+    # # Sample 0: download a list of stations if you know their ids
+    # total_data = download_stations(
+    #     param_id=usgs_var_dict['streamflow']['id'],
+    #     station_ids=['07374000', '07381490'],
+    #     datelist=pd.date_range(start='2021-07-31', end='2021-09-30')
+    # )
+    # # plt.plot(total_data[0].df['date'], total_data[0].df['value'])
+    # # plt.plot(total_data[1].df['date'], total_data[1].df['value'])
+
+    # # make a *.th file based on the downloaded data
+    # from schism_py_pre_post.Timeseries.TimeHistory import TimeHistory
+    # import pytz
+    # # convert time zone to UTC
+    # utc_tz = pytz.timezone('UTC')
+    # louisiana_tz = pytz.timezone('US/Central')
+    # # check if there is any missing time
+    # for i, _ in enumerate(total_data):
+    #     dt = np.array(total_data[i].df['date'].diff().dt.total_seconds())
+    #     total_data[i].df.set_index('date', inplace=True)
+    #     if dt[1] != dt[2]:
+    #         raise ValueError('Time interval is not consistent at the beginning, check the data.')
+    #     if (dt[1:] != dt[1]).any():
+    #         print('Time interval is not consistent, interpolation may be needed.')
+    #         # interpolate for missing time using dt[1]
+    #         total_data[i].df = total_data[i].df.resample(f'{dt[1]}S').interpolate()
+
+    # combined_df = pd.concat([total_data[0].df, total_data[1].df], axis=1)
+    # combined_df.reset_index(inplace=True)
+    # combined_df['date'] = combined_df['date'].dt.tz_convert(utc_tz)
+    # # truncate to a time span
+    # combined_df = combined_df[(combined_df['date'] >= '2021-08-01') & (combined_df['date'] < '2021-09-29')]
+    # # convert time to seconds
+    # time = np.array((combined_df['date'] - combined_df['date'].iloc[0]).dt.total_seconds())
+    # data = combined_df['value'].to_numpy() * usgs_var_dict['streamflow']['unit_conv']  # convert to m^3/s
+    # flux_th = TimeHistory(data_array=np.c_[time, -data])  # negative means inflow for SCHISM
+    # flux_th.writer('flux.th')
+    # pass
 
     '''
     # Sample 1: Download discharge data for all stations in selected states
@@ -437,3 +528,7 @@ if __name__ == "__main__":
     #                                datelist=pd.date_range(start='2022-01-01', end='2022-02-10'))
 '''
     pass
+    
+
+if __name__ == "__main__":
+    sample_get_station_info()

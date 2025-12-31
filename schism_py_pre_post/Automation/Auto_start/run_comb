@@ -1,0 +1,23 @@
+#!/bin/bash --login
+
+#SBATCH -D .
+#SBATCH -J R13_cmb
+#SBATCH -A nos-surge
+#SBATCH -p hercules
+##queues: 'windfall' max 450 nodes (no walltime limit but lower priority; for quick turn-around try <=8 hrs)
+###80 cores/node (mem 512GB/node)
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH --exclusive
+#SBATCH -t 01:00:00  
+#SBATCH -o myout_cmb
+#SBATCH -e err2.cmb
+#SBATCH --mail-user=feiye@vims.edu
+#SBATCH --mail-type=NONE  #send email for start, end and fail
+
+set -e
+ulimit -s unlimited 
+
+# source /home/feiye/modules.hercules
+
+~/bin/combine_hotstart7 -i 12345

@@ -1,0 +1,1 @@
+/sciclone/home/feiye/d1/stofs3d-setup/src/stofs3d_setup/ops/Source_sink/Replace_with_USGS/download_usgs.py

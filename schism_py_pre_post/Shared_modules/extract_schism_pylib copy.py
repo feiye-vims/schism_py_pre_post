@@ -2,6 +2,7 @@
 
 import numpy as np
 from pylib import read_schism_output
+from pylib_experimental.schism_file import TimeHistory
 
 # --------------- inputs ----------------
 # USGS_repositioned_v49 for v8, whole domain
@@ -32,23 +33,21 @@ from pylib import read_schism_output
 #     '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/coops_test.bp'
 # ]
 
-RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R19i1/'
+RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v7.3/r2017/'
 output_files = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/O19i1/elevation.USGS_station_LA_repositioned_nontidal_v51.dat',
-    '/sciclone/schism10/feiye/STOFS3D-v8/O19i1/elevation.USGS_station_LA_tidal_mesh_paper.dat',
+    '/sciclone/schism10/feiye/STOFS3D-v7.3/O2017/elevation.stofs3d_atl_202512.dat',
 ]
 bpfile = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v51.bp',
-    '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_tidal_mesh_paper.bp',
+    '/sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202512.bp'
 ]
 # ---------------------------------------
 
 start_stack = 1
-end_stack = 35
+end_stack = 36
 for bpfile, output_file in zip(bpfile, output_files):
-    data = read_schism_output(run=RUN_DIR, varname=['elevation'], xyz=bpfile, stacks=np.arange(start_stack, end_stack+1))
+    data = read_schism_output(run=RUN_DIR, varname=['elev'], xyz=bpfile, stacks=np.arange(start_stack, end_stack+1))
 
     np_savetxt_args = {'fmt': '%.4f', 'delimiter': ' ', 'newline': '\n'}
-    np.savetxt(output_file, np.c_[data.time, data.elevation.T], **np_savetxt_args)
+    np.savetxt(output_file, np.c_[data.time, data.elev.T], **np_savetxt_args)
 
 print("done!")

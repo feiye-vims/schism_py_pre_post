@@ -4,6 +4,7 @@ use mpi to parallelize the plotting of multiple time stamps
 """
 import os
 import gc
+from pathlib import Path
 import copy
 from mpi4py import MPI
 from datetime import datetime, timedelta
@@ -103,7 +104,7 @@ def schism2sms_parallel(
                 if 'var' not in locals():
                     var = my_nc.variables[var_str][:]
                 if var_proc is not None:
-                    var, title_var_str = var_proc(gd_copy, var)
+                    var, title_var_str = var_proc(gd_copy, var, var_str, fname)
                 else:
                     title_var_str = var_str
 
@@ -126,6 +127,17 @@ def schism2sms_parallel(
 
     print(f'Core {rank} finishing ...\n\n\n')
     comm.Barrier()
+
+
+def paired_out2d_fnames(fname):
+    """
+    Given an *.nc file name, return the paired out2d_*.nc file name.
+    For example, input 'salinity_10.nc', return 'out2d_10.nc'
+    """
+    parts = Path(fname).name.split('_')
+    parts[0] = 'out2d'
+    paired_fname = '_'.join(parts)
+    return Path(fname).parent / paired_fname
 
 
 def plot_schism2D_parallel(
@@ -170,7 +182,7 @@ def plot_schism2D_parallel(
 
         gd_copy = copy.deepcopy(gd)  # get a copy of the original grid because the copy will be modified
         if var_proc is not None:
-            var, var_title_str = var_proc(gd_copy, var)
+            var, var_title_str = var_proc(gd_copy, var, var_str, fname)
 
         this_time_dts = my_nc.variables['time']
         if time_steps is None:
@@ -199,7 +211,7 @@ def plot_schism2D_parallel(
             extent = [plot_params['xlim'][0], plot_params['xlim'][1], plot_params['ylim'][0], plot_params['ylim'][1]]
             ax.set_extent(extent, crs=crs)
 
-            ibasemap = False
+            ibasemap = True
             if ibasemap:
                 cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
                 img = cimgt.OSM() # spoofed, downloaded street map
@@ -215,15 +227,21 @@ def plot_schism2D_parallel(
                 # m.shadedrelief()
                 # m.drawcoastlines()
 
+            matplotlib.use('TkAgg')
             gd_copy.plot_grid(ax=ax, fmt=1, levels=21, cmap='jet', **plot_params)
             if ibasemap:
-                gl = ax.gridlines(draw_labels=True, crs=crs,
-                        color='k',lw=0.5)
+                gl = ax.gridlines(draw_labels=True, crs=crs, color='k', lw=0.5)
                 gl.top_labels = False
                 gl.right_labels = False
                 gl.xformatter = cartopy.mpl.gridliner.LONGITUDE_FORMATTER
                 gl.yformatter = cartopy.mpl.gridliner.LATITUDE_FORMATTER
 
+            from matplotlib.ticker import MultipleLocator
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=12)
+            plt.xlim(plot_params['xlim'])
+            plt.ylim(plot_params['ylim'])
+            ax.xaxis.set_major_locator(MultipleLocator(1))
             plt.title(title_str)
             plt.gca().set_aspect('equal', 'box')
             plt.savefig(savefilename, dpi=400)
@@ -254,21 +272,19 @@ def image_spoof(self, tile):
     return img, self.tileextent(tile), 'lower' # reformat for cartopy
 
 
-def mask_dry_nodes(hgrid_obj, var, var_str, elevation, min_depth=0.01):
+def mask_dry_nodes(hgrid_obj, var, var_str, nc_filename, min_depth=0.01):
     '''mask dry nodes in the variable
     min_depth: minimum depth to be considered as water
     '''
     var = np.array(var)
-    elev = np.array(elevation)
 
-    for i_time in range(var.shape[0]):
-        dry_idx = hgrid_obj.dp + elev[i_time, :] < min_depth
-        var[i_time, dry_idx] = np.nan
+    out2d_fname = paired_out2d_fnames(nc_filename)
+    elev = netCDF4.Dataset(out2d_fname).variables['elevation'][:]
+
+    dry_mask = (hgrid_obj.dp[None, :] + elev) < min_depth
+    var[dry_mask] = np.nan
 
     return var, 'masked_' + var_str
-
-def mask_dry_elevation(hgrid_obj, elevation):
-    return mask_dry_nodes(hgrid_obj, elevation, 'elevation', elevation, min_depth=0)
 
 def get_disturbance(hgrid_obj, elevation):
     '''elevation can have a time dimension,
@@ -289,31 +305,39 @@ def get_positive_disturbance(hgrid_obj, elevation):
 
     return disturbance, 'positive_disturbance'
 
-plot_param_dict = {
-    'Pearl River': {
-        'xlim': [-89.87, -89.55], 'ylim': [30.30, 30.55], 'clim': [-2, 10],
-    },
-    'LA': {
-        'xlim': [-92.3, -88.5], 'ylim': [28.8, 31.2], 'clim': [-2, 10],
-    },
-    'New Orleans': {
-        'xlim': [-90.19665, -89.96121], 'ylim': [29.89496, 30.05080], 'clim': [-2, 10],
-    },
-    'Outfall Canal': {
-        'xlim': [-90.10806, -90.00778], 'ylim': [29.97116, 30.03879], 'clim': [-2, 10],
-    }
-}
 
-if __name__ == "__main__":
+def LA_sample():
+    """
+    sample function for plotting SCHISM outputs in LA area
+    """
+
+    plot_param_dict = {
+        'Pearl River': {
+            'xlim': [-89.87, -89.55], 'ylim': [30.30, 30.55], 'clim': [-2, 10],
+        },
+        'LA': {
+            'xlim': [-92.3, -88.5], 'ylim': [28.8, 31.2], 'clim': [-2, 10],
+        },
+        'LA_coastal': {
+            'xlim': [-90.5, -88.7], 'ylim': [28.8, 29.8], 'clim': [0, 35],  
+        },
+        'New Orleans': {
+            'xlim': [-90.19665, -89.96121], 'ylim': [29.89496, 30.05080], 'clim': [-2, 10],
+        },
+        'Outfall Canal': {
+            'xlim': [-90.10806, -90.00778], 'ylim': [29.97116, 30.03879], 'clim': [-2, 10],
+        }
+    }
+
     # sample inputs
-    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15h_v7/'
-    output_dir = f'{RUNDIR}/outputs/'
-    model_start_time = datetime.strptime('2021-08-01', "%Y-%m-%d")
+    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/R19i1/'
+    output_dir = '/sciclone/schism10/feiye/STOFS3D-v8/O19i1/'
+    model_start_time = datetime.strptime('2024-03-05', "%Y-%m-%d")
     VAR_STR = 'elevation'
-    var_proc = mask_dry_elevation
-    stacks = np.arange(1, 47)  # must cover the plot time stamps
+    var_proc = mask_dry_nodes
+    stacks = np.arange(35, 36)  # must cover the plot time stamps
     time_steps = []  # None (all time steps), or a list of time steps to plot
-    plot_params = plot_param_dict['LA']
+    plot_params = plot_param_dict['LA_coastal']
 
     # -------------------- sample outputing to *.2dm -------------------------
     snapshots_times = (
@@ -321,18 +345,67 @@ if __name__ == "__main__":
         # datetime.strptime('2021-08-31 00:00:00', "%Y-%m-%d %H:%M:%S"),
         # datetime.strptime('2021-09-01 00:00:00', "%Y-%m-%d %H:%M:%S"),
         # datetime.strptime('2024-03-06 00:00:00', "%Y-%m-%d %H:%M:%S"),
+
         # datetime.strptime('2024-03-13 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2024-03-20 00:00:00', "%Y-%m-%d %H:%M:%S"),
-        # datetime.strptime('2024-03-27 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-03-19 03:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-23 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-24 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-25 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-26 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-27 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-28 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        datetime.strptime('2024-03-28 00:00:00', "%Y-%m-%d %H:%M:%S"),
+        # datetime.strptime('2024-04-09 00:00:00', "%Y-%m-%d %H:%M:%S"),
     )
     if snapshots_times:
         schism2sms_parallel(
             RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
-            output_dir, snapshots_times, iOverWrite=False)
+            output_dir, snapshots_times, iOverWrite=True)
 
     # ----------------------------- sample generating plot -------------------------
+    plot_schism2D_parallel(
+        RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
+        time_steps, plot_params, output_dir, iOverWrite=True)
+
+    print('All done!')
+
+
+def stofs_LA_sample():
+    """
+    sample function for plotting STOFS3D outputs in LA area
+    """
+
+    plot_param_dict = {
+        'Pearl River': {
+            'xlim': [-89.87, -89.55], 'ylim': [30.30, 30.55], 'clim': [-2, 10],
+        },
+        'LA': {
+            'xlim': [-92.3, -88.5], 'ylim': [28.8, 31.2], 'clim': [-2, 10],
+        },
+        'New Orleans': {
+            'xlim': [-90.19665, -89.96121], 'ylim': [29.89496, 30.05080], 'clim': [-2, 10],
+        },
+        'Outfall Canal': {
+            'xlim': [-90.10806, -90.00778], 'ylim': [29.97116, 30.03879], 'clim': [-2, 10],
+        }
+    }
+
+    # sample inputs
+    RUNDIR = '/sciclone/schism10/feiye/STOFS3D-v8/O15b4_v7/'
+    output_dir = f'{RUNDIR}/outputs/'
+    model_start_time = datetime.strptime('2017-12-01', "%Y-%m-%d")
+    VAR_STR = 'elevation'
+    var_proc = mask_dry_nodes
+    stacks = np.arange(369, 396)  # must cover the plot time stamps
+    time_steps = []  # None (all time steps), or a list of time steps to plot
+    plot_params = plot_param_dict['LA']
+
     plot_schism2D_parallel(
         RUNDIR, model_start_time, VAR_STR, var_proc, stacks,
         time_steps, plot_params, output_dir, iOverWrite=False)
 
     print('All done!')
+
+
+if __name__ == "__main__":
+    LA_sample()

@@ -3,16 +3,16 @@ import numpy as np
 import dask
 from dask import delayed
 from dask.distributed import Client
-from pylib import read_schism_output, save_schism_grid
+from pylib import read_schism_output, save_schism_grid, read_schism_slab
 from pylib_experimental.schism_file import TimeHistory
 
 # --------------- inputs ----------------
-RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15b4_v7/'
+RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R29j/'
 output_files = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/O15b4_v7/outputs/elevation.stofs3d_atl_202503.dat'
+    '/sciclone/schism10/feiye/STOFS3D-v8/O29j/outputs/elevation.mississippi.slab',
 ]
 bpfile_list = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/stofs3d_atl_202503.bp'
+    '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/mississippi.bp'
 ]
 
 start_stack = 1
@@ -49,6 +49,17 @@ def sample_save_grid():
     os.system(f"mv grid.npz {rundir}")
 
 
+def test_serial():
+    '''
+    Test serial processing
+    '''
+    data = read_schism_slab(
+        run=RUN_DIR, varname=['salinity'], levels="all",
+        stacks=np.arange(start_stack, end_stack + 1)
+    )
+    np.savetxt(output_files[0], np.c_[data.time, data.elevation.T], **np_savetxt_args)
+
+
 def main():
     '''
     Main function
@@ -74,6 +85,6 @@ def main():
 
 
 if __name__ == '__main__':
-    # sample_save_grid()
+    test_serial()
     main()
     print("done!")

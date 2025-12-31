@@ -10,7 +10,7 @@ import pandas as pd
 from datetime import timedelta
 from datetime import datetime
 from schism_py_pre_post.Shared_modules.obs_mod_comp import obs_mod_comp
-from get_elev import get_obs_from_station_json
+from schism_py_pre_post.Plot.get_elev import get_obs_from_station_json
 import numpy as np
 from scipy.interpolate import griddata  # , interp2d
 import math
@@ -162,7 +162,7 @@ def get_forecast_elev(plot_start_day_str, forecast_end_day_str, fcst_folder=None
             day2 = datetime.strftime(this_day + (int(not i_nowcast) + 1) * timedelta(days=1) - timedelta(days=0.001), "%Y-%m-%d %H:%M:%S")
         else:
             day2 = datetime.strftime(this_day + int(not i_nowcast) * timedelta(days=1) - timedelta(days=0.001), "%Y-%m-%d %H:%M:%S")
-        model_df = model_df.append(my_th.df.set_index('datetime')[day1:day2])
+        model_df = pd.concat([model_df, my_th.df.set_index('datetime')[day1:day2]])
     # ensure uniqueness
     model_df = model_df[~model_df.index.duplicated(keep='last')]
 
@@ -276,11 +276,12 @@ def get_obs_elev(
 
 def plot_elev(
     obs_df_list, mod_df_all_stations, plot_start_day_str, plot_end_day_str,
-              noaa_stations, datum_list, station_info,
-              plot_name, iplot=True, subplots_shape=(10, None),
-              fig_ax=None, line_styles=['r.', 'k'], font_size=6,
-              nday_moving_average=0, demean=False,
-              label_strs=[], label_rot=10, figure_type='png'):
+    noaa_stations, datum_list, station_info,
+    plot_name, iplot=True, subplots_shape=(10, None),
+    fig_ax=None, line_styles=['r.', 'k'], font_size=6,
+    nday_moving_average=0, demean=False,
+    label_strs=[], label_rot=10, figure_type='png'
+):
     '''
     Plot time series and calculate stats.
     "obs_df_list" is a list of pd.DataFrame
@@ -565,7 +566,7 @@ def plot_operation():
 
         # plot
         tmp = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str, noaa_stations_groups[group_name], datums, st_info, group_name, iplot=False)
-        stats = stats.append(tmp[0])
+        stats = pd.concat([stats, tmp[0]], ignore_index=True)
 
     stats.loc['mean'] = stats.iloc[:, 4:].copy().mean()
     stats.at['mean', 'station_id'] = 'all'
@@ -675,23 +676,28 @@ def test():
     print('test done.')
 
 
-def test_plot():
+def plot_mixed_elev(case_name, station_json_fname):
     '''
-    Plot time series and calculate stats.
+    Plot elevation from mixed sources, e.g., COOPS, USGS, USACE, etc.
     Both obs and model results will be converted to NAVD88 if possible.
-    '''
+
+    Example inputs:
+    case_name = 'Missi_Ida2'
+    station_json_fname = (
+        '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json'
+    )
+
+    case_name = 'LA_reforecast_repos_nontidal_paper_v8'
+    station_json_fname = (
+        '/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station2.json'
+    )
 
     # case_name =   # 'Missi_Ida2' # 'v8_2018'  #     # 'v8'
-
     # case_name = 'LA_reforecast_tidal_v8'
     # case_name = 'LA_reforecast_tidal_v7p1'
-
-    case_name = 'LA_Ida_repos_nontidal_paper_v8'
-    # case_name = 'LA_reforecast_repos_nontidal_paper_v8'
+    # case_name = 'LA_Ida_repos_nontidal_paper_v8'
     # case_name = 'LA_reforecast_repos_nontidal_paper_v7p1'
-
-    station_json_fname = ('/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/'
-                          'station2.json')
+    '''
 
     with open(station_json_fname, 'r', encoding='utf-8') as f:
         plot_dict = json.load(f)
@@ -778,7 +784,7 @@ def test_plot():
             subplots_shape=(7, None), label_strs=['obs', 'model'],
             font_size=12,
         )
-        total_stats_df = total_stats_df.append(stats_df)
+        total_stats_df = pd.concat([total_stats_df, stats_df], ignore_index=True)
         write_stat(stats_df, f"{plot_name}_stats.txt")
 
     write_stat(total_stats_df, f"{output_dir}/"
@@ -788,7 +794,10 @@ def test_plot():
 
 
 if __name__ == "__main__":
-    test_plot()
+    plot_mixed_elev(
+        case_name='LA_reforecast_repos_nontidal_paper_v8',
+        station_json_fname='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station2.json'
+    )
     plot_operation()
     test()
     print('Done.')

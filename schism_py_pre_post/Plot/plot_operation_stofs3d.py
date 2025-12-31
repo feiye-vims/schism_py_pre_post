@@ -3,6 +3,8 @@ Daily automated plotting script for the operation of the STOfS3D system.
 """
 
 import os
+import shutil
+import subprocess
 from pathlib import Path
 import xarray as xr
 import numpy as np
@@ -30,7 +32,10 @@ def assemble_forecast_dict(forecast_date, output_dir, forecast_version):
     forecast_date_str = forecast_date.strftime("%Y%m%d")
     forecast_dict = {'forecast_date_str': forecast_date_str}
 
-    if forecast_version == 'v3.1.0':
+    if forecast_version == 'v3.1.0-bias_correction':
+        forecast_dict['parent_key'] = f'STOFS-3D-Atl/para/stofs.v3.1.1/stofs_3d_atl.{forecast_date_str}'
+        forecast_dict['hgrid_file'] = '/sciclone/schism10/feiye/STOFS3D-v8/v7.2_static_inputs_2025_04_12/hgrid.gr3'
+    elif forecast_version == 'v3.1.0-no_bias_correction':
         forecast_dict['parent_key'] = f'STOFS-3D-Atl/para/VIMS_v72_stofs.v3.1.0/stofs_3d_atl.{forecast_date_str}'
         forecast_dict['hgrid_file'] = '/sciclone/schism10/feiye/STOFS3D-v8/v7.2_static_inputs_2025_04_12/hgrid.gr3'
     elif forecast_version == 'v2.1':
@@ -63,18 +68,14 @@ def assemble_forecast_dict(forecast_date, output_dir, forecast_version):
             'output_filename': f'{output_dir}/stofs3d_salt_bottom_{forecast_date_str}.png'
         }
     }
-    if forecast_version == 'v3.1.0':
-        plot_var_dict['zeta'] = {
-            'caxis': [-2, 2],
-            'title': f'STOFS3D Surface Elevation on {forecast_date_str}',
-            'output_filename': f'{output_dir}/stofs3d_zeta_{forecast_date_str}.png'
-        }
-    elif forecast_version == 'v2.1':
-        plot_var_dict['elev'] = {
-            'caxis': [-2, 2],
-            'title': f'STOFS3D Surface Elevation on {forecast_date_str}',
-            'output_filename': f'{output_dir}/stofs3d_elev_{forecast_date_str}.png'
-        }
+
+    elev_var_name = 'elev' if forecast_version == 'v2.1' else 'zeta'
+    plot_var_dict[elev_var_name] = {
+        'caxis': [-2, 2],
+        'title': f'STOFS3D Surface Elevation on {forecast_date_str}',
+        'output_filename': f'{output_dir}/stofs3d_elev_{forecast_date_str}.png'
+    }
+
     forecast_dict['plot_var_dict'] = plot_var_dict
 
     return forecast_dict
@@ -162,6 +163,28 @@ def print_date():
     print(f"Running {__file__} on {today.strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
 
+def upload_outputs(local_folder, remote_path):
+    """
+    Upload the local folder to the remote folder.
+    """
+    rsync_path = shutil.which("rsync") or "/usr/bin/rsync"
+    rsync_command = [
+        rsync_path, "-avz",  # archive mode, verbose, compressed
+        local_folder,  # without trailing slash
+        remote_path
+    ]
+
+    print(f"Uploading with: {' '.join(rsync_command)}")
+
+    try:
+        result = subprocess.run(
+            rsync_command, check=True, capture_output=True, text=True
+        )
+        print("Upload successful:\n", result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Upload failed:\n", e.stderr)
+
+
 if __name__ == "__main__":  
     print_date()
 
@@ -171,7 +194,11 @@ if __name__ == "__main__":
     forecast_date = yesterday
     forecast_date_str = forecast_date.strftime("%Y%m%d")
 
-    for forecast_version in ['v3.1.0', 'v2.1']:
+    for forecast_version in [
+        'v3.1.0-bias_correction',
+        'v3.1.0-no_bias_correction',
+        'v2.1'
+    ]:
         print(f'Processing STOFS3D data for version {forecast_version}...')
     
         forecast_dict = assemble_forecast_dict(forecast_date, oper_dir, forecast_version)
@@ -195,4 +222,12 @@ if __name__ == "__main__":
 
         print(f'Done processing STOFS3D data for version {forecast_version}.\n')
 
+        # remove downloaded *.nc files to save space
+        os.system(f'rm -f {oper_dir}/{forecast_version}/{forecast_date_str}/*.nc')
 
+        # upload to ccrm drive
+        upload_outputs(
+            local_folder=f"{oper_dir}/{forecast_version}/{forecast_date_str}",  # without trailing slash
+            remote_path=("feiye@ccrm.vims.edu:/webdata/html/yinglong/feiye/Public/"
+                        f"STOFS-3D-Atlantic/{forecast_version}/")
+        )

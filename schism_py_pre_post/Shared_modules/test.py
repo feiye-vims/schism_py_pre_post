@@ -1,9 +1,10 @@
-from pylib import harmonic_analysis, schism_grid
+from pylib import harmonic_analysis, schism_grid, read_schism_reg
 import numpy as np
 from pylib_essentials.schism_file import read_schism_hgrid_cached
 from shapely.geometry import Polygon
 import geopandas as gpd
 from pathlib import Path
+
 
 filename = Path('/sciclone/schism10/Hgrid_projects/DEMs/hgrid.dem_id.2dm')
 hg = read_schism_hgrid_cached(filename)
