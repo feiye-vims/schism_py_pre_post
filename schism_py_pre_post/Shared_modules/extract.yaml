@@ -1,0 +1,161 @@
+runs:
+
+  - name: F2000
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2000/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2000/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 367
+
+  - name: F2001
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2001/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2001/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2002
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2002/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2002/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2003
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2003/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2003/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2004
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2004/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2004/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 367
+
+  - name: F2005
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2005/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2005/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2006
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2006/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2006/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2007
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2007/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2007/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2008
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2008/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2008/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 367
+
+  - name: F2009
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2009/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2009/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2010
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2010/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2010/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2011
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2011/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2011/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2012
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2012/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2012/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 367
+
+  - name: F2013
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2013/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2013/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2014
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2014/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2014/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2015
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2015/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2015/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2016
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2016/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2016/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 367
+
+  - name: F2017
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2017/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2017/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2018
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2018/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2018/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366
+
+  - name: F2019
+    run_dir: /sciclone/schism10/feiye/STOFS3D-v7.3/F2019/
+    var_name: elev
+    output_file: /sciclone/schism10/feiye/STOFS3D-v7.3/F2019/elevation.stofs3d_atl_202501.dat
+    bpfile: /sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202501.bp
+    start_stack: 2
+    end_stack: 366

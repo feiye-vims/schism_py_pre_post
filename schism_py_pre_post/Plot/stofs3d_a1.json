@@ -67,8 +67,8 @@
         "model_start_day_str": "1999-12-01 00:00:00",
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/R15a_v7/station.in",
         "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22e/elevation.stofs3d_atl_202503.dat",
-        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22e/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22f/staout_1",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22f/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31},
         "default_datum": "NAVD"
     },
@@ -79,8 +79,8 @@
         "model_start_day_str": "2000-12-01 00:00:00",
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/R15a_v7/station.in",
         "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22d/staout_1",
-        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22d/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22e/staout_1",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22e/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31},
         "default_datum": "NAVD"
     },
@@ -91,8 +91,8 @@
         "model_start_day_str": "2001-12-01 00:00:00",
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/R15a_v7/station.in",
         "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
-        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22c/staout_1",
-        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22c/",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22d/staout_1",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22d/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31},
         "default_datum": "NAVD"
     },
@@ -345,6 +345,18 @@
         "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
         "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O21j/elevation.stofs3d_atl_202503.dat",
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O21j/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "default_datum": "NAVD"
+    },
+    "2025_v7p3": {
+        "name": "2025_v7p3",
+        "plot_start_day_str": "2025-09-01 00:00:00",
+        "plot_end_day_str": "2025-10-01 00:00:00",
+        "model_start_day_str": "2024-12-01 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/stofs3d_atl_202503.bp",
+        "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22w/elevation.stofs3d_atl_202503.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O22w/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31},
         "default_datum": "NAVD"
     },

@@ -292,12 +292,147 @@ def get_coops_elev(
     return [noaa_df_list, datum_list, st_info]
 
 
+import numpy as np
+import pandas as pd
+import requests
+import xml.etree.ElementTree as ET
+from dateutil.parser import isoparse
+
+def fetch_usace_stage_chunk(
+    station: str,
+    start_dt,
+    end_dt,
+    *,
+    variable="HG",
+    chunk_days=20,
+    session=None,
+    verify=False,
+):
+    """
+    Download USACE RiverGages WaterML data in chunks (default 30 days) and return a single DataFrame.
+
+    Parameters
+    ----------
+    station : str
+        Station/site id used by RiverGages (location= and site= in your URL).
+    start_dt, end_dt : datetime-like
+        Requested time range. (Inclusive start; end handling depends on server, so we de-dup.)
+    variable : str
+        WaterML variable code, e.g., "HG".
+    chunk_days : int
+        Max days per request window (use 30 or 29 if you see edge failures).
+    session : requests.Session or None
+        Optional reuse of session for performance.
+    verify : bool
+        TLS verification. RiverGages often needs verify=False in some environments, but
+        prefer verify=True if it works for you.
+
+    Returns
+    -------
+    pd.DataFrame with UTC tz-aware DatetimeIndex and a single column: 'water_level' (in meters)
+    st_info: station information dictionary
+    """
+    s = session or requests.Session()
+
+    # Normalize inputs to pandas timestamps (timezone-naive OK here; we’ll keep server times as returned)
+    start_dt = pd.Timestamp(start_dt)
+    end_dt = pd.Timestamp(end_dt)
+
+    # Build chunk boundaries
+    # Use closed='left' windows: [t0, t1), [t1, t2), ... then request endDate = (chunk_end)
+    # Because the API may treat endDate as inclusive, we will de-duplicate by timestamp afterward.
+    chunk_starts = pd.date_range(start_dt, end_dt, freq=f"{chunk_days}D", inclusive="left")
+    if len(chunk_starts) == 0:
+        chunk_starts = pd.DatetimeIndex([start_dt])
+
+    dfs = []
+    st_info = {}
+    ns = {"wml": "http://www.cuahsi.org/waterML/1.0/"}
+
+    for t0 in chunk_starts:
+        t1 = min(t0 + pd.Timedelta(days=chunk_days), end_dt)
+        # If t0 == t1, skip
+        if t1 <= t0:
+            continue
+
+        # Format dates (adjust if the service expects something else in your use case)
+        beginDate = t0.strftime("%Y-%m-%d")
+        endDate = t1.strftime("%Y-%m-%d")
+
+        url = (
+            "https://rivergages.mvr.usace.army.mil/watercontrol/webservices/rest/"
+            "webserviceWaterML.cfc?"
+            f"method=RGWML&meth=getValues&location={station}&site={station}"
+            f"&variable={variable}&beginDate={beginDate}&endDate={endDate}&authToken=RiverGages"
+        )
+
+        r = s.get(url, verify=verify, timeout=60)
+        r.raise_for_status()
+
+        root = ET.fromstring(r.text)
+
+        if not st_info:
+            # Extract site information
+            site_info = root.find('.//wml:sourceInfo', ns)
+            site_name = site_info.find('wml:siteName', ns).text
+            site_code = site_info.find('.//wml:siteCode', ns).text
+            latitude = float(site_info.find('.//wml:latitude', ns).text)
+            longitude = float(site_info.find('.//wml:longitude', ns).text)
+            st_info = {'site_name': site_name, 'id': site_code, 'latitude': latitude, 'longitude': longitude}
+        
+        values = root.findall(".//wml:value", ns)
+        if not values:
+            continue
+
+        times = []
+        vals = []
+        for v in values:
+            dt_str = v.get("dateTime")
+            if dt_str is None or v.text is None:
+                continue
+            try:
+                # WaterML dateTime is typically ISO-8601; isoparse handles timezone offsets too
+                times.append(isoparse(dt_str))
+                vals.append(float(v.text))
+            except Exception:
+                continue
+
+        if not times:
+            continue
+
+        df = pd.DataFrame({"datetime": pd.to_datetime(times), "water_level_ft": vals}).set_index("datetime")
+        dfs.append(df)
+
+    if not dfs:
+        return pd.DataFrame(columns=["water_level"], index=pd.DatetimeIndex([], tz="UTC"))
+
+    out = pd.concat(dfs).sort_index()
+
+    # De-dup if API treats endDate as inclusive (common source of overlaps)
+    out = out[~out.index.duplicated(keep="last")]
+
+    # Unit conversion + QC, mirroring your logic
+    out["water_level"] = out["water_level_ft"] * 0.3048
+    out.drop(columns=["water_level_ft"], inplace=True)
+
+    out.loc[out["water_level"] < -99, "water_level"] = np.nan
+    out.loc[out["water_level"] > 99, "water_level"] = np.nan
+
+    # If timestamps are timezone-naive, assume they’re already UTC; otherwise convert to UTC
+    if out.index.tz is None:
+        out.index = out.index.tz_localize("UTC")
+    else:
+        out.index = out.index.tz_convert("UTC")
+
+    return out, st_info
+
+
 def get_usace_elev(stations=[], start_time_str='2022-04-11T00:00', end_time_str='2022-04-19T23:59'):
     import xml.etree.ElementTree as ET
     import requests
     import pytz
     '''
-    Get gage height from USACE, using the following API:
+    Get gage height from USACE API, for example:
     https://rivergages.mvr.usace.army.mil/watercontrol/webservices/rest/webserviceWaterML.cfc?method=RGWML&meth=getValues&location=01300&site=01300&variable=HG&beginDate=2022-04-11T00:00&endDate=2022-04-19T23:59&authToken=RiverGages
     '''
     cache_folder = os.path.realpath(os.path.expanduser('~/schism10/Cache/'))
@@ -332,43 +467,15 @@ def get_usace_elev(stations=[], start_time_str='2022-04-11T00:00', end_time_str=
                 print(f'Failed to read from Cache, regenerating cache')
 
         if not cache_success:
-            url = 'https://rivergages.mvr.usace.army.mil/watercontrol/webservices/rest/webserviceWaterML.cfc?' + \
-                f'method=RGWML&meth=getValues&location={station}&site={station}' + \
-                f'&variable=HG&beginDate={start_time_str}&endDate={end_time_str}&authToken=RiverGages'
-            root = ET.fromstring(requests.get(url, verify=False).text)
-            # namespace for waterML
-            ns = {'wml': 'http://www.cuahsi.org/waterML/1.0/'}
-            # Extract site information
-            site_info = root.find('.//wml:sourceInfo', ns)
-            site_name = site_info.find('wml:siteName', ns).text
-            site_code = site_info.find('.//wml:siteCode', ns).text
-            latitude = float(site_info.find('.//wml:latitude', ns).text)
-            longitude = float(site_info.find('.//wml:longitude', ns).text)
-
-            st_info = {'site_name': site_name, 'id': site_code, 'latitude': latitude, 'longitude': longitude}
-
-            # Extract and print variable name
-            variable_name = root.find('.//wml:variableName', ns).text
-            print(f"Variable Name: {variable_name}")
-            
-            # Extract and iterate through all values
-            values = root.findall('.//wml:value', ns)
-            value_array = np.nan * np.ones(len(values), dtype=float)
-            time_array = np.empty(len(values), dtype=object)
-            for i, value in enumerate(values):
-                time_array[i] = parse_date(value.get('dateTime'))[0]
-                value_array[i] = float(value.text)
-
-            # convert from feet to meter
-            value_array = value_array * 0.3048
-            # Create a pandas dataframe
-            df = pd.DataFrame({'datetime': time_array, 'water_level': value_array})
-            df.set_index('datetime', inplace=True)
-            # convert to GMT
-            df.index = df.index.tz_localize(louisiana_tz).tz_convert(gmt_tz)
-            # set unreadable values to nan
-            df.loc[df['water_level'] < -99, 'water_level'] = np.nan
-            df.loc[df['water_level'] > 99, 'water_level'] = np.nan
+            df, st_info = fetch_usace_stage_chunk(
+                station=station,
+                start_dt=start_time_str,
+                end_dt=end_time_str,
+                variable="HG",
+                chunk_days=20,
+                session=None,
+                verify=False,
+            )
 
             # save cache
             with open(cache_filename, 'wb') as f:

@@ -1,4 +1,8 @@
 import os
+os.environ["MPLBACKEND"] = "Agg"
+import matplotlib
+matplotlib.use("Agg", force=True)
+
 import numpy as np
 import xarray as xr
 import dask
@@ -6,18 +10,19 @@ from dask import delayed
 from dask.distributed import Client
 from pylib import read_schism_output, save_schism_grid, read
 
+
 # --------------- inputs ----------------
-RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R29j/'
+RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R35/'
 output_files = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/O29j/salinity.transect.mississippi',
+    '/sciclone/schism10/feiye/STOFS3D-v8/O35/ST.transect.mississippi',
 ]
 bpfile_list = [
     '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/mississippi.bp'
 ]
 
 start_stack = 1
-end_stack = 35
-num_jobs = 4  # Adjust as needed
+end_stack = 142
+num_jobs = 20  # Adjust as needed
 
 # ---------------------------------------
 # format of the output file
@@ -132,5 +137,6 @@ def serial_extract():
 
 
 if __name__ == '__main__':
+    # serial_extract()
     parallel_extract()
     print("done!")

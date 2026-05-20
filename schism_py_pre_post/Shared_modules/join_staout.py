@@ -7,12 +7,16 @@ import numpy as np
 from glob import glob
 import re
 
-rundir = '/sciclone/schism10/feiye/STOFS3D-v7.3/r2009/'
+rundir = '/sciclone/schism10/feiye/STOFS3D-v7.3/r2025/'
 days_per_stack = 1
 
 sub_runs = sorted(glob(f'{rundir}/start*/'))
 aggregate_run = f'{rundir}/outputs/'
 os.makedirs(aggregate_run, exist_ok=True)
+# remove existing schout files in the aggregate directory
+existing_schout_files = glob(f'{aggregate_run}/schout_*.nc')
+for f in existing_schout_files:
+    os.remove(f)
 
 # There should be a one-stack overlap between consecutive sub-runs,
 # the last sub-run contains all data, but with later stack overwriting previous ones at overlaps
@@ -31,7 +35,8 @@ for i, sub_run in enumerate(sub_runs):
 
     first_stack = int(re.search(r'schout_(\d+)\.nc$', stack_files[0]).group(1))
     if previous_run_last_stack != first_stack:
-        raise ValueError(f"No overlap in stacks between runs: {previous_run_last_stack} vs {last_stack} under {sub_run}")
+        raise ValueError(
+            f"No overlap in stacks between runs: {previous_run_last_stack} vs {first_stack} under {sub_run}")
 
     last_stack = int(re.search(r'schout_(\d+)\.nc$', stack_files[-1]).group(1))
     last_stack_entries = np.arange(

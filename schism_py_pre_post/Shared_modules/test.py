@@ -1,9 +1,41 @@
 from pylib import harmonic_analysis, schism_grid, read_schism_reg
 import numpy as np
-from pylib_essentials.schism_file import read_schism_hgrid_cached
 from shapely.geometry import Polygon
 import geopandas as gpd
 from pathlib import Path
+import xarray as xr
+
+import numpy as np
+from netCDF4 import Dataset
+
+ncfile = "/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7.2/Shared_for_CERA/stofs_3d_atl.t12z.field2d_f061_072.nc"
+outgr3 = "/sciclone/schism10/feiye/STOFS3D-v7/Shared_with_NOAA/v7.2/Shared_for_CERA/stofs_3d_atl.t12z.field2d_f061_072.gr3"
+
+with Dataset(ncfile, "r") as nc:
+    x = np.asarray(nc.variables["x"][:], dtype=np.float64)
+    y = np.asarray(nc.variables["y"][:], dtype=np.float64)
+    dp = np.asarray(nc.variables["depth"][:], dtype=np.float64)
+
+    # take triangles only
+    element = np.asarray(nc.variables["element"][:, :], dtype=np.int64)
+    if element.shape[1] != 3:
+        raise ValueError(f"Expected 'element' variable to have shape (ne, 3), but got {element.shape}")
+
+n_nodes = x.size
+n_elems = element.shape[0]
+
+node_ids = np.arange(1, n_nodes + 1, dtype=np.int64)
+nodes_block = np.column_stack((node_ids, x, y, dp))  # (np, 4)
+
+elem_ids = np.arange(1, n_elems + 1, dtype=np.int64)
+etype = np.full(n_elems, 3, dtype=np.int64)
+elems_block = np.column_stack((elem_ids, etype, element))  # (ne, 5)
+
+with open(outgr3, "w", buffering=128 * 1024 * 1024) as f:
+    f.write("\n")
+    f.write(f"{n_elems} {n_nodes}\n")
+    np.savetxt(f, nodes_block, fmt=("%d", "%.6f", "%.6f", "%.6f"))
+    np.savetxt(f, elems_block, fmt=("%d", "%d", "%d", "%d", "%d"))
 
 
 filename = Path('/sciclone/schism10/Hgrid_projects/DEMs/hgrid.dem_id.2dm')

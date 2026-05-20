@@ -60,6 +60,7 @@ def ecgc_stations_subset(station_bp_file=None):
     }
     return [stations_groups, default_datums]
 
+
 def ecgc_stations(station_bp_file=None):
     # --------------define stations----------------------
     # stations, ICOGS v2 and v3, coastal act
@@ -69,21 +70,25 @@ def ecgc_stations(station_bp_file=None):
     noaa_stations_all = Bpfile(station_bp_file, cols=5).st_id
 
     stations_groups = {
-         # 'Additional': noaa_stations_all[-7:],
+        # 'Additional': noaa_stations_all[-7:],
         'Florida': noaa_stations_all[:10],
         'Atlantic': noaa_stations_all[10:29],
-        'GoME': noaa_stations_all[29:39], 'GoMX_west': noaa_stations_all[41:60],
-        'GoMX_east': noaa_stations_all[60:80], 'Atlantic_inland1': noaa_stations_all[80:100],
-        'Atlantic_inland2': noaa_stations_all[100:120], 'GoMX_inland': noaa_stations_all[120:150],
+        'GoME': noaa_stations_all[29:39],
+        'GoMX_west': noaa_stations_all[41:60],
+        'GoMX_east': noaa_stations_all[60:80],
+        'Atlantic_inland1': noaa_stations_all[80:100], 'Atlantic_inland2': noaa_stations_all[100:120],
+        'GoMX_inland': noaa_stations_all[120:150],
         'Puerto_Rico': noaa_stations_all[150:164] + noaa_stations_all[39:41]  # last 2 are bermuda
     }
     default_datums = {
-        # 'Additional': 'NAVD',
+         # 'Additional': 'NAVD',
         'Florida': 'NAVD',
         'Atlantic': 'NAVD',
-        'GoME': 'NAVD', 'GoMX_west': 'NAVD',
-        'GoMX_east': 'NAVD', 'Atlantic_inland1': 'NAVD',
-        'Atlantic_inland2': 'NAVD', 'GoMX_inland': 'NAVD',
+        'GoME': 'NAVD',
+        'GoMX_west': 'NAVD',
+        'GoMX_east': 'NAVD',
+        'Atlantic_inland1': 'NAVD', 'Atlantic_inland2': 'NAVD',
+        'GoMX_inland': 'NAVD',
         'Puerto_Rico': 'MSL'
     }
     return [stations_groups, default_datums]
@@ -178,6 +183,7 @@ def write_stat(stats, fname):
 def plot_coastal_act(
     main_dict=None, events=None, region=None, datum=None, shift=None,
     other_runs=None,
+    low_pass_filter=False, low_pass_filter_cutoff_freq=2, low_pass_filter_order=4,
     nday_moving_average=None, outfilename_suffix=None,
     subplots_shape=None,
 ):
@@ -211,6 +217,10 @@ def plot_coastal_act(
     - other_shifts: list of shifts for the other runs
     - other_line_styles: list of line styles for the other runs
 
+    - low_pass_filter: whether to apply low-pass filter to the time series before plotting and calculating stats
+    - low_pass_filter_cutoff_freq: cutoff frequency for the low-pass filter in cycles per day (cpd)
+    - low_pass_filter_order: order of the low-pass Butterworth filter
+
     - nday_moving_average: number of days for moving average
     - outfilename_suffix: user-specified suffix for the output filename for information only
     """
@@ -235,6 +245,11 @@ def plot_coastal_act(
         print(f"nday_moving_average is not specified, using {nday_moving_average} as default")
     else:
         print(f"nday_moving_average is set to {nday_moving_average}")
+    
+    if low_pass_filter:
+        print(f"low_pass_filter is set to True, using cutoff frequency {low_pass_filter_cutoff_freq} cpd and order {low_pass_filter_order}")
+    else:
+        print("low_pass_filter is set to False")
 
     if outfilename_suffix is None:
         outfilename_suffix = ''
@@ -243,6 +258,8 @@ def plot_coastal_act(
 
     # -- additional inputs -----------------------------------------------------------------
     subplots_shape = [10, None]  # n per col
+    neglect_stations = ['8632837']  # Rappahannock Light, 
+
     # neglect stations, only for stats
     # neglect_stations =['8551910', '8548989', '8545240', '8539094', '8720226', '8652857', '8447435', '8575512', '8738043', '8729108']
     # neglect_stations = [
@@ -250,7 +267,6 @@ def plot_coastal_act(
     #     '8767816',  # Lake Charles
     #     '8423898', '8419317', '8410140'  # GoME
     # ]
-    neglect_stations = []  # Washington DC, Lake Charles
 
     var_str = 'MAE'  # for the scatter plot
     # -- end additional inputs ------------------------------------------------------------
@@ -274,6 +290,7 @@ def plot_coastal_act(
         hurricane_dict = json.load(d)
     station_bp_file = hurricane_dict[events[0]]['station_bp_file']
     datum_shift_file = hurricane_dict[events[0]]['datum_shift_file']
+    neglect_stations += hurricane_dict[events[0]].get('neglect_stations', [])
     with open(station_bp_file) as f:
         f.readline()
         n_station = int(f.readline().split()[0])
@@ -335,27 +352,29 @@ def plot_coastal_act(
         stats = pd.DataFrame()
         group_stats = ''
         other_group_stats = ['' for _ in other_runids]
+
+        # SCHISM's staout_1
+        mod = get_hindcast_elev(
+            model_start_day_str=model_start_day_str,
+            noaa_stations=None,
+            station_in_file=station_bp_file,
+            elev_out_file=elev_out_file,
+            station_in_subset=station_subset,
+        )
+        mod += shift
+        if datum_shift_file is not None:
+            mod = datum_shift(mod, datum_shift_file=datum_shift_file)
+
         for iter_groups, [group_name, stations] in enumerate(stations_groups.items()):
 
             filename_base = f'{event}_{group_name}_{default_datums[group_name]}'
 
+            # mask neglect stations for all subsequent analysis (plotting and stats)
             # stations = [station for station in stations if station not in neglect_stations]
 
             # if group_name != 'Puerto_Rico':
             #     continue
             print(f'\n\n\n processing {group_name} for {event}')
-            # SCHISM's staout_1
-            mod = get_hindcast_elev(
-                model_start_day_str=model_start_day_str,
-                noaa_stations=None,
-                station_in_file=station_bp_file,
-                elev_out_file=elev_out_file,
-                station_in_subset=station_subset,
-            )
-            
-            mod += shift
-            if datum_shift_file is not None:
-                mod = datum_shift(mod, datum_shift_file=datum_shift_file)
 
             # get obs
             [obs, datums, st_info] = get_coops_elev(
@@ -369,8 +388,9 @@ def plot_coastal_act(
             final_datums += datums
 
             # plot time series
-            stat, fig_ax = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str, stations,
-                                     datums, st_info, 'ts_' + filename_base, iplot=False, subplots_shape=subplots_shape,
+            stat, fig_ax = plot_elev(obs, mod, plot_start_day_str, plot_end_day_str, stations, datums, st_info,
+                                     plot_name='ts_' + filename_base, iplot=False, subplots_shape=subplots_shape,
+                                     low_pass_filter=low_pass_filter,
                                      nday_moving_average=nday_moving_average, label_strs=['obs', runid], figure_type='png')
             stats = pd.concat([stats, stat], axis=0, ignore_index=True)
             mean_stats_string = write_stat(stat, f'stats_{runid}_{group_name}.txt')
@@ -392,7 +412,9 @@ def plot_coastal_act(
 
                     other_stat, _ = plot_elev(obs, other_mod, plot_start_day_str, plot_end_day_str,
                                               stations_groups[group_name],
-                                              datums, st_info, None, iplot=False, nday_moving_average=nday_moving_average, subplots_shape=subplots_shape,
+                                              datums, st_info, None, iplot=False,
+                                              low_pass_filter=low_pass_filter,
+                                              nday_moving_average=nday_moving_average, subplots_shape=subplots_shape,
                                               fig_ax=fig_ax, line_styles=[None, other_line_style], label_strs=['obs', other_runid])
                     other_runs_stats[i] = pd.concat([other_runs_stats[i], other_stat], axis=0, ignore_index=True)
 
@@ -401,13 +423,13 @@ def plot_coastal_act(
                         other_group_stats[i] +=  ''.ljust(25) + mean_stats_string[0] + "\n"
                     other_group_stats[i] += f'{group_name.ljust(25)}: {mean_stats_string[1]}\n'
 
-                    fig_ax[0].savefig(f'compare_ts_{filename_base}.svg')
+                    fig_ax[0].savefig(f'compare_ts_{filename_base}.png')
 
         # ---------------------------------------------------------------------------------
         filename_base = f'{event}_{region}_{outfilename_suffix}'
         stats_scatter(stats=stats, var_str=var_str, region=region, plot_symbol_dict=plot_symbol_dict, filename=filename_base)
 
-        # mask neglected stations
+        # mask neglected stations for overall stats
         mask = ~stats['station_id'].isin(neglect_stations)
 
         mean_stats_string = write_stat(stats[mask], f'stats_{runid}_{filename_base}.txt')
@@ -448,7 +470,7 @@ def plot_coastal_act(
 if __name__ == "__main__":
     # plot_coastal_act(
     #     main_dict='/sciclone/home/feiye/spp/Plot/stofs3d_a1.json',
-    #     events=['2005_v7p3'], datum='NAVD', shift=0.0,
+    #     events=['2025_v7p3'], datum='NAVD', shift=0.0,
     #     other_runs={
     #         # 'R15b4_v7': {
     #         #     'dict_file': '/sciclone/home/feiye/spp/Plot/stofs3d_a3.json',
@@ -460,14 +482,14 @@ if __name__ == "__main__":
 
     plot_coastal_act(
         main_dict='/sciclone/home/feiye/spp/Plot/stofs3d_a2.json',
-        events=['EnOI_2008'], datum='NAVD', shift=0.0,
-        other_runs={
-            # 'EnOI': {
-            #     'dict_file': '/sciclone/home/feiye/spp/Plot/stofs3d_a3.json',
-            #     'shift': 0.0,
-            #     'line_style': '--g',
-            # }
-        }
+        events=['EnOI_Total_Filtered'], datum='NAVD', shift=0.0,
+        # other_runs={
+        #     'EnOI_Total': {
+        #         'dict_file': '/sciclone/home/feiye/spp/Plot/stofs3d_a2.json',
+        #         'shift': 0.0, 'line_style': '--g',
+        #     }
+        # }
+        low_pass_filter=True,
     )
 
     print("Done!")

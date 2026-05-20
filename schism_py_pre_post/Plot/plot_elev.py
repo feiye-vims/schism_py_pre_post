@@ -279,6 +279,7 @@ def plot_elev(
     noaa_stations, datum_list, station_info,
     plot_name, iplot=True, subplots_shape=(10, None),
     fig_ax=None, line_styles=['r.', 'k'], font_size=6,
+    low_pass_filter=False,
     nday_moving_average=0, demean=False,
     label_strs=[], label_rot=10, figure_type='png'
 ):
@@ -350,10 +351,12 @@ def plot_elev(
             obs_df = mod_df * np.nan
 
         my_comp = obs_mod_comp(obs=pd.DataFrame({'datetime': obs_df.index, 'value': obs_df}),
-                               mod=pd.DataFrame({'datetime': mod_df.index, 'value': mod_df}))
+                               mod=pd.DataFrame({'datetime': mod_df.index, 'value': mod_df}),)
 
         if nday_moving_average > 0:
             my_comp.get_moving_average(nday_avg=nday_moving_average)
+        if low_pass_filter:
+            my_comp.apply_low_pass_filter()
 
         my_comp.cal_stats()
 
@@ -364,6 +367,9 @@ def plot_elev(
 
         obs_maxs.append(max(my_comp.obs_df['value']))
         mod_maxs.append(max(my_comp.mod_df['value']))
+        if datum_list[n] != "NAVD":
+            print(f'Warning: {st} is in {datum_list[n]}, not NAVD, replacing RMSE with ubRMSE')
+            my_comp.stats_dict['RMSE'] = my_comp.stats_dict['ubRMSE']
         stats.append(my_comp.stats_dict)
 
         datum_str = "NAVD 88" if datum_list[n] == "NAVD" else datum_list[n]
@@ -392,6 +398,8 @@ def plot_elev(
             ax[n].set_ylim([-2, 2])
         
         # ax[n].set_ylim([1, 9])
+        if i != n:
+            raise Exception(f"n {n} does not match i {i}, check subplot shape and n increment")
                        
         n = n + 1
 
@@ -794,6 +802,10 @@ def plot_mixed_elev(case_name, station_json_fname):
 
 
 if __name__ == "__main__":
+    plot_mixed_elev(
+        case_name='Missi_2023',
+        station_json_fname='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station.json'
+    )
     plot_mixed_elev(
         case_name='LA_reforecast_repos_nontidal_paper_v8',
         station_json_fname='/sciclone/data10/feiye/schism_py_pre_post/schism_py_pre_post/Plot/station2.json'

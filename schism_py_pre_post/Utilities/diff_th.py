@@ -5,6 +5,14 @@ from pylib_experimental.schism_file import TimeHistory, SourceSinkIn
 
 
 def main():
+    th1 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/Bnd_interior_source_sink2/vsource.th')
+    th2 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v8/I09j/Source_sink/Bnd_interior_source_sink/vsource.th')
+    assert th1 == th2, "TimeHistory files differ!"
+    diff = th1.data - th2.data
+    print("Max diff:", max(diff.flatten()))
+
+    
+
     ssin = SourceSinkIn.from_file('/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/Source_sink/original_source_sink/source_sink.in')
     th1 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v8/I15n_v7/Source_sink/USGS_adjusted_sources/adjusted_vsource.th', start_time_str='2017-12-01 00:00:00')
     th2 = TimeHistory.from_file('/sciclone/schism10/feiye/STOFS3D-v7.3/I18/Source_sink/USGS_adjusted_sources/adjusted_vsource.th', start_time_str='2017-12-01 00:00:00')

@@ -290,8 +290,12 @@ def get_coops_elev(
             with open(cache_filename, 'rb') as f:  # Python 3: open(..., 'rb')
                 try:
                     this_noaa_df, this_datum, station_data = pickle.load(f)
-                    print(f'Existing obs data read from {cache_filename}')
-                    cache_success = True
+                    if station_data.id != str(st):
+                        print(f"Station ID mismatch in cache file {cache_filename}")
+                        cache_success = False
+                    else:
+                        print(f'Existing obs data read from {cache_filename}')
+                        cache_success = True
                 except ModuleNotFoundError as e:
                     print(f"Failed to read from cache: {e}")
                     cache_success = False
@@ -305,11 +309,11 @@ def get_coops_elev(
                     if retrieve_method in ['native', 'noaa_coops', 'searvey']:  # searvey has problems with station info, use noaa_coops
                         station_data = noaa_coops.Station(st)
                         break  # Success, exit loop
-                    elif retrieve_method == 'searvey':  # searvey, convert into the same format as noaa_coops
-                        station_data = COOPS_Station(int(st))
-                        lon_lat = np.squeeze(np.array(station_data.location.coords))
-                        setattr(station_data, 'lat_lon', {'lat': lon_lat[-1], 'lon': lon_lat[0]})
-                        break  # Success, exit loop
+                    # elif retrieve_method == 'searvey':  # searvey, convert into the same format as noaa_coops
+                    #     station_data = COOPS_Station(int(st))
+                    #     lon_lat = np.squeeze(np.array(station_data.location.coords))
+                    #     setattr(station_data, 'lat_lon', {'lat': lon_lat[-1], 'lon': lon_lat[0]})
+                    #     break  # Success, exit loop
                     else:
                         raise ValueError(f"retrieve_method '{retrieve_method}' not supported")
                 except (ConnectionError, TimeoutError, JSONDecodeError) as e:
@@ -319,6 +323,8 @@ def get_coops_elev(
                     raise  # Re-raise if it's a ValueError as it's likely not retryable
 
                 time.sleep(2 ** ntry)  # Exponential backoff
+            else:
+                raise ConnectionError(f"Failed to retrieve station info for {st} after multiple attempts")
 
             # --------------------------get data--------------------------
             this_noaa_df = None
@@ -434,5 +440,18 @@ def sample_get_station_info_from_bp():
 
 
 if __name__ == '__main__':
+    data = get_coops_elev(
+        begin_time='2023-09-01 00:00:00', end_time='2024-02-26 23:59:59',
+        noaa_stations=['8760922'], retrieve_method='noaa_coops',
+        default_datum='NAVD', cache_folder='/sciclone/schism10/feiye/Cache/',
+    )
+    t = np.array(data[2][0].data['t'])
+    elev = data[2][0].data['v']
+    from matplotlib import pyplot as plt
+    plt.plot(t, elev)
+    plt.show()
+    t_seconds = (t - t[0]) / np.timedelta64(1, 's')
+    np.savetxt('/sciclone/schism10/feiye/STOFS3D-v8/I38/coops_8760922_elev.txt', np.c_[t_seconds, elev], fmt='%.2f %.4f')
+
     sample_get_station_info_from_bp()
     print('Done')

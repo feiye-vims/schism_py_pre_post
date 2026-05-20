@@ -1,4 +1,30 @@
 {
+    "Missi_2023": {
+        "name": "Missi_2023",
+        "plot_start_day_str": "2023-08-13 00:00:00",
+        "plot_end_day_str": "2023-09-30 00:00:00",
+        "model_start_day_str": "2023-04-13 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/ICOGS/BPfiles/Missi_Ida2_moved.bp",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O33o/elevation.Missi_Ida2_moved.dat.33o",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/Missi/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "stations": {
+            "01160": {"source": "USACE", "to_NAVD88_feet": -0.71},
+            "01220": {"source": "USACE", "to_NAVD88_feet": -0.88},
+            "01280": {"source": "USACE", "to_NAVD88_feet": -0.70},
+            "8761955": {"source": "COOPS", "to_NAVD88_feet": 0},
+            "01390": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01400": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01440": {"source": "USACE", "to_NAVD88_feet": -0.12},
+            "01480": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01515": {"source": "USACE", "to_NAVD88_feet": 0},
+            "8760721": {"source": "COOPS", "to_NAVD88_feet": 0.78},
+            "01545": {"source": "USACE", "to_NAVD88_feet": 0},
+            "01850": {"source": "USACE", "to_NAVD88_feet": 0},
+            "8760922": {"source": "COOPS", "to_NAVD88_feet": 1.03}
+        },
+        "model_datum": "xgeoid20b"
+    },
     "Missi_Ida2": {
         "name": "Missi_Ida2",
         "plot_start_day_str": "2021-08-13 00:00:00",

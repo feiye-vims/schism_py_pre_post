@@ -162,11 +162,11 @@ def sample_download_call():
         timestamps = build_timestamps("201612010000", "201701010400", step_hours=1)
     """
 
-    timestamps = build_timestamps("201601010000", "201701010000", step_hours=1)
+    timestamps = build_timestamps("202109250000", "202109250100", step_hours=1)
 
     fetch_nwm_snapshots(
         timestamps=timestamps,
-        file_types=["CHRTOUT"],  # ["LDASOUT"],  # or "ALL"
+        file_types="LDASOUT",  # ["CHRTOUT"],  # ["LDASOUT"],  # or "ALL"
         outdir="/sciclone/schism10/feiye/STOFS3D-v8/NWM/",
         dry_run=False
     )

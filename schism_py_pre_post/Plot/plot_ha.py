@@ -321,17 +321,22 @@ def plot_ha(event=None, color_groups=None, cache: bool = False):
 
 if __name__ == '__main__':
     project_json = './Plot/ha.json'
-    event_name = 'EX62'
+    event_names = [
+        'F2015', 'F2024', 'F2023', 'F2022', 'F2021', 'F2020', 'F2019', 'F2018', 'F2017', 'F2016',
+        'F2014', 'F2013', 'F2012', 'F2011', 'F2010', 'F2009', 'F2008', 'F2007', 'F2006', 'F2005',
+        'F2004', 'F2003', 'F2002', 'F2001', 'F2000',
+    ]
 
-    with open(project_json, 'r', encoding='utf-8') as f:
-        main_dict = json.load(f)
-    event = main_dict[event_name]
-    
-    # group stations by region
-    station_groups = get_stations_from_groups(
-        grouping_polygon_shpfile='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/station_group_polygons.shp',
-        station_bp_file=event['station_bp_file']
-    )
+    for event_name in event_names:
+        with open(project_json, 'r', encoding='utf-8') as f:
+            main_dict = json.load(f)
+        event = main_dict[event_name]
+        
+        # group stations by region
+        station_groups = get_stations_from_groups(
+            grouping_polygon_shpfile='/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/station_group_polygons.shp',
+            station_bp_file=event['station_bp_file']
+        )
 
-    plot_ha(event, color_groups=station_groups, cache=True)
-    print("done!")
+        plot_ha(event, color_groups=station_groups, cache=False)
+        print("done!")

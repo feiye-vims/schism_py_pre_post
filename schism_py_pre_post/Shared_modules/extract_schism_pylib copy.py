@@ -33,17 +33,17 @@ from pylib_experimental.schism_file import TimeHistory
 #     '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/coops_test.bp'
 # ]
 
-RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v7.3/r2017/'
+RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v7.3/R22w/'
 output_files = [
-    '/sciclone/schism10/feiye/STOFS3D-v7.3/O2017/elevation.stofs3d_atl_202512.dat',
+    '/sciclone/schism10/feiye/STOFS3D-v7.3/O22w/elevation.Missi_Ida2_moved.dat',
 ]
 bpfile = [
-    '/sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202512.bp'
+    '/sciclone/schism10/feiye/ICOGS/BPfiles/Missi_Ida2_moved.bp'
 ]
 # ---------------------------------------
 
 start_stack = 1
-end_stack = 36
+end_stack = 396
 for bpfile, output_file in zip(bpfile, output_files):
     data = read_schism_output(run=RUN_DIR, varname=['elev'], xyz=bpfile, stacks=np.arange(start_stack, end_stack+1))
 

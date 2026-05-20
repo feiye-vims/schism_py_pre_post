@@ -1,1 +1,0 @@
-/sciclone/home/feiye/s1/CIROH/Observation/Mississippi_Salt_Intrusion/CTD/Processed_data/Scripts/plot_mississippi_transect.py

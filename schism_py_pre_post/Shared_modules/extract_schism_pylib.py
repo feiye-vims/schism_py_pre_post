@@ -33,19 +33,27 @@ from pylib_experimental.schism_file import TimeHistory
 #     '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/coops_test.bp'
 # ]
 
-RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7.1/'
+# RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7.1/'
+# output_files = [
+#     '/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/elevation.USGS_station_LA_repositioned_nontidal_v7p1_paper.dat',
+#     # '/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/elevation.USGS_station_LA_tidal.dat',
+# ]
+# bpfile = [
+#     '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v7p1_paper.bp',
+#     # '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_tidal.bp',
+# ]
+
+RUN_DIR = '/sciclone/schism10/feiye/STOFS3D-v8/R34/'
 output_files = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/elevation.USGS_station_LA_repositioned_nontidal_v7p1_paper.dat',
-    # '/sciclone/schism10/feiye/STOFS3D-v8/O15b3_v7.1/elevation.USGS_station_LA_tidal.dat',
+    '/sciclone/schism10/feiye/STOFS3D-v8/O34/elevation.Missi_Ida2_moved.dat.34'
 ]
 bpfile = [
-    '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_repositioned_nontidal_v7p1_paper.bp',
-    # '/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/USGS_station_LA_tidal.bp',
+    '/sciclone/schism10/feiye/ICOGS/BPfiles/Missi_Ida2_moved.bp'
 ]
 # ---------------------------------------
 
-start_stack = 1
-end_stack = 35
+start_stack = 81
+end_stack = 250
 for bpfile, output_file in zip(bpfile, output_files):
     data = read_schism_output(run=RUN_DIR, varname=['elevation'], xyz=bpfile, stacks=np.arange(start_stack, end_stack+1))
 

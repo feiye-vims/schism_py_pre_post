@@ -145,6 +145,267 @@
         "cdir": "$cdir/webdata/html/yinglong/feiye/STOFS3D-v7/R12/",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
     },
+    "F2000": {
+        "name": "F2000",
+        "plot_start_day_str": "2000-01-01 00:00:00",
+        "plot_end_day_str": "2001-01-01 00:00:00",
+        "model_start_day_str": "1999-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2000/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2000/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2001": {
+        "name": "F2001",
+        "plot_start_day_str": "2001-01-01 00:00:00",
+        "plot_end_day_str": "2002-01-01 00:00:00",
+        "model_start_day_str": "2000-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2001/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2001/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2002": {
+        "name": "F2002",
+        "plot_start_day_str": "2002-01-01 00:00:00",
+        "plot_end_day_str": "2003-01-01 00:00:00",
+        "model_start_day_str": "2001-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2002/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2002/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2003": {
+        "name": "F2003",
+        "plot_start_day_str": "2003-01-01 00:00:00",
+        "plot_end_day_str": "2004-01-01 00:00:00",
+        "model_start_day_str": "2002-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2003/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2003/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2004": {
+        "name": "F2004",
+        "plot_start_day_str": "2004-01-01 00:00:00",
+        "plot_end_day_str": "2005-01-01 00:00:00",
+        "model_start_day_str": "2003-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2004/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2004/",
+        "neglect_stations": ["8518750", "8779748", "8658163", "8775296"],
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2005": {
+        "name": "F2005",
+        "plot_start_day_str": "2005-01-01 00:00:00",
+        "plot_end_day_str": "2006-01-01 00:00:00",
+        "model_start_day_str": "2004-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2005/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2005/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2006": {
+        "name": "F2006",
+        "plot_start_day_str": "2006-01-01 00:00:00",
+        "plot_end_day_str": "2007-01-01 00:00:00",
+        "model_start_day_str": "2005-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2006/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2006/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2007": {
+        "name": "F2007",
+        "plot_start_day_str": "2007-01-01 00:00:00",
+        "plot_end_day_str": "2008-01-01 00:00:00",
+        "model_start_day_str": "2006-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2007/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2007/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2008": {
+        "name": "F2008",
+        "plot_start_day_str": "2008-01-01 00:00:00",
+        "plot_end_day_str": "2009-01-01 00:00:00",
+        "model_start_day_str": "2007-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2008/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2008/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2009": {
+        "name": "F2009",
+        "plot_start_day_str": "2009-01-01 00:00:00",
+        "plot_end_day_str": "2010-01-01 00:00:00",
+        "model_start_day_str": "2008-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2009/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2009/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2010": {
+        "name": "F2010",
+        "plot_start_day_str": "2010-01-01 00:00:00",
+        "plot_end_day_str": "2011-01-01 00:00:00",
+        "model_start_day_str": "2009-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2010/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2010/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2011": {
+        "name": "F2011",
+        "plot_start_day_str": "2011-01-01 00:00:00",
+        "plot_end_day_str": "2012-01-01 00:00:00",
+        "model_start_day_str": "2010-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2011/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2011/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2012": {
+        "name": "F2012",
+        "plot_start_day_str": "2012-01-01 00:00:00",
+        "plot_end_day_str": "2013-01-01 00:00:00",
+        "model_start_day_str": "2011-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2012/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2012/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2013": {
+        "name": "F2013",
+        "plot_start_day_str": "2013-01-01 00:00:00",
+        "plot_end_day_str": "2014-01-01 00:00:00",
+        "model_start_day_str": "2012-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2013/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2013/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2014": {
+        "name": "F2014",
+        "plot_start_day_str": "2014-01-01 00:00:00",
+        "plot_end_day_str": "2015-01-01 00:00:00",
+        "model_start_day_str": "2013-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2014/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2014/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2015": {
+        "name": "F2015",
+        "plot_start_day_str": "2015-01-01 00:00:00",
+        "plot_end_day_str": "2016-01-01 00:00:00",
+        "model_start_day_str": "2014-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2015/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2015/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2016": {
+        "name": "F2016",
+        "plot_start_day_str": "2016-01-01 00:00:00",
+        "plot_end_day_str": "2017-01-01 00:00:00",
+        "model_start_day_str": "2015-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2016/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2016/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2017": {
+        "name": "F2017",
+        "plot_start_day_str": "2017-01-01 00:00:00",
+        "plot_end_day_str": "2018-01-01 00:00:00",
+        "model_start_day_str": "2016-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2017/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2017/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2018": {
+        "name": "F2018",
+        "plot_start_day_str": "2018-01-01 00:00:00",
+        "plot_end_day_str": "2019-01-01 00:00:00",
+        "model_start_day_str": "2017-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2018/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2018/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2019": {
+        "name": "F2019",
+        "plot_start_day_str": "2019-01-01 00:00:00",
+        "plot_end_day_str": "2020-01-01 00:00:00",
+        "model_start_day_str": "2018-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2019/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2019/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2020": {
+        "name": "F2020",
+        "plot_start_day_str": "2020-01-01 00:00:00",
+        "plot_end_day_str": "2021-01-01 00:00:00",
+        "model_start_day_str": "2019-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2020/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2020/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2021": {
+        "name": "F2021",
+        "plot_start_day_str": "2021-01-01 00:00:00",
+        "plot_end_day_str": "2022-01-01 00:00:00",
+        "model_start_day_str": "2020-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2021/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2021/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2022": {
+        "name": "F2022",
+        "plot_start_day_str": "2022-01-01 00:00:00",
+        "plot_end_day_str": "2023-01-01 00:00:00",
+        "model_start_day_str": "2021-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2022/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2022/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2023": {
+        "name": "F2023",
+        "plot_start_day_str": "2023-01-01 00:00:00",
+        "plot_end_day_str": "2024-01-01 00:00:00",
+        "model_start_day_str": "2022-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2023/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2023/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2024": {
+        "name": "F2024",
+        "plot_start_day_str": "2024-01-01 00:00:00",
+        "plot_end_day_str": "2025-01-01 00:00:00",
+        "model_start_day_str": "2023-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2024/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2024/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
+    "F2025": {
+        "name": "F2025",
+        "plot_start_day_str": "2025-01-01 00:00:00",
+        "plot_end_day_str": "2026-01-01 00:00:00",
+        "model_start_day_str": "2024-12-31 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/TEMP/EnOI/run01q/station.in",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2025/elevation.stofs3d_atl_202501.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/F2025/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31}
+    },
     "All":{
         "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O14b/PostP/station.in",
         "box": {"W": -100, "E": -60, "S": 8, "N": 48}
