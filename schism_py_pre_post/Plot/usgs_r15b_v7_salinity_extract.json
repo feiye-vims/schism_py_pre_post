@@ -1,0 +1,10 @@
+{
+    "name": "O15b_v7_salinity",
+    "output_dir": "/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7",
+    "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7/salinity.usgs_sal_la.dat",
+    "station_bp_file": "/sciclone/schism10/feiye/CIROH/Observation/USGS_Salinity/usgs_salinity_best_20180305_20180409_gpkg/mean_xyz.bp",
+    "extract": {
+        "var_name": "salinity",
+        "nproc": 16
+    }
+}

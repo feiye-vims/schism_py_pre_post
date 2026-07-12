@@ -295,19 +295,7 @@ def plot_coastal_act(
         f.readline()
         n_station = int(f.readline().split()[0])
     station_subset = range(n_station)
-
-    other_subsets = []
-    other_station_bp_files = []
-    for other_dict_file in other_dicts_files:
-        with open(other_dict_file) as d:
-            other_dict = json.load(d)
-        other_bp_file = other_dict[events[0]]['station_bp_file']
-        other_neglect_stations = other_dict[events[0]].get('neglect_stations', [])
-        with open(other_bp_file) as f:
-            f.readline()
-            n_station = int(f.readline().split()[0])
-        other_subsets.append(range(n_station))
-        other_station_bp_files.append(other_bp_file)
+    other_subsets = [range(n_station)]
 
     for event in events:
         dict_item = hurricane_dict[event]
@@ -411,12 +399,11 @@ def plot_coastal_act(
             group_stats += f'{group_name.ljust(25)}: {mean_stats_string[1]}\n'
 
             if len(other_dicts) > 0:
-                for i, [other_runid, other_dict, other_line_style, other_shift, other_subset, other_bp_file] in enumerate(
-                    zip(other_runids, other_dicts, other_line_styles, other_shifts, other_subsets, other_station_bp_files)):
+                for i, [other_runid, other_dict, other_line_style, other_shift, other_subset] in enumerate(zip(other_runids, other_dicts, other_line_styles, other_shifts, other_subsets)):
                     other_mod = get_hindcast_elev(
                         model_start_day_str=other_dict[event]['model_start_day_str'],
                         noaa_stations=None,
-                        station_in_file=other_bp_file,
+                        station_in_file=station_bp_file,
                         elev_out_file=other_dict[event]['elev_out_file'],
                         station_in_subset=other_subset
                     )
@@ -481,17 +468,17 @@ def plot_coastal_act(
 
 
 if __name__ == "__main__":
-    plot_coastal_act(
-        main_dict='/sciclone/home/feiye/spp/Plot/stofs3d_a3.json',
-        events=['2018_v7'], datum='NAVD', shift=0.0,
-        other_runs={
-            'R23e': {
-                'dict_file': '/sciclone/home/feiye/spp/Plot/stofs3d_a1.json',
-                'shift': 0.0,
-                'line_style': '--c',
-            }
-        }
-    )
+    # plot_coastal_act(
+    #     main_dict='/sciclone/home/feiye/spp/Plot/stofs3d_a1.json',
+    #     events=['2025_v7p3'], datum='NAVD', shift=0.0,
+    #     other_runs={
+    #         # 'R15b4_v7': {
+    #         #     'dict_file': '/sciclone/home/feiye/spp/Plot/stofs3d_a3.json',
+    #         #     'shift': 0.0,
+    #         #     'line_style': '--g',
+    #         # }
+    #     }
+    # )
 
     plot_coastal_act(
         main_dict='/sciclone/home/feiye/spp/Plot/stofs3d_a2.json',

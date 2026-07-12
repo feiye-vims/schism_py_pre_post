@@ -1,0 +1,14 @@
+{
+  "runs": [
+    {
+      "name": "R23",
+      "var_name": "elevation",
+      "run_dir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23",
+      "output_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23/elevation.stofs3d_atl_202503.dat",
+      "bpfile": "/sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202503.bp",
+      "start_stack": 1,
+      "end_stack": 220,
+      "stack_type": "out2d"
+    }
+  ]
+}

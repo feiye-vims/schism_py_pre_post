@@ -1,0 +1,53 @@
+{
+    "All": {
+        "box": {
+            "W": -100,
+            "E": -60,
+            "S": 8,
+            "N": 48
+        }
+    },
+    "events": {
+        "2018_hindcast": {
+            "plot_start_day_str": "2017-12-01 00:00:00",
+            "plot_end_day_str": "2018-04-01 00:00:00",
+            "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/R23a/station.in",
+            "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
+            "box": {
+                "W": -92,
+                "E": -88,
+                "S": 29,
+                "N": 31
+            },
+            "default_datum": "NAVD",
+            "runs": [
+                {
+                    "name": "2018_v7p3_2D",
+                    "model_start_day_str": "2017-12-01 00:00:00",
+                    "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23e/staout_1",
+                    "output_dir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23e/",
+                    "shift": 0.0,
+                    "line_style": "k"
+                },
+                {
+                    "name": "R15b4_v7",
+                    "model_start_day_str": "2017-12-01 00:00:00",
+                    "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202503.bp",
+                    "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b4_v7/elevation.stofs3d_atl_202503.dat",
+                    "output_dir": "/sciclone/schism10/feiye/STOFS3D-v8/O15b4_v7/",
+                    "shift": 0.0,
+                    "line_style": "--g"
+                },
+                {
+                    "name": "R23",
+                    "model_start_day_str": "2017-12-01 00:00:00",
+                    "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202503.bp",
+                    "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23/elevation.stofs3d_atl_202503.dat",
+                    "output_dir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23/",
+                    "shift": 0.0,
+                    "line_style": "--g"
+                }
+            ]
+        }
+    }
+}

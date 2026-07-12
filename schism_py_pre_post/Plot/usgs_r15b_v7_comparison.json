@@ -1,0 +1,54 @@
+{
+    "comparisons": [
+        {
+            "name": "salinity_O15b_v7_USGS",
+            "obs_dir": "/sciclone/schism10/feiye/CIROH/Observation/USGS_Salinity/usgs_salinity_best_20180305_20180409_gpkg",
+            "bp_file": "/sciclone/schism10/feiye/CIROH/Observation/USGS_Salinity/usgs_salinity_best_20180305_20180409_gpkg/mean_xyz.bp",
+            "model_start": "2018-03-05 00:00:00",
+            "model_time_unit": "days",
+            "variable": "salinity",
+            "ylabel": "Salinity (PSU)",
+            "start": "2018-03-05",
+            "end": "2018-04-09",
+            "overview_layout": [6, 3],
+            "overview_ylim": [0, 35],
+            "output_dir": "/sciclone/schism10/feiye/STOFS3D-v8/Comparisons/salinity_O15b_v7_USGS",
+            "runs": [
+                {
+                    "name": "O15b_v7",
+                    "output_dir": "/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7",
+                    "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7/salinity.usgs_sal_la.dat",
+                    "extract": {
+                        "var_name": "salinity",
+                        "nproc": 16
+                    }
+                }
+            ]
+        },
+        {
+            "name": "temperature_O15b_v7_USGS",
+            "obs_dir": "/sciclone/schism10/feiye/CIROH/Observation/USGS_Temperature/usgs_temperature_20180305_20180409_gpkg",
+            "bp_file": "/sciclone/schism10/feiye/CIROH/Observation/USGS_Temperature/usgs_temperature_20180305_20180409_gpkg/mean_xyz.bp",
+            "model_start": "2018-03-05 00:00:00",
+            "model_time_unit": "days",
+            "variable": "temperature",
+            "ylabel": "Temperature (degC)",
+            "start": "2018-03-05",
+            "end": "2018-04-09",
+            "overview_layout": [6, 3],
+            "overview_ylim": [0, 35],
+            "output_dir": "/sciclone/schism10/feiye/STOFS3D-v8/Comparisons/temperature_O15b_v7_USGS",
+            "runs": [
+                {
+                    "name": "O15b_v7",
+                    "output_dir": "/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7",
+                    "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7/temperature.usgs_temperature.dat",
+                    "extract": {
+                        "var_name": "temperature",
+                        "nproc": 16
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -132,12 +132,12 @@
         "box": {"W": -92, "E": -88, "S": 29, "N": 31},
         "default_datum": "NAVD"
     },
-    "2018_v8": {
-        "name": "2018_v8",
-        "plot_start_day_str": "2017-12-01 00:00:00",
-        "plot_end_day_str": "2018-01-10 00:00:00",
+    "2018_v7": {
+        "name": "2018_v7.3_3D",
+        "plot_start_day_str": "2018-09-01 00:00:00",
+        "plot_end_day_str": "2018-11-01 00:00:00",
         "model_start_day_str": "2017-12-01 00:00:00",
-        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v8/R15a_v7/station.in",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202503.bp",
         "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
         "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b4_v7/elevation.stofs3d_atl_202503.dat",
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v8/O15b4_v7/",

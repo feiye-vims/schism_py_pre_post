@@ -2,11 +2,13 @@ import os
 from pylib_experimental.schism_file import cread_schism_hgrid as read_schism_hgrid
 from copy import deepcopy
 import numpy as np
-from pylib import grd2sms  #, read_schism_hgrid
+from pylib import grd2sms, sms2grd  #, read_schism_hgrid
 
-gd1 = read_schism_hgrid('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v32/v32b.gr3')
-gd2 = read_schism_hgrid('/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100b/hgrid.gr3')
-output_dir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v32/diff'
+# gd1 = read_schism_hgrid('/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v32/v32b.gr3')
+# gd2 = read_schism_hgrid('/sciclone/schism10/hjyoo/task/task10_Atlantic/RUN100b/hgrid.gr3')
+gd1 = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/Bathy_edit/hgrid_dem_edit.2dm')
+gd2 = sms2grd('/sciclone/schism10/Hgrid_projects/STOFS3D-v7.4/v32e/hgrid.2dm')
+output_dir = '/sciclone/schism10/Hgrid_projects/STOFS3D-v8/v32e/diff'
 
 os.makedirs(output_dir, exist_ok=True)
 

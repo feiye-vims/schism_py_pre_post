@@ -1,0 +1,10 @@
+{
+    "name": "O15b_v7_temperature",
+    "output_dir": "/sciclone/schism10/feiye/STOFS3D-v8/R15b_v7",
+    "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v8/O15b_v7/temperature.usgs_temperature.dat",
+    "station_bp_file": "/sciclone/schism10/feiye/CIROH/Observation/USGS_Temperature/usgs_temperature_20180305_20180409_gpkg/mean_xyz.bp",
+    "extract": {
+        "var_name": "temperature",
+        "nproc": 16
+    }
+}

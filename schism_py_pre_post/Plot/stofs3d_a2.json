@@ -37,6 +37,18 @@
         "cdir": "/sciclone/schism10/feiye/STOFS3D-v7/Outputs/O15a/",
         "box": {"W": -92, "E": -88, "S": 29, "N": 31}
     },
+    "2018_v7": {
+        "name": "2018_v7p3_2D",
+        "plot_start_day_str": "2017-12-01 00:00:00",
+        "plot_end_day_str": "2018-02-01 00:00:00",
+        "model_start_day_str": "2017-12-01 00:00:00",
+        "station_bp_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/BPfiles/stofs3d_atl_202503.bp",
+        "datum_shift_file": "/sciclone/schism10/feiye/STOFS3D-v8/BPfiles/navd2xgeoid_shift.txt",
+        "elev_out_file": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23/elevation.stofs3d_atl_202503.dat",
+        "cdir": "/sciclone/schism10/feiye/STOFS3D-v7.3/O23/",
+        "box": {"W": -92, "E": -88, "S": 29, "N": 31},
+        "default_datum": "NAVD"
+    },
     "PreFlorence": {
         "name": "PreFlorence",
         "plot_start_day_str": "2018-08-20 00:00:00",

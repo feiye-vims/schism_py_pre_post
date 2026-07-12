@@ -121,134 +121,229 @@ def plot_transect_filled(
     # If user gave x in decreasing order (river miles), keep that orientation:
     if np.any(np.diff(x) < 0):
         ax.invert_xaxis()
+    
+    return ax
 
 
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 
-def cal_intrusion_length(
+def cal_intrusion_length_from_mouth(
         x_native,
         salinity_native,
         threshold=0.5,
-        dx_reg=250.0,           # target regular x-grid spacing (m)
-        smooth_km=1.0,          # spatial smoothing window (km)
-        min_consecutive=10,      # require at least N consecutive points above threshold
+        dx_reg=250.0,
+        smooth_km=1.0,
+        min_consecutive=10,
         temporal_smooth_hours=12,
-        dt_hours=1
+        dt_hours=1,
+        return_front_x=False,
     ):
     """
-    Calculate robust salt intrusion length along a transect.
+    Calculate salt intrusion length along a transect.
+
+    Definition
+    ----------
+    x_native must be ordered from upstream/fresh to downstream/mouth/salty:
+
+        x_native[0]  = upstream end
+        x_native[-1] = mouth / downstream end
+
+    The returned intrusion length is measured from the mouth upstream:
+
+        intrusion_length = x_mouth - x_front
+
+    where x_front is the accepted upstream salinity front, defined by the
+    threshold salinity.
+
+    Therefore:
+        - no salt anywhere       -> intrusion_length = 0
+        - entire transect salty  -> intrusion_length = x_mouth - x_upstream
 
     Parameters
     ----------
-    x_native : 1D array (npoints,)
-        Cumulative distance along the transect (in meters). Must be monotonic.
-    salinity_native : 2D array (nt, npoints)
-        Bottom salinity along transect.
+    x_native : 1D array, shape (npoints,)
+        Cumulative distance along transect in meters, increasing from
+        upstream to downstream/mouth.
+
+    salinity_native : 2D array, shape (nt, npoints)
+        Bottom salinity along the transect.
+
     threshold : float
-        Salinity threshold defining the upstream limit (e.g., 0.5 psu).
+        Salinity threshold defining salt presence, e.g. 0.5 psu or 4 psu.
+
     dx_reg : float
-        Spacing for the regular x-grid (meters). Recommended 200–300 m.
+        Regular-grid spacing in meters.
+
     smooth_km : float
-        Spatial smoothing window (km) for salinity along x.
+        Spatial smoothing window in km.
+
     min_consecutive : int
-        Minimum consecutive points >= threshold needed to accept.
+        Minimum number of consecutive fresh points required upstream of the
+        front. This suppresses isolated fresh/salty noise.
+
     temporal_smooth_hours : float or None
-        If not None, apply running mean to L(t) with this window size.
+        If not None, apply running mean to intrusion_length.
+
     dt_hours : float or None
-        Time step in hours (needed for temporal smoothing).
+        Model output interval in hours.
+
+    return_front_x : bool
+        If True, also return the front location x_front.
 
     Returns
     -------
-    intrusion_length : 1D array (nt,)
-        Smoothed time series of intrusion length (same units as x_native).
+    intrusion_length : 1D array, shape (nt,)
+        Salt intrusion length measured from the mouth, in same units as x_native.
+
+    front_x : 1D array, shape (nt,), optional
+        Accepted salinity-front location in x coordinates.
     """
 
+    x_native = np.asarray(x_native)
+    salinity_native = np.asarray(salinity_native)
+
+    if salinity_native.ndim != 2:
+        raise ValueError("salinity_native must be 2D with shape (nt, npoints).")
+
     nt, npoints = salinity_native.shape
+
+    if x_native.ndim != 1:
+        raise ValueError("x_native must be 1D.")
+
+    if x_native.size != npoints:
+        raise ValueError("x_native.size must match salinity_native.shape[1].")
+
+    if not np.all(np.diff(x_native) > 0):
+        raise ValueError(
+            "x_native must be strictly increasing from upstream/fresh "
+            "to downstream/mouth/salty."
+        )
 
     # ---------------------------------------------------------
     # 1. Construct regular x-grid
     # ---------------------------------------------------------
-    x_reg = np.arange(x_native.min(), x_native.max() + dx_reg, dx_reg)
+    x_reg = np.arange(x_native[0], x_native[-1] + dx_reg, dx_reg)
+    x_mouth = x_reg[-1]
+    x_upstream = x_reg[0]
     n_reg = x_reg.size
 
     # ---------------------------------------------------------
-    # 2. Interpolate salinity onto regular grid
+    # 2. Interpolate salinity onto regular x-grid
     # ---------------------------------------------------------
-    sal_reg = np.empty((nt, n_reg))
+    sal_reg = np.empty((nt, n_reg), dtype=float)
+
     for t in range(nt):
         sal_reg[t, :] = np.interp(x_reg, x_native, salinity_native[t, :])
 
     # ---------------------------------------------------------
     # 3. Spatial smoothing along x
     # ---------------------------------------------------------
-    # Convert smoothing window from km -> number of points
     window_m = smooth_km * 1000.0
-    window_pts = max(1, int(window_m / dx_reg))
+    window_pts = max(1, int(round(window_m / dx_reg)))
 
-    sal_smooth = uniform_filter1d(sal_reg, size=window_pts, axis=1, mode='nearest')
+    sal_smooth = uniform_filter1d(
+        sal_reg,
+        size=window_pts,
+        axis=1,
+        mode="nearest",
+    )
 
     # ---------------------------------------------------------
-    # 4. Intrusion-length detection per time step
-    #    x_reg is from UPSTREAM (fresh) -> DOWNSTREAM (salty)
+    # 4. Detect front and compute intrusion length from mouth
     # ---------------------------------------------------------
+    front_x = np.full(nt, np.nan)
     intrusion_length = np.full(nt, np.nan)
 
     for t in range(nt):
-        profile = sal_smooth[t, :]         # shape (n_reg,), upstream->downstream
-        wet = profile >= threshold         # True = salty
+        profile = sal_smooth[t, :]
+        salty = profile >= threshold
 
-        # If everything is fresh: no salt anywhere
-        if not wet.any():
-            intrusion_length[t] = x_reg[0]   # stays at upstream end
+        # No salt anywhere: intrusion length is zero.
+        if not salty.any():
+            front_x[t] = x_mouth
+            intrusion_length[t] = 0.0
             continue
 
-        # If everything is salty: salt reaches all the way upstream
-        if wet.all():
-            intrusion_length[t] = x_reg[-1]  # downstream end (mouth)
+        # Entire transect is salty: salt reaches the upstream boundary.
+        if salty.all():
+            front_x[t] = x_upstream
+            intrusion_length[t] = x_mouth - x_upstream
             continue
 
-        # ---- Work on reversed arrays so index 0 = mouth (downstream) ----
-        wet_rev = wet[::-1]                 # now 0 = downstream, increasing index = upstream
-        n = wet_rev.size
+        # Search from the mouth upstream, without reversing arrays.
+        #
+        # We look for the first sustained fresh segment encountered while
+        # moving upstream from the mouth. The front is then the first salty
+        # point immediately downstream of that sustained fresh segment.
+        fresh_count = 0
+        seen_salty_downstream = False
+        front_idx = None
 
-        if min_consecutive > 1:
-            # sustained FRESH segment (False) of length >= min_consecutive
-            fresh_runs_rev = np.convolve((~wet_rev).astype(int),
-                                        np.ones(min_consecutive, dtype=int),
-                                        mode="same") >= min_consecutive
-
-            fresh_idx_rev = np.where(fresh_runs_rev)[0]
-
-            if fresh_idx_rev.size > 0:
-                # first sustained fresh segment moving from mouth upstream
-                i_front_rev = fresh_idx_rev[0]
-
-                # last salty cell immediately DOWNSTREAM of that fresh segment
-                salty_idx_rev = np.where(wet_rev[:i_front_rev])[0]
-                if salty_idx_rev.size > 0:
-                    j_rev = salty_idx_rev[-1]          # index in reversed array
-                    j = n - 1 - j_rev                  # corresponding index in original x_reg
-                    intrusion_length[t] = x_reg[j]
-                else:
-                    # no salty cell before fresh segment in reversed space
-                    intrusion_length[t] = x_reg[0]
+        for i in range(n_reg - 1, -1, -1):  # mouth -> upstream
+            if salty[i]:
+                seen_salty_downstream = True
+                fresh_count = 0
             else:
-                # no sustained fresh segment; fallback to last salty cell (most upstream salt)
-                j_rev = np.where(wet_rev)[0][-1]
-                j = n - 1 - j_rev
-                intrusion_length[t] = x_reg[j]
+                if seen_salty_downstream:
+                    fresh_count += 1
+
+                    if fresh_count >= min_consecutive:
+                        # Sustained fresh segment found.
+                        # The first salty point downstream should be:
+                        candidate = i + min_consecutive
+
+                        if candidate < n_reg and salty[candidate]:
+                            front_idx = candidate
+                        else:
+                            # Robust fallback: find nearest salty point downstream.
+                            downstream_salty = np.where(salty[i + 1:])[0]
+                            if downstream_salty.size > 0:
+                                front_idx = i + 1 + downstream_salty[0]
+
+                        break
+
+        if front_idx is None:
+            # Fallback: use the most upstream salty point.
+            front_idx = np.where(salty)[0][0]
+
+        # Optional sub-grid interpolation of the threshold crossing.
+        #
+        # In the ideal case:
+        #   front_idx - 1 is fresh
+        #   front_idx     is salty
+        #
+        # Then interpolate between them to estimate where salinity = threshold.
+        if front_idx > 0 and profile[front_idx - 1] < threshold <= profile[front_idx]:
+            x0 = x_reg[front_idx - 1]
+            x1 = x_reg[front_idx]
+            s0 = profile[front_idx - 1]
+            s1 = profile[front_idx]
+
+            if s1 != s0:
+                xf = x0 + (threshold - s0) * (x1 - x0) / (s1 - s0)
+            else:
+                xf = x_reg[front_idx]
         else:
-            # simple fallback: most upstream salty cell in original orientation
-            j = np.where(wet)[0][0]   # first True going upstream->downstream
-            intrusion_length[t] = x_reg[j]
+            xf = x_reg[front_idx]
+
+        front_x[t] = xf
+        intrusion_length[t] = x_mouth - xf
 
     # ---------------------------------------------------------
     # 5. Optional temporal smoothing
     # ---------------------------------------------------------
     if temporal_smooth_hours is not None and dt_hours is not None:
-        win_t = max(1, int(temporal_smooth_hours / dt_hours))
-        intrusion_length = uniform_filter1d(intrusion_length, size=win_t, mode="nearest")
+        win_t = max(1, int(round(temporal_smooth_hours / dt_hours)))
+
+        intrusion_length = uniform_filter1d(
+            intrusion_length,
+            size=win_t,
+            mode="nearest",
+        )
+
+        # Smooth front_x consistently if requested.
+        front_x = x_mouth - intrusion_length
 
     return intrusion_length
 
@@ -260,7 +355,7 @@ def plot_intrusion_time_series(x, salinity, threshold=0.5):
     salinity: 2D array of salinity (nt, npoints)
     threshold: salinity threshold to define intrusion
     """
-    intrusion_length = cal_intrusion_length(x, salinity, threshold)
+    intrusion_length = cal_intrusion_length_from_mouth(x, salinity, threshold)
 
     plt.figure(figsize=(10, 4))
     plt.plot(intrusion_length, marker='o')
@@ -271,16 +366,20 @@ def plot_intrusion_time_series(x, salinity, threshold=0.5):
     plt.show()
 
 
-def compare_intrusion_lengths(threshold=0.5, ramp_up_t_records=7*24, reverse=False):
+def compare_intrusion_lengths(threshold=0.5, ramp_up_t_records=7*24, reverse=False, use_miles=False):
     """
     Compare salt intrusion lengths from two different salinity datasets.
     x: 1D array of distance along transect (e.g., river miles), must be from downstream to upstream
     salinity1, salinity2: 2D arrays of salinity (nt, npoints)
     threshold: salinity threshold to define intrusion
+    ramp_up_t_records: number of initial time records to skip for ramp-up
+    reverse: if True, reverse the x array to be from upstream to downstream before calculation
+    use_miles: if True, convert intrusion length to miles; otherwise, use km
     """
+    transect_name = 'FreshwaterBayouCanal' # 'mississippi'  # 'FreshwaterBayouCanal'
     results_list = {
-        'coarse mesh': f'/sciclone/schism10/feiye/STOFS3D-v8/O29i1/salinity.transect.FreshwaterBayouCanal.nc',
-        'refined mesh': f'/sciclone/schism10/feiye/STOFS3D-v8/O19i1/salinity.transect.FreshwaterBayouCanal.nc',
+        'coarse mesh': f'/sciclone/schism10/feiye/STOFS3D-v8/O29i1/salinity.transect.{transect_name}.nc',
+        'refined mesh': f'/sciclone/schism10/feiye/STOFS3D-v8/O19i1/salinity.transect.{transect_name}.nc',
     }
     start_time = [pd.Timestamp('2024-03-05', tz='UTC'), pd.Timestamp('2024-03-05', tz='UTC')]
     time_stamps = []
@@ -295,14 +394,16 @@ def compare_intrusion_lengths(threshold=0.5, ramp_up_t_records=7*24, reverse=Fal
         ds = xr.open_dataset(filepath)
         time_stamp = time_stamp[ramp_up_t_records:]
         salinity = ds['salinity'].values  # (nt, npoints)
-        salinity = salinity[ramp_up_t_records:, :, 0]
-        x = compute_along_transect_distance(ds['lon'].values, ds['lat'].values, reverse=reverse)
+        salinity = salinity[ramp_up_t_records:, :, 0]  # bottom
+        x = compute_along_transect_distance(ds['lon'].values, ds['lat'].values, reverse=reverse)  # in miles
         x *= 1609.34  # miles to meters
-        intrusion_length = cal_intrusion_length(x, salinity, threshold)
-        intrusion_data_list.append((intrusion_length))
 
-        intrusion_length = x[-1] - intrusion_length  # convert to distance from mouth
-        intrusion_length /= 1609.34  # back to miles
+        intrusion_length = cal_intrusion_length_from_mouth(x, salinity, threshold)  # meters from mouth
+        if use_miles:
+            intrusion_length /= 1609.34  # convert to miles
+        else:
+            intrusion_length /= 1000.0  # convert to km
+        intrusion_data_list.append((intrusion_length))
 
         ylim = [np.min(intrusion_length) - 8, np.max(intrusion_length) + 6]
         plt.plot(time_stamp, intrusion_length, label=label)
@@ -310,9 +411,11 @@ def compare_intrusion_lengths(threshold=0.5, ramp_up_t_records=7*24, reverse=Fal
     
     mean_diff = np.nanmean(np.abs(
         intrusion_data_list[0] - intrusion_data_list[1]
-    )) / 1609.34  # back to miles
+    ))
     
-    plt.ylabel('Salt Intrusion Length (miles)')
+    # plot
+    ylable_str = 'Salt intrusion length (miles)' if use_miles else 'Salt intrusion length (km)'
+    plt.ylabel(ylable_str)
     plt.title(f'Comparison of Salt Intrusion Lengths (Threshold={threshold}); Mean Abs Diff={mean_diff:.2f} miles)')
     plt.legend()
     plt.grid()
@@ -343,7 +446,7 @@ def plot_model_transect2D(
     schism_start_time=None,  # todo: put this into processed netcdf
     var_str='salinity', plot_time=pd.Timestamp('2023-08-31', tz='UTC'),
     ax=None, clim=None, draw_mesh=False, reverse_x=False,
-    draw_color_bar=True, river_mile_coor=True, show_plot=True
+    draw_color_bar=True, river_mile_coor=True, show_plot=True, use_miles=False
 ):
     """
     Plot a 2D transect from SCHISM model output along a river,
@@ -411,17 +514,26 @@ def plot_model_transect2D(
     else:
         # reverse river_dist_miles if necessary, start from downstream
         river_dist_miles = compute_along_transect_distance(river_lon, river_lat, reverse=False)
-        river_dist_miles = river_dist_miles[-1] - river_dist_miles  # to start from downstream end
+        river_dist_miles = river_dist_miles[-1] - river_dist_miles  # from downstream to upstream
+        if use_miles:
+            river_dist = river_dist_miles  # already in miles
+        else:
+            river_dist = river_dist_miles * 1.60934  # miles to km
+
         if var_str == 'temperature':
             clim = (15.5, 22.5)
         elif var_str == 'salinity':
-            clim = (0, 35)
-        plot_transect_filled(
-            river_dist_miles, -z, var, var_name_dict[var_str], ax=ax, t_idx=t_idx, cmap='jet',
+            clim = (0, 4)
+        ax = plot_transect_filled(
+            river_dist, -z, var, var_name_dict[var_str], ax=ax, t_idx=t_idx, cmap='jet',
             draw_mesh=draw_mesh, reverse_x=reverse_x, draw_color_bar=draw_color_bar,
             clim=clim,
-            # plot_args={'xlim': (0, 45)}
+            # plot_args={'xlim': (0, 45*1.60934)}
         )
+
+        ax.set_ylabel("z (m)")
+        if not use_miles:
+            ax.set_xlabel("along-transect distance (km)")  # override default label for x-axis
         plt.title(f"Model {var_str.capitalize()} Transect — {run_name} at {time_datetimes[t_idx].date()}")
 
     if show_plot:
@@ -445,8 +557,9 @@ def diff_transect_2D(var_str='salinity', x_range=None, schism_start_time=None, p
     plot_time: pd.Timestamp or None
         Time to plot. If None, plot at t_idx=0.
     """
-    ds1 = xr.open_dataset('/sciclone/schism10/feiye/STOFS3D-v8/O19i1/salinity.transect.mississippi.nc', engine='netcdf4')
-    ds2 = xr.open_dataset('/sciclone/schism10/feiye/STOFS3D-v8/O29i1/salinity.transect.mississippi.nc', engine='netcdf4')
+    transect_name = 'FreshwaterBayouCanal'  # 'mississippi'  # 'FreshwaterBayouCanal'
+    ds1 = xr.open_dataset(f'/sciclone/schism10/feiye/STOFS3D-v8/O19i1/salinity.transect.{transect_name}.nc', engine='netcdf4')
+    ds2 = xr.open_dataset(f'/sciclone/schism10/feiye/STOFS3D-v8/O29i1/salinity.transect.{transect_name}.nc', engine='netcdf4')
 
     var_name_dict = {
         'salinity': 'Salinity Difference (psu)',
@@ -506,22 +619,23 @@ def diff_transect_2D(var_str='salinity', x_range=None, schism_start_time=None, p
     plt.show()
 
 if __name__ == "__main__":
-    # compare_intrusion_lengths(threshold=4, reverse=False)
+    # set global plot parameters
+    plt.rcParams.update({'font.size': 14})
+
+    # compare_intrusion_lengths(threshold=4, reverse=False, use_miles=False)
 
     # diff_transect_2D(
-    #     var_str='temperature',
-    #     x_range=(0, 45),
+    #     var_str='salinity',
+    #     # x_range=(0, 45),
     #     schism_start_time=pd.Timestamp('2024-03-05', tz='UTC'),
     #     plot_time=pd.Timestamp('2024-04-09', tz='UTC')
     # )
 
-    # set global plot parameters
-    plt.rcParams.update({'font.size': 14})
     plot_model_transect2D(
-        processed_schism_outputs='/sciclone/schism10/feiye/STOFS3D-v8/O19i1/salinity.transect.FreshwaterBayouCanal.nc',
+        processed_schism_outputs='/sciclone/schism10/feiye/STOFS3D-v8/O29i1/salinity.transect.FreshwaterBayouCanal.nc',
         schism_start_time=pd.Timestamp('2024-03-05', tz='UTC'),
-        var_str='temperature', plot_time=pd.Timestamp('2024-04-09', tz='UTC'),
-        river_mile_coor=False, draw_mesh=False, show_plot=True
+        var_str='salinity', plot_time=pd.Timestamp('2024-04-09 00:00:00', tz='UTC'),
+        river_mile_coor=False, draw_mesh=False, show_plot=True, use_miles=False
     )
 
     pass
